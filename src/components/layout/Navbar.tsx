@@ -78,13 +78,9 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white font-bold text-sm transition-transform group-hover:scale-105">
-              N
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              nandzz
-            </span>
+          <Link href="/" className="flex items-center gap-0 group">
+            <span className="text-xl font-bold tracking-tight">nand</span>
+            <span className="text-xl font-bold tracking-tight text-violet-600 transition-colors group-hover:text-violet-500">zz</span>
           </Link>
 
           {/* Nav links - desktop */}

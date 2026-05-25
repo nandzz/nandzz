@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
-import { ArrowRight, Sparkles, Globe, Code } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -49,70 +49,98 @@ export default async function HomePage() {
     <div>
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        {/* Animated gradient background */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] rounded-full bg-violet-200/60 blur-3xl dark:bg-violet-900/30 animate-hero-gradient" />
-          <div className="absolute left-1/4 top-1/4 h-[400px] w-[400px] rounded-full bg-fuchsia-200/40 blur-3xl dark:bg-fuchsia-900/20 animate-hero-gradient-2" />
-          <div className="absolute right-1/4 bottom-1/4 h-[300px] w-[300px] rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/15 animate-hero-gradient" />
-        </div>
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,oklch(0.7_0_0_/_0.05)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.7_0_0_/_0.05)_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,oklch(0.5_0_0_/_0.06)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.5_0_0_/_0.06)_1px,transparent_1px)]" />
+            {/* Left: Text */}
+            <div>
+              <div className="mb-8 flex items-center gap-3">
+                <span className="h-px w-8 bg-violet-500 flex-shrink-0" />
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  AI Gallery · Community
+                </span>
+              </div>
 
-        <div className="mx-auto max-w-7xl px-4 py-28 sm:px-6 sm:py-36 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border bg-background/80 backdrop-blur-sm px-4 py-1.5 text-sm text-muted-foreground shadow-sm">
-              <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-              <span>The home for AI-generated web apps</span>
-            </div>
-            <h1 className="text-balance text-5xl font-bold tracking-tight sm:text-7xl">
-              Save & Share
-              <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
-                {" "}
-                AI-Built Web Apps
-              </span>
-            </h1>
-            <p className="mt-8 text-lg leading-8 text-muted-foreground max-w-2xl mx-auto text-balance">
-              Built something cool with Claude or ChatGPT? nandzz lets you
-              save, host, and share AI-generated web apps with the world.
-              Upload HTML or link a URL — it&apos;s that simple.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/login?tab=signup">
-                <Button
-                  size="lg"
-                  className="bg-violet-600 hover:bg-violet-700 text-white px-8 shadow-lg shadow-violet-600/25 hover:shadow-xl hover:shadow-violet-600/30 transition-all"
-                >
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/explore">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="px-8 border-border/60 hover:border-violet-500/50 transition-colors"
-                >
-                  Explore Spaces
-                </Button>
-              </Link>
-            </div>
-          </div>
+              <h1 className="text-[clamp(3rem,8vw,5.5rem)] font-bold tracking-tight leading-[1.04]">
+                Share what
+                <br />
+                <span className="text-violet-600">AI built.</span>
+              </h1>
 
-          {/* Feature pills */}
-          <div className="mt-20 flex flex-wrap items-center justify-center gap-4">
-            <div className="flex items-center gap-2 rounded-xl border bg-card/80 backdrop-blur-sm px-5 py-3 shadow-sm transition-colors hover:border-violet-500/30">
-              <Code className="h-5 w-5 text-violet-500" />
-              <span className="text-sm font-medium">Upload HTML</span>
+              <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-sm">
+                A gallery for apps made with Claude, ChatGPT & friends.
+                Upload HTML or drop a URL.
+              </p>
+
+              <div className="mt-10 flex flex-wrap items-center gap-4">
+                <Link href="/login?tab=signup">
+                  <Button
+                    size="lg"
+                    className="bg-violet-600 hover:bg-violet-700 text-white px-8 shadow-lg shadow-violet-600/25 hover:shadow-xl hover:shadow-violet-600/30 transition-all"
+                  >
+                    Get started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/explore">
+                  <Button
+                    size="lg"
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Browse the gallery
+                    <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border bg-card/80 backdrop-blur-sm px-5 py-3 shadow-sm transition-colors hover:border-violet-500/30">
-              <Globe className="h-5 w-5 text-violet-500" />
-              <span className="text-sm font-medium">Link a URL</span>
+
+            {/* Right: Browser mockup placeholder — swap this div for a real <Image> when ready */}
+            <div className="relative lg:ml-8">
+              <div className="absolute -top-6 -right-6 h-32 w-32 rounded-full bg-violet-200/50 blur-3xl dark:bg-violet-800/25 pointer-events-none" />
+              <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-fuchsia-200/40 blur-2xl dark:bg-fuchsia-800/20 pointer-events-none" />
+
+              <div className="relative rounded-2xl border border-border/50 shadow-2xl shadow-black/10 overflow-hidden bg-card">
+                {/* Browser chrome */}
+                <div className="flex items-center gap-1.5 bg-muted/60 px-4 py-2.5 border-b border-border/40">
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
+                  <div className="ml-3 flex-1 bg-background rounded-md h-5 flex items-center px-3 border border-border/30">
+                    <span className="text-[11px] text-muted-foreground/50 font-mono">
+                      nandzz.com/explore
+                    </span>
+                  </div>
+                </div>
+
+                {/* Gallery preview — placeholder grid, replace with <Image src="/hero-preview.png"> */}
+                <div className="p-4 grid grid-cols-2 gap-2.5 bg-background/50">
+                  <div className="aspect-video rounded-lg bg-gradient-to-br from-violet-100 to-violet-50 dark:from-violet-900/40 dark:to-violet-800/20 flex items-center justify-center">
+                    <span className="text-[10px] font-mono text-violet-400/70">space #1</span>
+                  </div>
+                  <div className="aspect-video rounded-lg bg-gradient-to-br from-sky-100 to-sky-50 dark:from-sky-900/40 dark:to-sky-800/20 flex items-center justify-center">
+                    <span className="text-[10px] font-mono text-sky-400/70">space #2</span>
+                  </div>
+                  <div className="aspect-video rounded-lg bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-800/20 flex items-center justify-center">
+                    <span className="text-[10px] font-mono text-emerald-400/70">space #3</span>
+                  </div>
+                  <div className="aspect-video rounded-lg bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-800/20 flex items-center justify-center">
+                    <span className="text-[10px] font-mono text-amber-400/70">space #4</span>
+                  </div>
+                </div>
+
+                {/* Bottom bar of the browser mockup */}
+                <div className="px-4 py-3 border-t border-border/30 bg-muted/30 flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground/50 font-mono">
+                    {spaces?.length ?? 0}+ spaces shared
+                  </span>
+                  <span className="text-[11px] text-violet-500 font-mono">
+                    explore →
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border bg-card/80 backdrop-blur-sm px-5 py-3 shadow-sm transition-colors hover:border-violet-500/30">
-              <Sparkles className="h-5 w-5 text-violet-500" />
-              <span className="text-sm font-medium">Share Instantly</span>
-            </div>
+
           </div>
         </div>
       </section>
