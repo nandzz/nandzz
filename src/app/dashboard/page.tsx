@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Plus, Rocket } from "lucide-react";
+import { LayoutGrid, Layers, Plus, Rocket } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -51,12 +51,20 @@ export default async function DashboardPage() {
               Welcome back, {greeting}. Manage your web app collection.
             </p>
           </div>
-          <Link href="/dashboard/create-space">
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Space
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/collections">
+              <Button variant="outline" className="border-border/60 gap-2">
+                <Layers className="h-4 w-4" />
+                Collections
+              </Button>
+            </Link>
+            <Link href="/dashboard/create-space">
+              <Button className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Space
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {spaces && spaces.length > 0 ? (

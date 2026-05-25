@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -13,8 +13,11 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { ExternalLink, Globe, FileCode2, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Globe, FileCode2, FolderPlus, Pencil, Trash2, Bookmark } from "lucide-react";
 import { LikeButton } from "./LikeButton";
+import { ShareButton } from "./ShareButton";
+import { StarButton } from "./StarButton";
+import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
 import type { Space, SpaceType } from "@/lib/types";
 
 const typeLabels: Record<SpaceType, { label: string; icon: React.ReactNode }> = {
@@ -27,11 +30,62 @@ interface SpaceCardProps {
   username?: string;
   editable?: boolean;
   liked?: boolean;
+  saved?: boolean;
   compact?: boolean;
+  collectionId?: string;
+  isOwn?: boolean;
 }
 
-export function SpaceCard({ space, username, editable, liked, compact }: SpaceCardProps) {
+export function SpaceCard({ space, username, editable, liked, saved, compact, collectionId, isOwn }: SpaceCardProps) {
   const router = useRouter();
+  const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(saved ?? false);
+
+  const handleRemoveFromCollection = async () => {
+    if (!collectionId) return;
+    if (!confirm("Remove this space from the collection?")) return;
+    const supabase = createClient();
+    await supabase
+      .from("collection_spaces")
+      .delete()
+      .eq("collection_id", collectionId)
+      .eq("space_id", space.id);
+    router.refresh();
+  };
+
+  const handleToggleStar = async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login"); return; }
+
+    let { data: collection } = await supabase
+      .from("collections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_default", true)
+      .maybeSingle();
+
+    if (!collection) {
+      const { data: newCol } = await supabase
+        .from("collections")
+        .insert({ user_id: user.id, name: "Starred", description: "Spaces I've saved from the community", is_public: true, is_default: true })
+        .select("id")
+        .single();
+      collection = newCol;
+    }
+
+    if (!collection) return;
+
+    const wasSaved = isSaved;
+    setIsSaved(!wasSaved);
+
+    if (wasSaved) {
+      await supabase.from("collection_spaces").delete().eq("collection_id", collection.id).eq("space_id", space.id);
+    } else {
+      await supabase.from("collection_spaces").insert({ collection_id: collection.id, space_id: space.id });
+    }
+    router.refresh();
+  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this space?")) return;
@@ -86,14 +140,23 @@ export function SpaceCard({ space, username, editable, liked, compact }: SpaceCa
             ) : (
               <span />
             )}
-            {!editable && (
-              <LikeButton
-                spaceId={space.id}
-                initialLikesCount={space.likes_count ?? 0}
-                initialLiked={liked}
-                size="sm"
-              />
-            )}
+            <div
+              className="flex items-center gap-1"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            >
+              {!editable && !isOwn && (
+                <>
+                  <LikeButton
+                    spaceId={space.id}
+                    initialLikesCount={space.likes_count ?? 0}
+                    initialLiked={liked}
+                    size="sm"
+                  />
+                  <StarButton spaceId={space.id} initialSaved={isSaved} size="sm" onToggle={setIsSaved} />
+                </>
+              )}
+              <ShareButton url={`/space/${space.id}`} title={space.title} size="sm" />
+            </div>
           </div>
         </CardContent>
       </Link>
@@ -101,29 +164,55 @@ export function SpaceCard({ space, username, editable, liked, compact }: SpaceCa
   );
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger>{cardContent}</ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={() => router.push(`/space/${space.id}`)}>
-          <ExternalLink className="size-4" />
-          Open
-        </ContextMenuItem>
-        {editable && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={() => router.push(`/dashboard/edit-space/${space.id}`)}
-            >
-              <Pencil className="size-4" />
-              Edit
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger>{cardContent}</ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => router.push(`/space/${space.id}`)}>
+            <ExternalLink className="size-4" />
+            Open
+          </ContextMenuItem>
+          {!editable && !isOwn && (
+            <ContextMenuItem onClick={handleToggleStar}>
+              <Bookmark className={`size-4 ${isSaved ? "fill-violet-500 text-violet-500" : ""}`} />
+              {isSaved ? "Remove from Starred" : "Save to Starred"}
             </ContextMenuItem>
-            <ContextMenuItem variant="destructive" onClick={handleDelete}>
-              <Trash2 className="size-4" />
-              Delete
-            </ContextMenuItem>
-          </>
-        )}
-      </ContextMenuContent>
-    </ContextMenu>
+          )}
+          {editable && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => setCollectionDialogOpen(true)}>
+                <FolderPlus className="size-4" />
+                Add to Collection
+              </ContextMenuItem>
+              {collectionId && (
+                <ContextMenuItem variant="destructive" onClick={handleRemoveFromCollection}>
+                  <Trash2 className="size-4" />
+                  Remove from Collection
+                </ContextMenuItem>
+              )}
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={() => router.push(`/dashboard/edit-space/${space.id}`)}
+              >
+                <Pencil className="size-4" />
+                Edit
+              </ContextMenuItem>
+              <ContextMenuItem variant="destructive" onClick={handleDelete}>
+                <Trash2 className="size-4" />
+                Delete Space
+              </ContextMenuItem>
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+
+      <AddToCollectionDialog
+        open={collectionDialogOpen}
+        onClose={() => setCollectionDialogOpen(false)}
+        spaceId={space.id}
+        spaceTitle={space.title}
+      />
+    </>
   );
 }

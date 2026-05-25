@@ -4,8 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { SpaceCard } from "./SpaceCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, LayoutGrid, Grid3X3 } from "lucide-react";
-import type { SpaceWithProfile, Space } from "@/lib/types";
+import { Plus, LayoutGrid, Grid3X3, Globe, FileCode2 } from "lucide-react";
+import type { SpaceWithProfile, Space, SpaceType } from "@/lib/types";
+
+type FilterType = "all" | SpaceType;
+
+const filters: { value: FilterType; label: string; icon: React.ReactNode }[] = [
+  { value: "all", label: "All", icon: null },
+  { value: "url", label: "Website", icon: <Globe className="h-3 w-3" /> },
+  { value: "html", label: "Custom Page", icon: <FileCode2 className="h-3 w-3" /> },
+];
 
 interface SpaceGridProps {
   spaces: SpaceWithProfile[] | Space[];
@@ -13,6 +21,9 @@ interface SpaceGridProps {
   showCreateCard?: boolean;
   editable?: boolean;
   likedSpaceIds?: string[];
+  savedSpaceIds?: string[];
+  collectionId?: string;
+  currentUserId?: string;
 }
 
 export function SpaceGrid({
@@ -21,13 +32,29 @@ export function SpaceGrid({
   showCreateCard = false,
   editable = false,
   likedSpaceIds = [],
+  savedSpaceIds = [],
+  collectionId,
+  currentUserId,
 }: SpaceGridProps) {
   const [compact, setCompact] = useState(false);
+  const [filter, setFilter] = useState<FilterType>("all");
+
+  const filtered = filter === "all" ? spaces : spaces.filter((s) => s.type === filter);
+
+  const urlCount = spaces.filter((s) => s.type === "url").length;
+  const htmlCount = spaces.filter((s) => s.type === "html").length;
+
+  const counts: Record<FilterType, number> = {
+    all: spaces.length,
+    url: urlCount,
+    html: htmlCount,
+  };
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        {/* View toggle */}
         <button
           onClick={() => setCompact((v) => !v)}
           className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -45,6 +72,32 @@ export function SpaceGrid({
             </>
           )}
         </button>
+
+        {/* Divider */}
+        <div className="h-4 w-px bg-border/60" />
+
+        {/* Filter */}
+        <div className="flex items-center gap-0.5">
+          {filters.map(({ value, label, icon }) => {
+            const active = filter === value;
+            const count = counts[value];
+            if (value !== "all" && count === 0) return null;
+            return (
+              <button
+                key={value}
+                onClick={() => setFilter(value)}
+                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                  active
+                    ? "text-foreground bg-accent"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Grid */}
@@ -55,10 +108,10 @@ export function SpaceGrid({
             : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
         }
       >
-        {spaces.map((space) => {
+        {filtered.map((space) => {
           const username =
             showAuthor && "profiles" in space
-              ? space.profiles?.display_name || space.profiles?.username
+              ? (space as SpaceWithProfile).profiles?.display_name || (space as SpaceWithProfile).profiles?.username
               : undefined;
           return (
             <SpaceCard
@@ -67,11 +120,14 @@ export function SpaceGrid({
               username={username || undefined}
               editable={editable}
               liked={likedSpaceIds.includes(space.id)}
+              saved={savedSpaceIds.includes(space.id)}
               compact={compact}
+              collectionId={collectionId}
+              isOwn={!!currentUserId && space.user_id === currentUserId}
             />
           );
         })}
-        {showCreateCard && (
+        {showCreateCard && filter === "all" && (
           <Link href="/dashboard/create-space">
             <Card
               className={
@@ -102,6 +158,11 @@ export function SpaceGrid({
               )}
             </Card>
           </Link>
+        )}
+        {filtered.length === 0 && (
+          <p className="col-span-full py-12 text-center text-muted-foreground text-sm">
+            No {filter === "url" ? "website" : "custom page"} spaces here yet.
+          </p>
         )}
       </div>
     </div>

@@ -1,0 +1,119 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus } from "lucide-react";
+
+export function NewCollectionForm() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setError("");
+    setLoading(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("You must be logged in");
+      setLoading(false);
+      return;
+    }
+
+    const { error: err } = await supabase.from("collections").insert({
+      name: name.trim(),
+      description: description.trim() || null,
+      is_public: isPublic,
+      user_id: user.id,
+    });
+
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
+
+    setName("");
+    setDescription("");
+    setLoading(false);
+    router.refresh();
+  };
+
+  return (
+    <Card className="border-border/60 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Plus className="h-4 w-4 text-violet-600" />
+          New Collection
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Name *</Label>
+            <Input
+              id="name"
+              placeholder="e.g. Design Tools"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="bg-muted/50 border-border/60"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="What's this collection about?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="bg-muted/50 border-border/60 text-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/50">
+            <input
+              type="checkbox"
+              id="isPublic"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-violet-600"
+            />
+            <Label htmlFor="isPublic" className="font-normal cursor-pointer text-sm">
+              Make this collection public
+            </Label>
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+
+          <Button
+            type="submit"
+            disabled={loading || !name.trim()}
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25"
+          >
+            {loading ? "Creating..." : "Create Collection"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy — Nandzz",
-  description: "Cookie policy for the Nandzz platform.",
+  title: "Cookie Policy — nandzz",
+  description: "Cookie policy for the nandzz platform.",
 };
 
 export default function CookiesPage() {

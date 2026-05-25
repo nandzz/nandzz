@@ -71,7 +71,7 @@ export function Navbar() {
               N
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              Nandzz
+              nandzz
             </span>
           </Link>
 
@@ -119,6 +119,9 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={() => router.push("/dashboard")}>
                     My Spaces
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/collections")}>
+                    My Collections
                   </DropdownMenuItem>
                   {profile?.username && (
                     <DropdownMenuItem
@@ -208,6 +211,13 @@ export function Navbar() {
                 className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 My Spaces
+              </Link>
+              <Link
+                href="/dashboard/collections"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                My Collections
               </Link>
               {profile?.username && (
                 <Link

@@ -1,8 +1,8 @@
-# Nandzz
+# nandzz
 
 **The home for AI-generated web apps.**
 
-Nandzz is a platform where you can save, host, and share the web apps you build with AI tools like Claude or ChatGPT. Drop in raw HTML or link a URL — your creation gets its own Space, a public page where the world can discover and like it.
+nandzz is a platform where you can save, host, and share the web apps you build with AI tools like Claude or ChatGPT. Drop in raw HTML or link a URL — your creation gets its own Space, a public page where the world can discover and like it.
 
 ---
 

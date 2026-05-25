@@ -12,7 +12,7 @@ export function Footer() {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600 text-white font-bold text-xs">
                 N
               </div>
-              <span className="font-semibold">Nandzz</span>
+              <span className="font-semibold">nandzz</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               A platform for saving and sharing AI-generated web apps with the
@@ -82,7 +82,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-8 pt-6 border-t border-border/50">
           <p className="text-xs text-muted-foreground/70">
-            &copy; {new Date().getFullYear()} Nandzz. All rights reserved.
+            &copy; {new Date().getFullYear()} nandzz. All rights reserved.
           </p>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions — Nandzz",
-  description: "Terms and conditions for using the Nandzz platform.",
+  title: "Terms & Conditions — nandzz",
+  description: "Terms and conditions for using the nandzz platform.",
 };
 
 export default function TermsPage() {
@@ -21,7 +21,7 @@ export default function TermsPage() {
             1. Acceptance of Terms
           </h2>
           <p className="mt-3">
-            By accessing or using Nandzz (&quot;the Platform&quot;), you agree to
+            By accessing or using nandzz (&quot;the Platform&quot;), you agree to
             be bound by these Terms & Conditions. If you do not agree to these
             terms, please do not use the Platform.
           </p>
@@ -32,7 +32,7 @@ export default function TermsPage() {
             2. Description of Service
           </h2>
           <p className="mt-3">
-            Nandzz is a platform that allows users to save, host, and share
+            nandzz is a platform that allows users to save, host, and share
             AI-generated web applications. Users can upload HTML content or link
             external URLs to create &quot;Spaces&quot; that are viewable by the
             public or kept private.
@@ -57,7 +57,7 @@ export default function TermsPage() {
           </h2>
           <p className="mt-3">
             You retain ownership of any content you upload to the Platform. By
-            uploading content, you grant Nandzz a non-exclusive, worldwide,
+            uploading content, you grant nandzz a non-exclusive, worldwide,
             royalty-free license to host, display, and distribute your content
             as part of the Platform&apos;s services.
           </p>
@@ -112,7 +112,7 @@ export default function TermsPage() {
             8. Limitation of Liability
           </h2>
           <p className="mt-3">
-            To the maximum extent permitted by law, Nandzz shall not be liable
+            To the maximum extent permitted by law, nandzz shall not be liable
             for any indirect, incidental, special, or consequential damages
             arising from your use of the Platform.
           </p>

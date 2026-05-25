@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LikeButton } from "@/components/spaces/LikeButton";
+import { ShareButton } from "@/components/spaces/ShareButton";
+import { StarButton } from "@/components/spaces/StarButton";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 
 export async function generateMetadata({
@@ -21,7 +23,7 @@ export async function generateMetadata({
     .single();
 
   if (!space) {
-    return { title: "Space Not Found — Nandzz" };
+    return { title: "Space Not Found — nandzz" };
   }
 
   const profile = space.profiles as unknown as {
@@ -31,13 +33,13 @@ export async function generateMetadata({
   const author = profile?.display_name || profile?.username || "Unknown";
 
   return {
-    title: `${space.title} — Nandzz`,
+    title: `${space.title} — nandzz`,
     description:
-      space.description || `A web app shared by ${author} on Nandzz.`,
+      space.description || `A web app shared by ${author} on nandzz.`,
     openGraph: {
       title: space.title,
       description:
-        space.description || `A web app shared by ${author} on Nandzz.`,
+        space.description || `A web app shared by ${author} on nandzz.`,
       ...(space.preview_image_url && {
         images: [{ url: space.preview_image_url }],
       }),
@@ -63,18 +65,40 @@ export default async function SpaceViewPage({
     notFound();
   }
 
-  // Check if current user has liked this space
+  // Check if current user has liked/saved this space
   const { data: { user } } = await supabase.auth.getUser();
   let liked = false;
+  let saved = false;
+
   if (user) {
-    const { data: likeData } = await supabase
-      .from("space_likes")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("space_id", id)
-      .maybeSingle();
+    const [{ data: likeData }, { data: starredCol }] = await Promise.all([
+      supabase
+        .from("space_likes")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("space_id", id)
+        .maybeSingle(),
+      supabase
+        .from("collections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_default", true)
+        .maybeSingle(),
+    ]);
     liked = !!likeData;
+
+    if (starredCol) {
+      const { data: savedEntry } = await supabase
+        .from("collection_spaces")
+        .select("id")
+        .eq("collection_id", starredCol.id)
+        .eq("space_id", id)
+        .maybeSingle();
+      saved = !!savedEntry;
+    }
   }
+
+  const isOwner = user?.id === space.user_id;
 
   // For HTML spaces, fetch the actual HTML content so we can use srcDoc
   // This avoids content-type issues with Supabase Storage serving as text/plain
@@ -115,6 +139,10 @@ export default async function SpaceViewPage({
             initialLiked={liked}
             size="md"
           />
+          {!isOwner && (
+            <StarButton spaceId={space.id} initialSaved={saved} size="md" />
+          )}
+          <ShareButton url={`/space/${space.id}`} title={space.title} size="md" />
           {space.profiles && (
             <Link
               href={`/profile/${space.profiles.username}`}

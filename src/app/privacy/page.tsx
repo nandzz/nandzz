@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Nandzz",
-  description: "Privacy policy for the Nandzz platform.",
+  title: "Privacy Policy — nandzz",
+  description: "Privacy policy for the nandzz platform.",
 };
 
 export default function PrivacyPage() {
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
           <ul className="mt-2 list-disc pl-6 space-y-1">
             <li>With service providers who assist in operating the Platform (e.g., hosting, analytics)</li>
             <li>When required by law or legal process</li>
-            <li>To protect the rights, safety, or property of Nandzz and its users</li>
+            <li>To protect the rights, safety, or property of nandzz and its users</li>
             <li>With your consent</li>
           </ul>
         </section>

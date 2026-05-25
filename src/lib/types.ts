@@ -45,3 +45,31 @@ export type SpaceLike = {
 export type SpaceWithProfile = Space & {
   profiles: Pick<Profile, "username" | "display_name" | "avatar_url">;
 };
+
+export type Collection = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  is_default: boolean;
+  created_at: string;
+};
+
+export type CollectionWithCount = Collection & {
+  collection_spaces: { id: string }[];
+};
+
+export type CollectionWithSpaces = Collection & {
+  collection_spaces: {
+    space_id: string;
+    spaces: Space;
+  }[];
+};
+
+export type CollectionSpace = {
+  id: string;
+  collection_id: string;
+  space_id: string;
+  created_at: string;
+};

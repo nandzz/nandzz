@@ -1,32 +1,39 @@
--- Nandzz MVP Schema
+-- nandzz MVP Schema
 -- Safe to re-run — all statements are idempotent
 
 -- 1. Create profiles table
 create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
-  username text unique not null,
-  display_name text,
-  tagline text,
-  bio text,
-  avatar_url text,
-  website_url text,
-  social_links jsonb default '{}',
-  created_at timestamptz default now()
+  id            uuid references auth.users on delete cascade primary key,
+  username      text unique not null,
+  display_name  text,
+  tagline       text,
+  bio           text,
+  avatar_url    text,
+  website_url   text,
+  social_links  jsonb default '{}',
+  created_at    timestamptz default now()
 );
+
+-- Migrations for existing databases
+alter table public.profiles add column if not exists social_links jsonb default '{}';
 
 -- 2. Create spaces table
 create table if not exists public.spaces (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade not null,
-  title text not null,
-  description text,
-  type text not null default 'url' check (type in ('url', 'html')),
-  url text,
-  html_url text,
+  id                uuid default gen_random_uuid() primary key,
+  user_id           uuid references public.profiles(id) on delete cascade not null,
+  title             text not null,
+  description       text,
+  type              text not null default 'url' check (type in ('url', 'html')),
+  url               text,
+  html_url          text,
   preview_image_url text,
-  is_public boolean default true,
-  created_at timestamptz default now()
+  is_public         boolean default true,
+  likes_count       integer default 0,
+  created_at        timestamptz default now()
 );
+
+-- Migrations for existing databases
+alter table public.spaces add column if not exists likes_count integer default 0;
 
 -- 3. Enable RLS
 alter table public.profiles enable row level security;
@@ -156,13 +163,7 @@ create policy "Users can delete space HTML"
   on storage.objects for delete
   using (bucket_id = 'space-html' and (storage.foldername(name))[1] = auth.uid()::text);
 
--- 8. Social links column (for existing databases)
-alter table public.profiles add column if not exists social_links jsonb default '{}';
-
--- 9. Likes system
-
--- Add likes count to spaces
-alter table public.spaces add column if not exists likes_count integer default 0;
+-- 8. Likes system
 
 -- Create likes table
 create table if not exists public.space_likes (
@@ -208,3 +209,87 @@ drop trigger if exists on_like_change on public.space_likes;
 create trigger on_like_change
   after insert or delete on public.space_likes
   for each row execute procedure public.update_likes_count();
+
+-- 9. Collections
+
+create table if not exists public.collections (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  description text,
+  is_public boolean default true,
+  is_default boolean default false,
+  created_at timestamptz default now()
+);
+
+-- Add is_default column for existing databases
+alter table public.collections add column if not exists is_default boolean default false;
+
+create table if not exists public.collection_spaces (
+  id uuid default gen_random_uuid() primary key,
+  collection_id uuid references public.collections(id) on delete cascade not null,
+  space_id uuid references public.spaces(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique(collection_id, space_id)
+);
+
+alter table public.collections enable row level security;
+alter table public.collection_spaces enable row level security;
+
+-- Collections RLS
+drop policy if exists "Public collections are viewable by everyone" on public.collections;
+create policy "Public collections are viewable by everyone"
+  on public.collections for select
+  using (is_public = true);
+
+drop policy if exists "Users can view their own collections" on public.collections;
+create policy "Users can view their own collections"
+  on public.collections for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can create their own collections" on public.collections;
+create policy "Users can create their own collections"
+  on public.collections for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own collections" on public.collections;
+create policy "Users can update their own collections"
+  on public.collections for update
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own collections" on public.collections;
+create policy "Users can delete their own collections"
+  on public.collections for delete
+  using (auth.uid() = user_id);
+
+-- Collection spaces RLS
+drop policy if exists "Collection spaces are viewable if collection is accessible" on public.collection_spaces;
+create policy "Collection spaces are viewable if collection is accessible"
+  on public.collection_spaces for select
+  using (
+    exists (
+      select 1 from public.collections c
+      where c.id = collection_id
+        and (c.is_public = true or c.user_id = auth.uid())
+    )
+  );
+
+drop policy if exists "Users can add spaces to their own collections" on public.collection_spaces;
+create policy "Users can add spaces to their own collections"
+  on public.collection_spaces for insert
+  with check (
+    exists (
+      select 1 from public.collections c
+      where c.id = collection_id and c.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Users can remove spaces from their own collections" on public.collection_spaces;
+create policy "Users can remove spaces from their own collections"
+  on public.collection_spaces for delete
+  using (
+    exists (
+      select 1 from public.collections c
+      where c.id = collection_id and c.user_id = auth.uid()
+    )
+  );

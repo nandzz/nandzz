@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nandzz — Save & Share Web Apps",
+  title: "nandzz — Save & Share Web Apps",
   description: "A platform for saving and sharing your favorite web apps with the world.",
 };
 

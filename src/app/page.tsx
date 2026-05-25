@@ -16,14 +16,33 @@ export default async function HomePage() {
 
   const { data: { user } } = await supabase.auth.getUser();
   let likedSpaceIds: string[] = [];
+  let savedSpaceIds: string[] = [];
+
   if (user && spaces) {
     const spaceIds = spaces.map(s => s.id);
-    const { data: likes } = await supabase
-      .from("space_likes")
-      .select("space_id")
-      .eq("user_id", user.id)
-      .in("space_id", spaceIds);
+    const [{ data: likes }, { data: starredCol }] = await Promise.all([
+      supabase
+        .from("space_likes")
+        .select("space_id")
+        .eq("user_id", user.id)
+        .in("space_id", spaceIds),
+      supabase
+        .from("collections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_default", true)
+        .maybeSingle(),
+    ]);
     likedSpaceIds = likes?.map(l => l.space_id) || [];
+
+    if (starredCol) {
+      const { data: savedEntries } = await supabase
+        .from("collection_spaces")
+        .select("space_id")
+        .eq("collection_id", starredCol.id)
+        .in("space_id", spaceIds);
+      savedSpaceIds = savedEntries?.map(e => e.space_id) || [];
+    }
   }
 
   return (
@@ -54,7 +73,7 @@ export default async function HomePage() {
               </span>
             </h1>
             <p className="mt-8 text-lg leading-8 text-muted-foreground max-w-2xl mx-auto text-balance">
-              Built something cool with Claude or ChatGPT? Nandzz lets you
+              Built something cool with Claude or ChatGPT? nandzz lets you
               save, host, and share AI-generated web apps with the world.
               Upload HTML or link a URL — it&apos;s that simple.
             </p>
@@ -120,7 +139,7 @@ export default async function HomePage() {
               </Button>
             </Link>
           </div>
-          <SpaceGrid spaces={spaces} showAuthor likedSpaceIds={likedSpaceIds} />
+          <SpaceGrid spaces={spaces} showAuthor likedSpaceIds={likedSpaceIds} savedSpaceIds={savedSpaceIds} currentUserId={user?.id} />
         </section>
       )}
 
