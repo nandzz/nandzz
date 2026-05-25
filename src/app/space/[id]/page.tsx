@@ -154,7 +154,7 @@ export default async function SpaceViewPage({
           <iframe
             srcDoc={htmlContent}
             className="h-full w-full border-0"
-            sandbox="allow-scripts allow-forms allow-popups"
+            sandbox="allow-scripts allow-forms"
             title={space.title}
           />
         ) : space.type === "url" && space.url ? (
