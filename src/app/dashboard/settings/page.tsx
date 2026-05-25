@@ -1,0 +1,402 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Camera,
+  Briefcase,
+  AtSign,
+  Code,
+  Mail,
+  Video,
+  Settings,
+} from "lucide-react";
+import type { Profile, SocialLinks } from "@/lib/types";
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [displayName, setDisplayName] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [bio, setBio] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setProfile(data);
+        setDisplayName(data.display_name || "");
+        setTagline(data.tagline || "");
+        setBio(data.bio || "");
+        setWebsiteUrl(data.website_url || "");
+        setSocialLinks(data.social_links || {});
+      }
+    };
+    loadProfile();
+  }, [supabase, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess(false);
+    setLoading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let avatar_url = profile?.avatar_url || null;
+
+      if (avatarFile) {
+        const allowedTypes = ["image/png", "image/jpeg"];
+        if (!allowedTypes.includes(avatarFile.type)) {
+          setError("Only PNG and JPG files are allowed.");
+          return;
+        }
+        const fileExt = avatarFile.name.split(".").pop();
+        const filePath = `${user.id}/avatar.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(filePath, avatarFile, { upsert: true });
+
+        if (uploadError) {
+          setError("Failed to upload avatar: " + uploadError.message);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(filePath);
+        avatar_url = publicUrlData.publicUrl;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: displayName || null,
+          tagline: tagline || null,
+          bio: bio || null,
+          website_url: websiteUrl || null,
+          social_links: socialLinks,
+          avatar_url,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setSuccess(true);
+      router.refresh();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!profile) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+          <p className="text-muted-foreground text-sm">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-[calc(100vh-8rem)]">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-violet-100/30 blur-3xl dark:bg-violet-950/15" />
+      </div>
+
+      <div className="mx-auto flex max-w-7xl justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-2xl shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
+                <Settings className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Profile Settings</CardTitle>
+                <CardDescription>
+                  Manage your profile and social links
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Avatar */}
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
+                <Avatar className="h-16 w-16 border-2 border-violet-200 dark:border-violet-800">
+                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarFallback className="text-xl bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300">
+                    {profile.display_name?.[0]?.toUpperCase() ||
+                      profile.username[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-1.5 flex-1">
+                  <Label htmlFor="avatar" className="font-medium">
+                    Profile Picture
+                  </Label>
+                  <Input
+                    id="avatar"
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    onChange={(e) =>
+                      setAvatarFile(e.target.files?.[0] || null)
+                    }
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <Input
+                  value={profile.username}
+                  disabled
+                  className="bg-muted/50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Username cannot be changed
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  placeholder="Your display name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tagline">Tagline</Label>
+                <Input
+                  id="tagline"
+                  placeholder="e.g. Full-Stack Developer"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Tell the world about yourself..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                  className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="websiteUrl">Website URL</Label>
+                <Input
+                  id="websiteUrl"
+                  type="url"
+                  placeholder="https://yourwebsite.com"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+                />
+              </div>
+
+              {/* Social Links */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Social Links</Label>
+
+                <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50">
+                      <Camera className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center gap-0 flex-1 rounded-md border border-border/60 bg-background overflow-hidden focus-within:border-violet-500/50 transition-colors">
+                      <span className="px-3 text-xs text-muted-foreground bg-muted/50 h-9 flex items-center border-r border-border/60 whitespace-nowrap">instagram.com/</span>
+                      <Input
+                        placeholder="username"
+                        value={socialLinks.instagram || ""}
+                        onChange={(e) =>
+                          setSocialLinks({
+                            ...socialLinks,
+                            instagram: e.target.value,
+                          })
+                        }
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center gap-0 flex-1 rounded-md border border-border/60 bg-background overflow-hidden focus-within:border-violet-500/50 transition-colors">
+                      <span className="px-3 text-xs text-muted-foreground bg-muted/50 h-9 flex items-center border-r border-border/60 whitespace-nowrap">linkedin.com/in/</span>
+                      <Input
+                        placeholder="username"
+                        value={socialLinks.linkedin || ""}
+                        onChange={(e) =>
+                          setSocialLinks({
+                            ...socialLinks,
+                            linkedin: e.target.value,
+                          })
+                        }
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50">
+                      <AtSign className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center gap-0 flex-1 rounded-md border border-border/60 bg-background overflow-hidden focus-within:border-violet-500/50 transition-colors">
+                      <span className="px-3 text-xs text-muted-foreground bg-muted/50 h-9 flex items-center border-r border-border/60 whitespace-nowrap">x.com/</span>
+                      <Input
+                        placeholder="username"
+                        value={socialLinks.twitter || ""}
+                        onChange={(e) =>
+                          setSocialLinks({
+                            ...socialLinks,
+                            twitter: e.target.value,
+                          })
+                        }
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50">
+                      <Code className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center gap-0 flex-1 rounded-md border border-border/60 bg-background overflow-hidden focus-within:border-violet-500/50 transition-colors">
+                      <span className="px-3 text-xs text-muted-foreground bg-muted/50 h-9 flex items-center border-r border-border/60 whitespace-nowrap">github.com/</span>
+                      <Input
+                        placeholder="username"
+                        value={socialLinks.github || ""}
+                        onChange={(e) =>
+                          setSocialLinks({
+                            ...socialLinks,
+                            github: e.target.value,
+                          })
+                        }
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={socialLinks.email || ""}
+                      onChange={(e) =>
+                        setSocialLinks({
+                          ...socialLinks,
+                          email: e.target.value,
+                        })
+                      }
+                      className="bg-background border-border/60 focus:border-violet-500/50 transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background border border-border/50">
+                      <Video className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex items-center gap-0 flex-1 rounded-md border border-border/60 bg-background overflow-hidden focus-within:border-violet-500/50 transition-colors">
+                      <span className="px-3 text-xs text-muted-foreground bg-muted/50 h-9 flex items-center border-r border-border/60 whitespace-nowrap">youtube.com/@</span>
+                      <Input
+                        placeholder="channel"
+                        value={socialLinks.youtube || ""}
+                        onChange={(e) =>
+                          setSocialLinks({
+                            ...socialLinks,
+                            youtube: e.target.value,
+                          })
+                        }
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+              {success && (
+                <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2">
+                  <p className="text-sm text-green-700 dark:text-green-400">
+                    Profile updated successfully!
+                  </p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30"
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,522 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Code, Globe, Rocket } from "lucide-react";
+import type { Space, SpaceType } from "@/lib/types";
+
+/** Render HTML in a hidden iframe and capture a screenshot using html2canvas */
+async function captureHtmlScreenshot(
+  htmlContent: string
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-9999px";
+    iframe.style.top = "0";
+    iframe.style.width = "1024px";
+    iframe.style.height = "768px";
+    iframe.style.border = "none";
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = async () => {
+      try {
+        const html2canvas = (await import("html2canvas")).default;
+        const body = iframe.contentDocument?.body;
+        if (!body) {
+          document.body.removeChild(iframe);
+          resolve(null);
+          return;
+        }
+        const canvas = await html2canvas(body, {
+          width: 1024,
+          height: 768,
+          windowWidth: 1024,
+          windowHeight: 768,
+          useCORS: true,
+        });
+        canvas.toBlob(
+          (blob) => {
+            document.body.removeChild(iframe);
+            resolve(blob);
+          },
+          "image/png",
+          0.8
+        );
+      } catch {
+        document.body.removeChild(iframe);
+        resolve(null);
+      }
+    };
+
+    document.body.appendChild(iframe);
+  });
+}
+
+interface SpaceFormProps {
+  space?: Space;
+}
+
+export function SpaceForm({ space }: SpaceFormProps) {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const isEditing = !!space;
+
+  const [spaceType, setSpaceType] = useState<SpaceType>(
+    space?.type || "html"
+  );
+  const [title, setTitle] = useState(space?.title || "");
+  const [description, setDescription] = useState(space?.description || "");
+  const [url, setUrl] = useState(space?.url || "");
+  const [htmlContent, setHtmlContent] = useState("");
+  const [previewImage, setPreviewImage] = useState<File | null>(null);
+  const [isPublic, setIsPublic] = useState(space?.is_public ?? true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const MAX_HTML_SIZE = 5 * 1024 * 1024; // 5 MB
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  const handleHtmlFileUpload = (file: File) => {
+    if (file.size > MAX_HTML_SIZE) {
+      setError("HTML file must be under 5 MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setHtmlContent(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError("You must be logged in");
+        return;
+      }
+
+      if (spaceType === "url" && !url) {
+        setError("URL is required for URL spaces");
+        setLoading(false);
+        return;
+      }
+
+      // Auto-prepend https:// if no protocol is provided
+      let normalizedUrl = url.trim();
+      if (
+        spaceType === "url" &&
+        normalizedUrl &&
+        !/^https?:\/\//i.test(normalizedUrl)
+      ) {
+        normalizedUrl = `https://${normalizedUrl}`;
+      }
+
+      // Block javascript: and data: URL schemes
+      if (
+        spaceType === "url" &&
+        /^(javascript|data|vbscript):/i.test(normalizedUrl)
+      ) {
+        setError("Invalid URL scheme. Only http and https URLs are allowed.");
+        setLoading(false);
+        return;
+      }
+
+      if (spaceType === "html" && !htmlContent && !space?.html_url) {
+        setError("HTML content is required. Upload a file or paste HTML.");
+        setLoading(false);
+        return;
+      }
+
+      let preview_image_url = space?.preview_image_url || null;
+      let html_url = space?.html_url || null;
+
+      // Validate preview image size
+      if (previewImage && previewImage.size > MAX_IMAGE_SIZE) {
+        setError("Preview image must be under 5 MB");
+        setLoading(false);
+        return;
+      }
+
+      // Upload preview image if provided
+      if (previewImage) {
+        const fileExt = previewImage.name.split(".").pop();
+        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("space-previews")
+          .upload(filePath, previewImage);
+
+        if (uploadError) {
+          setError("Failed to upload image: " + uploadError.message);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("space-previews")
+          .getPublicUrl(filePath);
+        preview_image_url = publicUrlData.publicUrl;
+      }
+
+      // Upload HTML content to storage bucket
+      if (spaceType === "html" && htmlContent) {
+        const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+        const filePath = `${user.id}/${Date.now()}.html`;
+        const { error: uploadError } = await supabase.storage
+          .from("space-html")
+          .upload(filePath, htmlBlob, {
+            contentType: "text/html",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          setError("Failed to upload HTML: " + uploadError.message);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("space-html")
+          .getPublicUrl(filePath);
+        html_url = publicUrlData.publicUrl;
+
+        // Auto-generate screenshot if no manual preview image was provided
+        if (!previewImage && !preview_image_url) {
+          const screenshotBlob = await captureHtmlScreenshot(htmlContent);
+          if (screenshotBlob) {
+            const screenshotPath = `${user.id}/${Date.now()}-auto.png`;
+            const { error: ssError } = await supabase.storage
+              .from("space-previews")
+              .upload(screenshotPath, screenshotBlob, {
+                contentType: "image/png",
+              });
+            if (!ssError) {
+              const { data: ssUrl } = supabase.storage
+                .from("space-previews")
+                .getPublicUrl(screenshotPath);
+              preview_image_url = ssUrl.publicUrl;
+            }
+          }
+        }
+      }
+
+      const spaceData = {
+        title,
+        description: description || null,
+        type: spaceType,
+        url: spaceType === "url" ? normalizedUrl : null,
+        html_url: spaceType === "html" ? html_url : null,
+        preview_image_url,
+        is_public: isPublic,
+        user_id: user.id,
+      };
+
+      if (isEditing && space) {
+        const { error } = await supabase
+          .from("spaces")
+          .update(spaceData)
+          .eq("id", space.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("spaces").insert(spaceData);
+        if (error) throw error;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: unknown) {
+      const supaErr = err as {
+        message?: string;
+        details?: string;
+        hint?: string;
+        code?: string;
+      };
+      const message =
+        supaErr?.message ||
+        (err instanceof Error ? err.message : "Something went wrong");
+      const details = supaErr?.details || supaErr?.hint || "";
+      setError(details ? `${message} — ${details}` : message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-2xl shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
+            <Rocket className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          </div>
+          <div>
+            <CardTitle className="text-xl">
+              {isEditing ? "Edit Space" : "Create a New Space"}
+            </CardTitle>
+            <CardDescription>
+              Save a website URL or upload HTML generated by AI tools like
+              Claude or ChatGPT.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Space Type Toggle */}
+          <div className="space-y-2">
+            <Label>Space Type</Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSpaceType("html")}
+                className={`flex-1 rounded-xl border-2 px-4 py-4 text-left transition-all ${
+                  spaceType === "html"
+                    ? "border-violet-600 bg-violet-50 dark:bg-violet-950/50 shadow-sm shadow-violet-600/10"
+                    : "border-border/60 hover:border-violet-500/30 hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Code
+                    className={`h-4 w-4 ${
+                      spaceType === "html"
+                        ? "text-violet-600 dark:text-violet-400"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold text-sm ${
+                      spaceType === "html"
+                        ? "text-violet-700 dark:text-violet-300"
+                        : ""
+                    }`}
+                  >
+                    HTML Upload
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Paste or upload HTML from AI tools
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpaceType("url")}
+                className={`flex-1 rounded-xl border-2 px-4 py-4 text-left transition-all ${
+                  spaceType === "url"
+                    ? "border-violet-600 bg-violet-50 dark:bg-violet-950/50 shadow-sm shadow-violet-600/10"
+                    : "border-border/60 hover:border-violet-500/30 hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Globe
+                    className={`h-4 w-4 ${
+                      spaceType === "url"
+                        ? "text-violet-600 dark:text-violet-400"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold text-sm ${
+                      spaceType === "url"
+                        ? "text-violet-700 dark:text-violet-300"
+                        : ""
+                    }`}
+                  >
+                    Website URL
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Link to an external website
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="title">Title *</Label>
+            <Input
+              id="title"
+              placeholder="My Awesome App"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+            />
+          </div>
+
+          {/* URL input */}
+          {spaceType === "url" && (
+            <div className="space-y-2">
+              <Label htmlFor="url">Website URL *</Label>
+              <Input
+                id="url"
+                type="text"
+                placeholder="example.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+                className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+              />
+              <p className="text-xs text-muted-foreground">
+                No need to type https:// — we&apos;ll add it automatically
+              </p>
+            </div>
+          )}
+
+          {/* HTML input */}
+          {spaceType === "html" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="htmlFile">Upload HTML File</Label>
+                <Input
+                  id="htmlFile"
+                  type="file"
+                  accept=".html,.htm"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleHtmlFileUpload(file);
+                  }}
+                  className="bg-muted/50 border-border/60"
+                />
+              </div>
+
+              <div className="relative flex items-center">
+                <div className="flex-1 border-t border-border/50" />
+                <span className="px-3 text-xs text-muted-foreground">
+                  or paste HTML directly
+                </span>
+                <div className="flex-1 border-t border-border/50" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="htmlContent">HTML Content *</Label>
+                <Textarea
+                  id="htmlContent"
+                  placeholder="<!DOCTYPE html>&#10;<html>&#10;  <head>...</head>&#10;  <body>...</body>&#10;</html>"
+                  value={htmlContent}
+                  onChange={(e) => setHtmlContent(e.target.value)}
+                  rows={8}
+                  className="font-mono text-xs bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+                />
+                {htmlContent && (
+                  <p className="text-xs text-muted-foreground">
+                    {htmlContent.length.toLocaleString()} characters loaded
+                  </p>
+                )}
+              </div>
+
+              {/* Live Preview */}
+              {htmlContent && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="rounded-xl border border-border/60 overflow-hidden bg-white shadow-sm">
+                    <iframe
+                      srcDoc={htmlContent}
+                      className="w-full h-64 border-0"
+                      sandbox="allow-scripts"
+                      title="HTML Preview"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Show existing HTML link when editing */}
+              {isEditing && space?.html_url && !htmlContent && (
+                <p className="text-xs text-muted-foreground">
+                  Current HTML file will be kept if no new content is provided.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="A short description of what this app does..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="preview">Preview Image (optional)</Label>
+            <Input
+              id="preview"
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setPreviewImage(e.target.files?.[0] || null)
+              }
+              className="bg-muted/50 border-border/60"
+            />
+            <p className="text-xs text-muted-foreground">
+              {spaceType === "html"
+                ? "Optional — a live iframe preview will be shown if no image is provided"
+                : "Optional — an iframe preview of the URL will be shown if no image is provided"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/50">
+            <input
+              type="checkbox"
+              id="isPublic"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-violet-600"
+            />
+            <Label htmlFor="isPublic" className="font-normal cursor-pointer">
+              Make this Space public
+            </Label>
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              type="submit"
+              className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30"
+              disabled={loading}
+            >
+              {loading
+                ? "Saving..."
+                : isEditing
+                ? "Save Changes"
+                : "Create Space"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              className="border-border/60 hover:border-violet-500/50 transition-colors"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
