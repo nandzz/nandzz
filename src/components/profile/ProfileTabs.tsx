@@ -50,20 +50,20 @@ export function ProfileTabs({
   return (
     <div className="w-full">
       {/* Tab bar */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b border-border/50 scrollbar-hide">
+      <div className="flex items-center gap-0 overflow-x-auto border-b border-border/50 scrollbar-hide">
         {/* All tab */}
         <button
           onClick={() => setActiveTab("all")}
-          className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors flex-shrink-0 ${
+          className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors flex-shrink-0 border-b-2 -mb-px ${
             activeTab === "all"
-              ? "text-foreground bg-accent"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              ? "border-violet-600 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           <LayoutGrid className="h-3.5 w-3.5" />
           All
-          <span className="ml-0.5 text-xs text-muted-foreground">
-            ({spaces.length})
+          <span className="ml-0.5 text-xs text-muted-foreground tabular-nums">
+            {spaces.length}
           </span>
         </button>
 
@@ -75,10 +75,10 @@ export function ProfileTabs({
             <button
               key={col.id}
               onClick={() => setActiveTab(col.id)}
-              className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors flex-shrink-0 border-b-2 -mb-px ${
                 isActive
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  ? "border-violet-600 text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               {col.is_default
@@ -86,8 +86,8 @@ export function ProfileTabs({
                 : <FolderOpen className="h-3.5 w-3.5" />
               }
               {col.name}
-              <span className="ml-0.5 text-xs text-muted-foreground">
-                ({count})
+              <span className="ml-0.5 text-xs text-muted-foreground tabular-nums">
+                {count}
               </span>
             </button>
           );

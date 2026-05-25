@@ -188,6 +188,11 @@ export default function SettingsPage() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      if (file.size > 1.5 * 1024 * 1024) {
+                        setError("Profile picture must be under 1.5 MB");
+                        e.target.value = "";
+                        return;
+                      }
                       const reader = new FileReader();
                       reader.onload = () => setCropImageSrc(reader.result as string);
                       reader.readAsDataURL(file);

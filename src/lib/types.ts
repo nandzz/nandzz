@@ -14,6 +14,8 @@ export type Profile = {
   tagline: string | null;
   bio: string | null;
   avatar_url: string | null;
+  background_url: string | null;
+  background_position: string | null;
   website_url: string | null;
   social_links: SocialLinks | null;
   created_at: string;

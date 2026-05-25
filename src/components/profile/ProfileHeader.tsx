@@ -2,10 +2,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Camera,
   Briefcase,
-  AtSign,
-  Code,
+  X,
+  GitBranch,
   Mail,
-  Video,
+  Play,
   Globe,
 } from "lucide-react";
 import type { Profile } from "@/lib/types";
@@ -39,42 +39,49 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
       key: "website",
       value: profile.website_url,
       icon: Globe,
+      label: "Website",
       hoverClass: "hover:text-violet-600 dark:hover:text-violet-400",
     },
     {
       key: "instagram",
       value: socialLinks.instagram,
       icon: Camera,
+      label: "Instagram",
       hoverClass: "hover:text-pink-500",
     },
     {
       key: "linkedin",
       value: socialLinks.linkedin,
       icon: Briefcase,
+      label: "LinkedIn",
       hoverClass: "hover:text-blue-600",
     },
     {
       key: "twitter",
       value: socialLinks.twitter,
-      icon: AtSign,
+      icon: X,
+      label: "X (Twitter)",
       hoverClass: "hover:text-foreground",
     },
     {
       key: "github",
       value: socialLinks.github,
-      icon: Code,
+      icon: GitBranch,
+      label: "GitHub",
       hoverClass: "hover:text-foreground",
     },
     {
       key: "email",
       value: socialLinks.email,
       icon: Mail,
+      label: "Email",
       hoverClass: "hover:text-foreground",
     },
     {
       key: "youtube",
       value: socialLinks.youtube,
-      icon: Video,
+      icon: Play,
+      label: "YouTube",
       hoverClass: "hover:text-red-600",
     },
   ].filter((link) => link.value && link.value.trim() !== "");
@@ -113,6 +120,7 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
               <a
                 key={link.key}
                 href={href}
+                aria-label={link.label}
                 target={link.key === "email" ? undefined : "_blank"}
                 rel={
                   link.key === "email" ? undefined : "noopener noreferrer"

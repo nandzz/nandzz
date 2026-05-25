@@ -3,19 +3,23 @@
 
 -- 1. Create profiles table
 create table if not exists public.profiles (
-  id            uuid references auth.users on delete cascade primary key,
-  username      text unique not null,
-  display_name  text,
-  tagline       text,
-  bio           text,
-  avatar_url    text,
-  website_url   text,
-  social_links  jsonb default '{}',
-  created_at    timestamptz default now()
+  id             uuid references auth.users on delete cascade primary key,
+  username       text unique not null,
+  display_name   text,
+  tagline        text,
+  bio            text,
+  avatar_url          text,
+  background_url      text,
+  background_position text default '50% 50%',
+  website_url         text,
+  social_links   jsonb default '{}',
+  created_at     timestamptz default now()
 );
 
 -- Migrations for existing databases
 alter table public.profiles add column if not exists social_links jsonb default '{}';
+alter table public.profiles add column if not exists background_url text;
+alter table public.profiles add column if not exists background_position text default '50% 50%';
 
 -- 2. Create spaces table
 create table if not exists public.spaces (
@@ -104,6 +108,9 @@ create trigger on_auth_user_created
 insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public) values ('space-previews', 'space-previews', true) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public) values ('space-html', 'space-html', true) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('profile-backgrounds', 'profile-backgrounds', true, 1572864, array['image/jpeg','image/png','image/webp'])
+  on conflict (id) do nothing;
 
 -- Storage policies for avatars
 drop policy if exists "Avatar images are publicly accessible" on storage.objects;
@@ -351,3 +358,24 @@ create policy "Users can remove spaces from their own collections"
       where c.id = collection_id and c.user_id = auth.uid()
     )
   );
+
+-- Storage policies for profile backgrounds
+drop policy if exists "Profile backgrounds are publicly accessible" on storage.objects;
+create policy "Profile backgrounds are publicly accessible"
+  on storage.objects for select
+  using (bucket_id = 'profile-backgrounds');
+
+drop policy if exists "Users can upload their own background" on storage.objects;
+create policy "Users can upload their own background"
+  on storage.objects for insert
+  with check (bucket_id = 'profile-backgrounds' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update their own background" on storage.objects;
+create policy "Users can update their own background"
+  on storage.objects for update
+  using (bucket_id = 'profile-backgrounds' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete their own background" on storage.objects;
+create policy "Users can delete their own background"
+  on storage.objects for delete
+  using (bucket_id = 'profile-backgrounds' and (storage.foldername(name))[1] = auth.uid()::text);

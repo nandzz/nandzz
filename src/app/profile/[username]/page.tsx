@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
+import { ProfileBackground } from "@/components/profile/ProfileBackground";
 
 export async function generateMetadata({
   params,
@@ -107,12 +108,16 @@ export default async function ProfilePage({
     }
   }
 
+  const isOwner = user?.id === profile.id;
+
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
-      {/* Background decoration */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[400px] w-[600px] rounded-full bg-violet-100/40 blur-3xl dark:bg-violet-950/20" />
-      </div>
+      <ProfileBackground
+        backgroundUrl={profile.background_url ?? null}
+        backgroundPosition={profile.background_position ?? null}
+        isOwner={isOwner}
+        profileId={profile.id}
+      />
 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <ProfileHeader profile={profile} />

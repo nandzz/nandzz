@@ -105,12 +105,12 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   }, [supabase]);
 
 
-  const MAX_HTML_SIZE = 5 * 1024 * 1024; // 5 MB
-  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+  const MAX_HTML_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
+  const MAX_IMAGE_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
 
   const handleHtmlFileUpload = (file: File) => {
     if (file.size > MAX_HTML_SIZE) {
-      setError("HTML file must be under 5 MB");
+      setError("HTML file must be under 1.5 MB");
       return;
     }
     setHtmlFileName(file.name);
@@ -173,7 +173,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
 
       // Validate preview image size
       if (previewImage && previewImage.size > MAX_IMAGE_SIZE) {
-        setError("Preview image must be under 5 MB");
+        setError("Preview image must be under 1.5 MB");
         setLoading(false);
         return;
       }
@@ -481,7 +481,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
                     Drop your HTML file here
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    or <span className="text-violet-600 dark:text-violet-400 underline underline-offset-2">browse</span> — .html / .htm, up to 5 MB
+                    or <span className="text-violet-600 dark:text-violet-400 underline underline-offset-2">browse</span> — .html / .htm, up to 1.5 MB
                   </p>
                 </button>
               )}
