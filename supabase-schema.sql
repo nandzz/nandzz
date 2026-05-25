@@ -27,7 +27,6 @@ create table if not exists public.spaces (
   user_id           uuid references public.profiles(id) on delete cascade not null,
   title             text not null,
   description       text,
-  type              text not null default 'url' check (type in ('url', 'html')),
   url               text,
   html_url          text,
   preview_image_url text,
@@ -38,6 +37,8 @@ create table if not exists public.spaces (
 
 -- Migrations for existing databases
 alter table public.spaces add column if not exists likes_count integer default 0;
+alter table public.spaces drop column if exists type;
+alter table public.spaces add column if not exists pdf_url text;
 
 -- 3. Enable RLS
 alter table public.profiles enable row level security;
@@ -109,6 +110,9 @@ insert into storage.buckets (id, name, public) values ('avatars', 'avatars', tru
 insert into storage.buckets (id, name, public) values ('space-previews', 'space-previews', true) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public) values ('space-html', 'space-html', true) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('space-pdfs', 'space-pdfs', true, 10485760, array['application/pdf'])
+  on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   values ('profile-backgrounds', 'profile-backgrounds', true, 1572864, array['image/jpeg','image/png','image/webp'])
   on conflict (id) do nothing;
 
@@ -170,6 +174,27 @@ create policy "Users can delete space HTML"
   on storage.objects for delete
   using (bucket_id = 'space-html' and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- Storage policies for space PDF files
+drop policy if exists "Space PDF files are publicly accessible" on storage.objects;
+create policy "Space PDF files are publicly accessible"
+  on storage.objects for select
+  using (bucket_id = 'space-pdfs');
+
+drop policy if exists "Users can upload space PDFs" on storage.objects;
+create policy "Users can upload space PDFs"
+  on storage.objects for insert
+  with check (bucket_id = 'space-pdfs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update space PDFs" on storage.objects;
+create policy "Users can update space PDFs"
+  on storage.objects for update
+  using (bucket_id = 'space-pdfs' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete space PDFs" on storage.objects;
+create policy "Users can delete space PDFs"
+  on storage.objects for delete
+  using (bucket_id = 'space-pdfs' and (storage.foldername(name))[1] = auth.uid()::text);
+
 -- 8. Tags system
 
 create table if not exists public.tags (
@@ -181,12 +206,14 @@ create table if not exists public.tags (
 
 -- Seed tags (idempotent)
 insert into public.tags (name, slug) values
-  ('Website',     'website'),
-  ('Custom Page', 'custom-page'),
-  ('Tool',        'tool'),
-  ('Service',     'service'),
-  ('Util',        'util')
+  ('Tool',    'tool'),
+  ('Service', 'service'),
+  ('Util',    'util'),
+  ('PDF',     'pdf')
 on conflict (slug) do nothing;
+
+-- Remove deprecated type-based tags
+delete from public.tags where slug in ('website', 'custom-page');
 
 create table if not exists public.space_tags (
   space_id uuid references public.spaces(id) on delete cascade not null,
@@ -264,7 +291,8 @@ begin
     update public.spaces set likes_count = likes_count + 1 where id = NEW.space_id;
     return NEW;
   elsif TG_OP = 'DELETE' then
-    update public.spaces set likes_count = likes_count - 1 where id = OLD.space_id;
+    -- greatest(0, ...) prevents likes_count from going negative under concurrent deletes
+    update public.spaces set likes_count = greatest(0, likes_count - 1) where id = OLD.space_id;
     return OLD;
   end if;
 end;
@@ -379,3 +407,29 @@ drop policy if exists "Users can delete their own background" on storage.objects
 create policy "Users can delete their own background"
   on storage.objects for delete
   using (bucket_id = 'profile-backgrounds' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============================================================
+-- Performance indexes (critical for scale)
+-- Run these once; all are idempotent via CREATE INDEX IF NOT EXISTS
+-- ============================================================
+
+-- Explore page: public spaces ordered by recency
+create index if not exists idx_spaces_public_created
+  on public.spaces(created_at desc)
+  where is_public = true;
+
+-- Dashboard & profile page: spaces by owner
+create index if not exists idx_spaces_user_id
+  on public.spaces(user_id);
+
+-- Liked-spaces lookup per user
+create index if not exists idx_space_likes_user_id
+  on public.space_likes(user_id);
+
+-- Default-collection lookup (used on every authenticated page)
+create index if not exists idx_collections_user_default
+  on public.collections(user_id, is_default);
+
+-- Spaces inside a collection
+create index if not exists idx_collection_spaces_collection_id
+  on public.collection_spaces(collection_id);

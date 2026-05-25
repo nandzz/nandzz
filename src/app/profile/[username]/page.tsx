@@ -1,9 +1,22 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { ProfileBackground } from "@/components/profile/ProfileBackground";
+
+// React cache deduplicates this call within a single request,
+// so generateMetadata and ProfilePage share the same DB hit.
+const getProfile = cache(async (username: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("username", username)
+    .single();
+  return data;
+});
 
 export async function generateMetadata({
   params,
@@ -11,12 +24,7 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, username, tagline, avatar_url")
-    .eq("username", username)
-    .single();
+  const profile = await getProfile(username);
 
   if (!profile) {
     return { title: "Profile Not Found — nandzz" };
@@ -45,17 +53,14 @@ export default async function ProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const supabase = await createClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("username", username)
-    .single();
+  const profile = await getProfile(username);
 
   if (!profile) {
     notFound();
   }
+
+  const supabase = await createClient();
 
   const [
     { data: spaces },

@@ -13,17 +13,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { ExternalLink, Globe, FileCode2, FolderPlus, Pencil, Trash2, Bookmark } from "lucide-react";
+import { ExternalLink, FolderPlus, Pencil, Trash2, Bookmark, Globe, Lock } from "lucide-react";
 import { LikeButton } from "./LikeButton";
 import { ShareButton } from "./ShareButton";
 import { StarButton } from "./StarButton";
 import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
-import type { Space, SpaceType, Tag } from "@/lib/types";
-
-const typeLabels: Record<SpaceType, { label: string; icon: React.ReactNode }> = {
-  url: { label: "Website", icon: <Globe className="size-2.5" /> },
-  html: { label: "Custom Page", icon: <FileCode2 className="size-2.5" /> },
-};
+import type { Space, Tag } from "@/lib/types";
 
 interface SpaceCardProps {
   space: Space;
@@ -106,6 +101,22 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
               {space.title}
             </span>
           </div>
+          {/* Visibility badge — owner only */}
+          {editable && (
+            <div className="absolute top-1.5 right-1.5 z-10">
+              {space.is_public ? (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-black/55 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-medium text-white">
+                  <Globe className="h-2 w-2" />
+                  Public
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-black/55 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-medium text-white">
+                  <Lock className="h-2 w-2" />
+                  Private
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="px-2 pt-1.5 pb-2.5 h-[52px]">
           <p className="text-[10px] font-medium truncate text-foreground/80 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
@@ -126,13 +137,25 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
           <SpacePreview space={space} />
           {/* Hover gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {/* Visibility badge — owner only */}
+          {editable && (
+            <div className="absolute top-2 right-2 z-10">
+              {space.is_public ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
+                  <Globe className="h-2.5 w-2.5" />
+                  Public
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
+                  <Lock className="h-2.5 w-2.5" />
+                  Private
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <CardContent className="p-4 flex flex-col">
           <div className="flex items-center flex-wrap gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100/80 dark:bg-violet-900/40 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:text-violet-300 tracking-wide">
-              {typeLabels[space.type].icon}
-              {typeLabels[space.type].label}
-            </span>
             {tags.map((tag) => (
               <span
                 key={tag.id}

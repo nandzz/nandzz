@@ -21,8 +21,6 @@ export type Profile = {
   created_at: string;
 };
 
-export type SpaceType = "url" | "html";
-
 export type Tag = {
   id: string;
   name: string;
@@ -35,9 +33,9 @@ export type Space = {
   user_id: string;
   title: string;
   description: string | null;
-  type: SpaceType;
   url: string | null;
   html_url: string | null;
+  pdf_url: string | null;
   preview_image_url: string | null;
   is_public: boolean;
   likes_count: number;

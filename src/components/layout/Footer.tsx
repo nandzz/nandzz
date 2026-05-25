@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Code } from "lucide-react";
 
 export function Footer() {
   return (
@@ -61,20 +60,6 @@ export function Footer() {
               >
                 Cookie Policy
               </Link>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Connect
-              </span>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Code className="h-3.5 w-3.5" />
-                GitHub
-              </a>
             </div>
           </div>
         </div>

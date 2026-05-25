@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Layers, Plus, Rocket } from "lucide-react";
+import type { Space, Tag } from "@/lib/types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -16,36 +17,31 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, username")
-    .eq("id", user.id)
-    .single();
-
-  const { data: spaces } = await supabase
-    .from("spaces")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: profile }, { data: rawSpaces }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name, username")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("spaces")
+      .select("*, space_tags(tags(*))")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   const greeting = profile?.display_name || profile?.username || "there";
 
-  // Fetch tags for all spaces
-  let spaceTagsMap: Record<string, import("@/lib/types").Tag[]> = {};
-  if (spaces && spaces.length > 0) {
-    const spaceIds = spaces.map((s) => s.id);
-    const { data: spaceTags } = await supabase
-      .from("space_tags")
-      .select("space_id, tags(*)")
-      .in("space_id", spaceIds);
-    if (spaceTags) {
-      for (const row of spaceTags) {
-        const tag = row.tags as unknown as import("@/lib/types").Tag;
-        if (!spaceTagsMap[row.space_id]) spaceTagsMap[row.space_id] = [];
-        spaceTagsMap[row.space_id].push(tag);
-      }
+  // Build spaceTagsMap from embedded join — single query instead of two
+  const spaceTagsMap: Record<string, Tag[]> = {};
+  const spaces: Space[] = (rawSpaces ?? []).map((raw) => {
+    const embedded = (raw as unknown as { space_tags: { tags: Tag | null }[] }).space_tags;
+    if (embedded) {
+      spaceTagsMap[raw.id] = embedded.map((st) => st.tags).filter((t): t is Tag => t !== null);
     }
-  }
+    const { space_tags: _st, ...space } = raw as unknown as Space & { space_tags: unknown };
+    return space as Space;
+  });
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">

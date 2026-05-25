@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Camera,
@@ -22,9 +23,11 @@ import {
   Code,
   Mail,
   Video,
-  Settings,
+  User,
+  ShieldCheck,
 } from "lucide-react";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
+import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import type { Profile, SocialLinks } from "@/lib/types";
 
 export default function SettingsPage() {
@@ -146,19 +149,26 @@ export default function SettingsPage() {
       </div>
 
       <div className="mx-auto flex max-w-7xl justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-2xl shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
+        <div className="w-full max-w-2xl">
+          <Tabs defaultValue="profile" className="gap-6">
+            <TabsList className="w-full">
+              <TabsTrigger value="profile" className="flex-1 gap-2">
+                <User className="h-4 w-4" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex-1 gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                Security
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile">
+            <Card className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
           <CardHeader className="pb-4">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
-                <Settings className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Profile Settings</CardTitle>
-                <CardDescription>
-                  Manage your profile and social links
-                </CardDescription>
-              </div>
-            </div>
+            <CardTitle className="text-xl">Profile</CardTitle>
+            <CardDescription>
+              Manage your profile and social links
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -426,6 +436,21 @@ export default function SettingsPage() {
             </form>
           </CardContent>
         </Card>
+            </TabsContent>
+
+            <TabsContent value="security">
+              <Card className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl">Security</CardTitle>
+                  <CardDescription>Manage your password and account security</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChangePasswordForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

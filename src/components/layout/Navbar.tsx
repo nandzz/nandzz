@@ -3,21 +3,25 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useMemo } from "react";
+import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Menu, X } from "lucide-react";
+import { Moon, Sun, Menu, X, User, Settings, LogOut } from "lucide-react";
 import type { Profile } from "@/lib/types";
 
 export function Navbar() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -75,7 +79,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-0 group">
@@ -103,17 +107,19 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ThemeToggle />
-
           {user ? (
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/dashboard/create-space">
-                <Button
-                  size="sm"
-                  className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30"
-                >
-                  Create Space
-                </Button>
+              <Link
+                href="/dashboard"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                My Spaces
+              </Link>
+              <Link
+                href="/dashboard/collections"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                My Collections
               </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger className="rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer transition-transform hover:scale-105">
@@ -124,28 +130,78 @@ export function Navbar() {
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-                    My Spaces
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/dashboard/collections")}>
-                    My Collections
-                  </DropdownMenuItem>
-                  {profile?.username && (
+                <DropdownMenuContent align="end" className="w-56">
+                  {/* User info header */}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="font-normal px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarImage src={profile?.avatar_url || undefined} />
+                          <AvatarFallback className="bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 text-xs font-semibold">
+                            {profile?.display_name?.[0]?.toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium leading-none truncate">
+                            {profile?.display_name || profile?.username || "User"}
+                          </p>
+                          {profile?.username && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              @{profile.username}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Navigation */}
+                  <DropdownMenuGroup>
+                    {profile?.username && (
+                      <DropdownMenuItem
+                        onClick={() => router.push(`/profile/${profile.username}`)}
+                        className="gap-2"
+                      >
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        My Profile
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
-                      onClick={() =>
-                        router.push(`/profile/${profile.username}`)
-                      }
+                      onClick={() => router.push("/dashboard/settings")}
+                      className="gap-2"
                     >
-                      My Profile
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                      Settings
                     </DropdownMenuItem>
-                  )}
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Preferences */}
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="gap-2"
+                    >
+                      {theme === "dark" ? (
+                        <Sun className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Moon className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      {theme === "dark" ? "Switch to Light" : "Switch to Dark"}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Destructive */}
                   <DropdownMenuItem
-                    onClick={() => router.push("/dashboard/settings")}
+                    onClick={handleLogout}
+                    className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="h-4 w-4" />
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -188,7 +244,7 @@ export function Navbar() {
       {/* Mobile menu */}
       <div
         className={`md:hidden border-t bg-background/95 backdrop-blur-xl overflow-hidden transition-all duration-300 ease-in-out ${
-          mobileMenuOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="space-y-1 px-4 py-3">
@@ -208,25 +264,29 @@ export function Navbar() {
               Create
             </Link>
           )}
+          {user && (
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              My Spaces
+            </Link>
+          )}
+          {user && (
+            <Link
+              href="/dashboard/collections"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              My Collections
+            </Link>
+          )}
 
           <div className="border-t my-2" />
 
           {user ? (
             <>
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                My Spaces
-              </Link>
-              <Link
-                href="/dashboard/collections"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                My Collections
-              </Link>
               {profile?.username && (
                 <Link
                   href={`/profile/${profile.username}`}
@@ -243,6 +303,25 @@ export function Navbar() {
               >
                 Settings
               </Link>
+              <button
+                onClick={() => {
+                  setTheme(theme === "dark" ? "light" : "dark");
+                  setMobileMenuOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                {theme === "dark" ? (
+                  <>
+                    <Sun className="h-4 w-4" />
+                    Switch to Light
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-4 w-4" />
+                    Switch to Dark
+                  </>
+                )}
+              </button>
               <button
                 onClick={() => {
                   handleLogout();

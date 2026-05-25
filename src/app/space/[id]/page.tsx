@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -7,7 +8,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LikeButton } from "@/components/spaces/LikeButton";
 import { ShareButton } from "@/components/spaces/ShareButton";
 import { StarButton } from "@/components/spaces/StarButton";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
+import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
+import { BackButton } from "@/components/ui/BackButton";
+
+// React cache deduplicates this call within a single request,
+// so generateMetadata and SpaceViewPage share the same DB hit.
+const getSpace = cache(async (id: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("spaces")
+    .select("*, profiles(username, display_name, avatar_url)")
+    .eq("id", id)
+    .single();
+  return data;
+});
 
 export async function generateMetadata({
   params,
@@ -15,12 +31,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: space } = await supabase
-    .from("spaces")
-    .select("title, description, preview_image_url, profiles(display_name, username)")
-    .eq("id", id)
-    .single();
+  const space = await getSpace(id);
 
   if (!space) {
     return { title: "Space Not Found — nandzz" };
@@ -53,17 +64,15 @@ export default async function SpaceViewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { data: space } = await supabase
-    .from("spaces")
-    .select("*, profiles(username, display_name, avatar_url)")
-    .eq("id", id)
-    .single();
+  // getSpace is cached — reuses the same DB hit from generateMetadata
+  const space = await getSpace(id);
 
   if (!space) {
     notFound();
   }
+
+  const supabase = await createClient();
 
   // Check if current user has liked/saved this space
   const { data: { user } } = await supabase.auth.getUser();
@@ -103,7 +112,7 @@ export default async function SpaceViewPage({
   // For HTML spaces, fetch the actual HTML content so we can use srcDoc
   // This avoids content-type issues with Supabase Storage serving as text/plain
   let htmlContent: string | null = null;
-  if (space.type === "html" && space.html_url) {
+  if (space.html_url) {
     try {
       const res = await fetch(space.html_url);
       htmlContent = await res.text();
@@ -115,15 +124,9 @@ export default async function SpaceViewPage({
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b px-4 py-2.5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center justify-between border-b px-4 sm:px-6 lg:px-8 py-2.5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Back</span>
-          </Link>
+          <BackButton />
           <div className="h-4 w-px bg-border" />
           <h1 className="font-semibold truncate max-w-md">{space.title}</h1>
           {space.description && (
@@ -161,7 +164,7 @@ export default async function SpaceViewPage({
               </span>
             </Link>
           )}
-          {space.type === "url" && space.url && (
+          {space.url && !space.html_url && (
             <a href={space.url} target="_blank" rel="noopener noreferrer">
               <Button
                 size="sm"
@@ -173,19 +176,42 @@ export default async function SpaceViewPage({
               </Button>
             </a>
           )}
+          {space.pdf_url && (
+            <a href={space.pdf_url} target="_blank" rel="noopener noreferrer" download>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-border/60 hover:border-violet-500/50 transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Download PDF</span>
+              </Button>
+            </a>
+          )}
         </div>
       </div>
 
-      {/* Iframe */}
+      {/* Iframe / Editor */}
       <div className="flex-1 bg-muted/50">
-        {space.type === "html" && htmlContent ? (
-          <iframe
-            srcDoc={htmlContent}
-            className="h-full w-full border-0"
-            sandbox="allow-scripts allow-forms"
-            title={space.title}
-          />
-        ) : space.type === "url" && space.url ? (
+        {htmlContent ? (
+          isOwner ? (
+            <HtmlSpaceEditor
+              spaceId={space.id}
+              htmlUrl={space.html_url!}
+              initialHtml={htmlContent}
+              spaceTitle={space.title}
+            />
+          ) : (
+            <iframe
+              srcDoc={htmlContent}
+              className="h-full w-full border-0"
+              sandbox="allow-scripts allow-forms"
+              title={space.title}
+            />
+          )
+        ) : space.pdf_url ? (
+          <PdfViewerWrapper url={space.pdf_url} title={space.title} />
+        ) : space.url ? (
           <iframe
             src={space.url}
             className="h-full w-full border-0"

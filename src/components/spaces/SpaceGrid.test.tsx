@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SpaceGrid } from "./SpaceGrid";
-import type { Space } from "@/lib/types";
+import type { Space, Tag } from "@/lib/types";
 
 // Mock SpaceCard so SpaceGrid tests stay focused on filtering/layout logic
 vi.mock("./SpaceCard", () => ({
   SpaceCard: ({ space }: { space: Space }) => (
-    <div data-testid="space-card" data-space-id={space.id} data-space-type={space.type}>
+    <div data-testid="space-card" data-space-id={space.id}>
       {space.title}
     </div>
   ),
@@ -20,24 +20,34 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const makeSpace = (overrides: Partial<Space> & Pick<Space, "id" | "type">): Space => ({
-  title: `Space ${overrides.id}`,
+const makeSpace = (id: string, title: string): Space => ({
+  id,
+  title,
   description: null,
   user_id: "user-1",
   url: null,
-  html_content: null,
-  thumbnail_url: null,
+  html_url: null,
+  preview_image_url: null,
+  is_public: true,
   likes_count: 0,
   created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  ...overrides,
 });
 
-const urlSpace1 = makeSpace({ id: "1", type: "url", title: "URL Space 1" });
-const urlSpace2 = makeSpace({ id: "2", type: "url", title: "URL Space 2" });
-const htmlSpace1 = makeSpace({ id: "3", type: "html", title: "HTML Space 1" });
+const tagTool: Tag = { id: "t1", name: "Tool", slug: "tool", created_at: "" };
+const tagService: Tag = { id: "t2", name: "Service", slug: "service", created_at: "" };
 
-const allSpaces = [urlSpace1, urlSpace2, htmlSpace1];
+const space1 = makeSpace("1", "Space 1");
+const space2 = makeSpace("2", "Space 2");
+const space3 = makeSpace("3", "Space 3");
+
+const allSpaces = [space1, space2, space3];
+
+// space1 → Tool, space2 → Service, space3 → Tool+Service
+const spaceTagsMap = {
+  "1": [tagTool],
+  "2": [tagService],
+  "3": [tagTool, tagService],
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -46,7 +56,7 @@ beforeEach(() => {
 describe("SpaceGrid", () => {
   describe("rendering", () => {
     it("renders all spaces with no filter", () => {
-      render(<SpaceGrid spaces={allSpaces} />);
+      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
       expect(screen.getAllByTestId("space-card")).toHaveLength(3);
     });
 
@@ -64,70 +74,57 @@ describe("SpaceGrid", () => {
       render(<SpaceGrid spaces={allSpaces} />);
       expect(screen.queryByText("Create New Space")).not.toBeInTheDocument();
     });
+
+    it("shows the empty state when filtered list is empty", () => {
+      render(<SpaceGrid spaces={[]} />);
+      expect(screen.getByText(/no spaces match this filter/i)).toBeInTheDocument();
+    });
   });
 
-  describe("type filter", () => {
-    it("hides url/html filter buttons when that type has 0 spaces", () => {
-      render(<SpaceGrid spaces={[urlSpace1, urlSpace2]} />);
-      // Only url spaces — html filter button should not appear
-      expect(screen.queryByRole("button", { name: /custom page/i })).not.toBeInTheDocument();
+  describe("tag filter", () => {
+    it("lists all unique tags in the dropdown", () => {
+      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
+      const select = screen.getByRole("combobox");
+      expect(select).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /tool/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /service/i })).toBeInTheDocument();
     });
 
-    it("shows filter buttons for types that have spaces", () => {
-      render(<SpaceGrid spaces={allSpaces} />);
-      expect(screen.getByRole("button", { name: /website/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /custom page/i })).toBeInTheDocument();
-    });
-
-    it("filters to url spaces when Website button is clicked", async () => {
+    it("filters to Tool-tagged spaces when Tool is selected", async () => {
       const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} />);
+      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
 
-      await user.click(screen.getByRole("button", { name: /website/i }));
+      await user.selectOptions(screen.getByRole("combobox"), "tag:tool");
 
       const cards = screen.getAllByTestId("space-card");
+      // space1 and space3 have Tool tag
       expect(cards).toHaveLength(2);
-      cards.forEach((card) => expect(card).toHaveAttribute("data-space-type", "url"));
+      expect(screen.getByText("Space 1")).toBeInTheDocument();
+      expect(screen.getByText("Space 3")).toBeInTheDocument();
     });
 
-    it("filters to html spaces when Custom Page button is clicked", async () => {
+    it("filters to Service-tagged spaces when Service is selected", async () => {
       const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} />);
+      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
 
-      await user.click(screen.getByRole("button", { name: /custom page/i }));
+      await user.selectOptions(screen.getByRole("combobox"), "tag:service");
 
       const cards = screen.getAllByTestId("space-card");
-      expect(cards).toHaveLength(1);
-      expect(cards[0]).toHaveAttribute("data-space-type", "html");
+      // space2 and space3 have Service tag
+      expect(cards).toHaveLength(2);
+      expect(screen.getByText("Space 2")).toBeInTheDocument();
+      expect(screen.getByText("Space 3")).toBeInTheDocument();
     });
 
-    it("shows the empty state message when there are no spaces at all", () => {
-      render(<SpaceGrid spaces={[]} />);
-      // The "no spaces here yet" message is shown when filtered list is empty
-      // (filter defaults to "all", message uses "custom page" for non-url types)
-      // With an empty array and default "all" filter the condition triggers
-      expect(screen.getByText(/no custom page spaces here yet/i)).toBeInTheDocument();
-    });
-
-    it("resets to showing all spaces when All is clicked after filtering", async () => {
+    it("resets to all spaces when All is selected", async () => {
       const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} />);
+      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
 
-      await user.click(screen.getByRole("button", { name: /website/i }));
+      await user.selectOptions(screen.getByRole("combobox"), "tag:tool");
       expect(screen.getAllByTestId("space-card")).toHaveLength(2);
 
-      await user.click(screen.getByRole("button", { name: /all/i }));
+      await user.selectOptions(screen.getByRole("combobox"), "all");
       expect(screen.getAllByTestId("space-card")).toHaveLength(3);
-    });
-
-    it("hides create card when a type filter is active", async () => {
-      const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} showCreateCard />);
-
-      expect(screen.getByText("Create New Space")).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: /website/i }));
-      expect(screen.queryByText("Create New Space")).not.toBeInTheDocument();
     });
   });
 

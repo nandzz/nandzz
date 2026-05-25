@@ -1,19 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { SpaceCard } from "./SpaceCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, LayoutGrid, Grid3X3, Globe, FileCode2 } from "lucide-react";
-import type { SpaceWithProfile, Space, SpaceType, Tag } from "@/lib/types";
+import { Plus, LayoutGrid, Grid3X3, ChevronDown } from "lucide-react";
+import type { SpaceWithProfile, Space, Tag } from "@/lib/types";
 
-type FilterType = "all" | SpaceType;
-
-const filters: { value: FilterType; label: string; icon: React.ReactNode }[] = [
-  { value: "all", label: "All", icon: null },
-  { value: "url", label: "Website", icon: <Globe className="h-3 w-3" /> },
-  { value: "html", label: "Custom Page", icon: <FileCode2 className="h-3 w-3" /> },
-];
+type FilterValue = "all" | `tag:${string}`;
 
 interface SpaceGridProps {
   spaces: SpaceWithProfile[] | Space[];
@@ -39,18 +33,24 @@ export function SpaceGrid({
   spaceTagsMap = {},
 }: SpaceGridProps) {
   const [compact, setCompact] = useState(false);
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<FilterValue>("all");
 
-  const filtered = filter === "all" ? spaces : spaces.filter((s) => s.type === filter);
+  // Collect all unique tags present across the visible spaces
+  const availableTags = useMemo(() => {
+    const seen = new Map<string, Tag>();
+    for (const space of spaces) {
+      for (const tag of spaceTagsMap[space.id] ?? []) {
+        if (!seen.has(tag.slug)) seen.set(tag.slug, tag);
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [spaces, spaceTagsMap]);
 
-  const urlCount = spaces.filter((s) => s.type === "url").length;
-  const htmlCount = spaces.filter((s) => s.type === "html").length;
-
-  const counts: Record<FilterType, number> = {
-    all: spaces.length,
-    url: urlCount,
-    html: htmlCount,
-  };
+  const filtered = useMemo(() => {
+    if (filter === "all") return spaces;
+    const slug = filter.slice(4);
+    return spaces.filter((s) => (spaceTagsMap[s.id] ?? []).some((t) => t.slug === slug));
+  }, [filter, spaces, spaceTagsMap]);
 
   return (
     <div className="space-y-4">
@@ -78,27 +78,26 @@ export function SpaceGrid({
         {/* Divider */}
         <div className="h-4 w-px bg-border/60" />
 
-        {/* Filter */}
-        <div className="flex items-center gap-0.5">
-          {filters.map(({ value, label, icon }) => {
-            const active = filter === value;
-            const count = counts[value];
-            if (value !== "all" && count === 0) return null;
-            return (
-              <button
-                key={value}
-                onClick={() => setFilter(value)}
-                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                  active
-                    ? "text-foreground bg-accent"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                }`}
-              >
-                {icon}
-                {label}
-              </button>
-            );
-          })}
+        {/* Filter dropdown */}
+        <div className="relative flex items-center">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as FilterValue)}
+            className="appearance-none rounded-md border border-border/60 bg-background pl-2.5 pr-7 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground focus:outline-none focus:ring-1 focus:ring-violet-500/50 cursor-pointer"
+          >
+            <option value="all">All ({spaces.length})</option>
+            {availableTags.map((tag) => {
+              const count = spaces.filter((s) =>
+                (spaceTagsMap[s.id] ?? []).some((t) => t.slug === tag.slug)
+              ).length;
+              return (
+                <option key={tag.slug} value={`tag:${tag.slug}`}>
+                  {tag.name} ({count})
+                </option>
+              );
+            })}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 h-3 w-3 text-muted-foreground" />
         </div>
       </div>
 
@@ -164,7 +163,7 @@ export function SpaceGrid({
         )}
         {filtered.length === 0 && (
           <p className="col-span-full py-12 text-center text-muted-foreground text-sm">
-            No {filter === "url" ? "website" : "custom page"} spaces here yet.
+            No spaces match this filter.
           </p>
         )}
       </div>

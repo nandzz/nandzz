@@ -14,9 +14,11 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Code, Globe, Rocket, UploadCloud, FileCode2, X } from "lucide-react";
+import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download } from "lucide-react";
 import { TagPicker } from "./TagPicker";
-import type { Space, SpaceType, Tag } from "@/lib/types";
+import type { Space, Tag } from "@/lib/types";
+
+type SpaceMode = "html" | "url" | "pdf";
 
 /** Render HTML in a hidden iframe and capture a screenshot using html2canvas */
 async function captureHtmlScreenshot(
@@ -76,20 +78,23 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   const supabase = useMemo(() => createClient(), []);
   const isEditing = !!space;
 
-  const [spaceType, setSpaceType] = useState<SpaceType>(
-    space?.type || "html"
+  const [spaceType, setSpaceType] = useState<SpaceMode>(
+    space?.pdf_url ? "pdf" : space?.html_url ? "html" : space?.url ? "url" : "html"
   );
   const [title, setTitle] = useState(space?.title || "");
   const [description, setDescription] = useState(space?.description || "");
   const [url, setUrl] = useState(space?.url || "");
   const [htmlContent, setHtmlContent] = useState("");
   const [previewImage, setPreviewImage] = useState<File | null>(null);
-  const [isPublic, setIsPublic] = useState(space?.is_public ?? true);
+  const [isPublic, setIsPublic] = useState(space?.is_public ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [htmlFileName, setHtmlFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfDragOver, setPdfDragOver] = useState(false);
+  const pdfFileInputRef = useRef<HTMLInputElement>(null);
 
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>(initialTags);
@@ -104,9 +109,29 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
       });
   }, [supabase]);
 
+  useEffect(() => {
+    if (spaceType === "pdf") {
+      const pdfTag = availableTags.find((t) => t.slug === "pdf");
+      if (pdfTag) setSelectedTags([pdfTag]);
+    }
+  }, [spaceType, availableTags]);
+
 
   const MAX_HTML_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
   const MAX_IMAGE_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
+  const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10 MB
+
+  const handlePdfFileUpload = (file: File) => {
+    if (file.type !== "application/pdf") {
+      setError("Only PDF files are accepted");
+      return;
+    }
+    if (file.size > MAX_PDF_SIZE) {
+      setError("PDF file must be under 10 MB");
+      return;
+    }
+    setPdfFile(file);
+  };
 
   const handleHtmlFileUpload = (file: File) => {
     if (file.size > MAX_HTML_SIZE) {
@@ -168,8 +193,15 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         return;
       }
 
+      if (spaceType === "pdf" && !pdfFile && !space?.pdf_url) {
+        setError("A PDF file is required.");
+        setLoading(false);
+        return;
+      }
+
       let preview_image_url = space?.preview_image_url || null;
       let html_url = space?.html_url || null;
+      let pdf_url = space?.pdf_url || null;
 
       // Validate preview image size
       if (previewImage && previewImage.size > MAX_IMAGE_SIZE) {
@@ -238,12 +270,33 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         }
       }
 
+      // Upload PDF to storage bucket
+      if (spaceType === "pdf" && pdfFile) {
+        const filePath = `${user.id}/${Date.now()}.pdf`;
+        const { error: uploadError } = await supabase.storage
+          .from("space-pdfs")
+          .upload(filePath, pdfFile, {
+            contentType: "application/pdf",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          setError("Failed to upload PDF: " + uploadError.message);
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("space-pdfs")
+          .getPublicUrl(filePath);
+        pdf_url = publicUrlData.publicUrl;
+      }
+
       const spaceData = {
         title,
         description: description || null,
-        type: spaceType,
         url: spaceType === "url" ? normalizedUrl : null,
         html_url: spaceType === "html" ? html_url : null,
+        pdf_url: spaceType === "pdf" ? pdf_url : null,
         preview_image_url,
         is_public: isPublic,
         user_id: user.id,
@@ -352,6 +405,37 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
               </button>
               <button
                 type="button"
+                onClick={() => setSpaceType("pdf")}
+                className={`flex-1 rounded-xl border-2 px-4 py-4 text-left transition-all ${
+                  spaceType === "pdf"
+                    ? "border-violet-600 bg-violet-50 dark:bg-violet-950/50 shadow-sm shadow-violet-600/10"
+                    : "border-border/60 hover:border-violet-500/30 hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText
+                    className={`h-4 w-4 ${
+                      spaceType === "pdf"
+                        ? "text-violet-600 dark:text-violet-400"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <span
+                    className={`font-semibold text-sm ${
+                      spaceType === "pdf"
+                        ? "text-violet-700 dark:text-violet-300"
+                        : ""
+                    }`}
+                  >
+                    PDF Upload
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Upload a PDF document
+                </div>
+              </button>
+              <button
+                type="button"
                 onClick={() => setSpaceType("url")}
                 className={`flex-1 rounded-xl border-2 px-4 py-4 text-left transition-all ${
                   spaceType === "url"
@@ -405,6 +489,76 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
               className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
             />
           </div>
+
+          {/* PDF input */}
+          {spaceType === "pdf" && (
+            <div className="space-y-4">
+              <input
+                ref={pdfFileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handlePdfFileUpload(file);
+                }}
+              />
+
+              {pdfFile ? (
+                <div className="flex items-center gap-3 rounded-xl border border-violet-400/50 bg-violet-50 dark:bg-violet-950/30 px-4 py-3">
+                  <FileText className="h-5 w-5 shrink-0 text-violet-500" />
+                  <span className="flex-1 text-sm font-medium text-violet-700 dark:text-violet-300 truncate">
+                    {pdfFile.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {(pdfFile.size / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfFile(null);
+                      if (pdfFileInputRef.current) pdfFileInputRef.current.value = "";
+                    }}
+                    className="rounded-full p-1 hover:bg-violet-100 dark:hover:bg-violet-900 transition-colors"
+                  >
+                    <X className="h-4 w-4 text-violet-500" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => pdfFileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setPdfDragOver(true); }}
+                  onDragLeave={() => setPdfDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setPdfDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handlePdfFileUpload(file);
+                  }}
+                  className={`w-full rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+                    pdfDragOver
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-950/30"
+                      : "border-border/60 hover:border-violet-400/60 hover:bg-muted/40"
+                  }`}
+                >
+                  <UploadCloud className={`mx-auto h-8 w-8 mb-3 ${pdfDragOver ? "text-violet-500" : "text-muted-foreground"}`} />
+                  <p className="text-sm font-medium text-foreground">
+                    Drop your PDF here
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    or <span className="text-violet-600 dark:text-violet-400 underline underline-offset-2">browse</span> — .pdf, up to 10 MB
+                  </p>
+                </button>
+              )}
+
+              {isEditing && space?.pdf_url && !pdfFile && (
+                <p className="text-xs text-muted-foreground">
+                  Current PDF will be kept if no new file is provided.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* URL input */}
           {spaceType === "url" && (
@@ -555,23 +709,31 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
               className="bg-muted/50 border-border/60"
             />
             <p className="text-xs text-muted-foreground">
-              {spaceType === "html"
-                ? "Optional — a live iframe preview will be shown if no image is provided"
-                : "Optional — an iframe preview of the URL will be shown if no image is provided"}
+              Optional — a live preview will be shown if no image is provided
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/50">
-            <input
-              type="checkbox"
-              id="isPublic"
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-              className="h-4 w-4 rounded border-input accent-violet-600"
-            />
-            <Label htmlFor="isPublic" className="font-normal cursor-pointer">
-              Make this Space public
-            </Label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/50">
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="h-4 w-4 rounded border-input accent-violet-600"
+              />
+              <Label htmlFor="isPublic" className="font-normal cursor-pointer">
+                Make this Space public
+              </Label>
+            </div>
+            {isPublic && (
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2.5">
+                <Globe className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Everyone will be able to view this Space, but only you can edit it.
+                </p>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -589,7 +751,8 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
                 !title.trim() ||
                 selectedTags.length === 0 ||
                 (spaceType === "url" && !url.trim()) ||
-                (spaceType === "html" && !htmlContent && !space?.html_url)
+                (spaceType === "html" && !htmlContent && !space?.html_url) ||
+                (spaceType === "pdf" && !pdfFile && !space?.pdf_url)
               }
             >
               {loading

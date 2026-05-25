@@ -64,12 +64,11 @@ export default async function HomePage() {
               <h1 className="text-[clamp(3rem,8vw,5.5rem)] font-bold tracking-tight leading-[1.04]">
                 Share what
                 <br />
-                <span className="text-violet-600">AI built.</span>
+                <span className="text-violet-600">you create.</span>
               </h1>
 
               <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-sm">
-                A gallery for apps made with Claude, ChatGPT & friends.
-                Upload HTML or drop a URL.
+                A gallery for web pages, PDFs, tools, and interactive creations.
               </p>
 
               <div className="mt-10 flex flex-wrap items-center gap-4">
