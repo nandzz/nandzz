@@ -33,30 +33,43 @@ export default async function ExplorePage({
   let likedSpaceIds: string[] = [];
   let savedSpaceIds: string[] = [];
 
-  if (user && spaces) {
-    const spaceIds = spaces.map(s => s.id);
-    const [{ data: likes }, { data: starredCol }] = await Promise.all([
-      supabase
-        .from("space_likes")
-        .select("space_id")
-        .eq("user_id", user.id)
-        .in("space_id", spaceIds),
-      supabase
-        .from("collections")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_default", true)
-        .maybeSingle(),
-    ]);
-    likedSpaceIds = likes?.map(l => l.space_id) || [];
+  let spaceTagsMap: Record<string, import("@/lib/types").Tag[]> = {};
 
-    if (starredCol) {
+  if (spaces && spaces.length > 0) {
+    const spaceIds = spaces.map(s => s.id);
+
+    const fetchTags = supabase
+      .from("space_tags")
+      .select("space_id, tags(*)")
+      .in("space_id", spaceIds);
+
+    const fetchLikes = user
+      ? supabase.from("space_likes").select("space_id").eq("user_id", user.id).in("space_id", spaceIds)
+      : Promise.resolve({ data: null });
+
+    const fetchStarred = user
+      ? supabase.from("collections").select("id").eq("user_id", user.id).eq("is_default", true).maybeSingle()
+      : Promise.resolve({ data: null });
+
+    const [tagsRes, likesRes, starredRes] = await Promise.all([fetchTags, fetchLikes, fetchStarred]);
+
+    if (tagsRes.data) {
+      for (const row of tagsRes.data) {
+        const tag = row.tags as unknown as import("@/lib/types").Tag;
+        if (!spaceTagsMap[row.space_id]) spaceTagsMap[row.space_id] = [];
+        spaceTagsMap[row.space_id].push(tag);
+      }
+    }
+
+    likedSpaceIds = likesRes.data?.map((l: { space_id: string }) => l.space_id) || [];
+
+    if (starredRes.data) {
       const { data: savedEntries } = await supabase
         .from("collection_spaces")
         .select("space_id")
-        .eq("collection_id", starredCol.id)
+        .eq("collection_id", starredRes.data.id)
         .in("space_id", spaceIds);
-      savedSpaceIds = savedEntries?.map(e => e.space_id) || [];
+      savedSpaceIds = savedEntries?.map((e: { space_id: string }) => e.space_id) || [];
     }
   }
 
@@ -86,7 +99,7 @@ export default async function ExplorePage({
 
         {spaces && spaces.length > 0 ? (
           <>
-            <SpaceGrid spaces={spaces} showAuthor likedSpaceIds={likedSpaceIds} savedSpaceIds={savedSpaceIds} currentUserId={user?.id} />
+            <SpaceGrid spaces={spaces} showAuthor likedSpaceIds={likedSpaceIds} savedSpaceIds={savedSpaceIds} currentUserId={user?.id} spaceTagsMap={spaceTagsMap} />
             {totalPages > 1 && (
               <div className="mt-10 flex items-center justify-center gap-2">
                 {currentPage > 1 && (

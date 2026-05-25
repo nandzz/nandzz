@@ -21,6 +21,13 @@ export type Profile = {
 
 export type SpaceType = "url" | "html";
 
+export type Tag = {
+  id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+};
+
 export type Space = {
   id: string;
   user_id: string;

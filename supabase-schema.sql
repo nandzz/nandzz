@@ -163,7 +163,65 @@ create policy "Users can delete space HTML"
   on storage.objects for delete
   using (bucket_id = 'space-html' and (storage.foldername(name))[1] = auth.uid()::text);
 
--- 8. Likes system
+-- 8. Tags system
+
+create table if not exists public.tags (
+  id         uuid default gen_random_uuid() primary key,
+  name       text not null,
+  slug       text not null unique,
+  created_at timestamptz default now()
+);
+
+-- Seed tags (idempotent)
+insert into public.tags (name, slug) values
+  ('Website',     'website'),
+  ('Custom Page', 'custom-page'),
+  ('Tool',        'tool'),
+  ('Service',     'service'),
+  ('Util',        'util')
+on conflict (slug) do nothing;
+
+create table if not exists public.space_tags (
+  space_id uuid references public.spaces(id) on delete cascade not null,
+  tag_id   uuid references public.tags(id)   on delete cascade not null,
+  primary key (space_id, tag_id)
+);
+
+alter table public.tags       enable row level security;
+alter table public.space_tags enable row level security;
+
+drop policy if exists "Anyone can read tags" on public.tags;
+create policy "Anyone can read tags"
+  on public.tags for select using (true);
+
+-- Tags are managed by admins only; no user insert policy
+
+drop policy if exists "Anyone can read space tags" on public.space_tags;
+create policy "Anyone can read space tags"
+  on public.space_tags for select using (true);
+
+drop policy if exists "Users can manage their space tags" on public.space_tags;
+create policy "Users can manage their space tags"
+  on public.space_tags for all
+  using (
+    exists (
+      select 1 from public.spaces s
+      where s.id = space_id and s.user_id = auth.uid()
+    )
+  );
+
+-- (Re-run safe) insert policy needs WITH CHECK too
+drop policy if exists "Users can insert their space tags" on public.space_tags;
+create policy "Users can insert their space tags"
+  on public.space_tags for insert
+  with check (
+    exists (
+      select 1 from public.spaces s
+      where s.id = space_id and s.user_id = auth.uid()
+    )
+  );
+
+-- 9. Likes system
 
 -- Create likes table
 create table if not exists public.space_likes (

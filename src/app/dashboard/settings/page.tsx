@@ -24,6 +24,7 @@ import {
   Video,
   Settings,
 } from "lucide-react";
+import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
 import type { Profile, SocialLinks } from "@/lib/types";
 
 export default function SettingsPage() {
@@ -37,6 +38,7 @@ export default function SettingsPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -84,16 +86,10 @@ export default function SettingsPage() {
       let avatar_url = profile?.avatar_url || null;
 
       if (avatarFile) {
-        const allowedTypes = ["image/png", "image/jpeg"];
-        if (!allowedTypes.includes(avatarFile.type)) {
-          setError("Only PNG and JPG files are allowed.");
-          return;
-        }
-        const fileExt = avatarFile.name.split(".").pop();
-        const filePath = `${user.id}/avatar.${fileExt}`;
+        const filePath = `${user.id}/avatar.jpg`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
-          .upload(filePath, avatarFile, { upsert: true });
+          .upload(filePath, avatarFile, { upsert: true, contentType: "image/jpeg" });
 
         if (uploadError) {
           setError("Failed to upload avatar: " + uploadError.message);
@@ -121,6 +117,7 @@ export default function SettingsPage() {
       if (error) throw error;
 
       setSuccess(true);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
       router.refresh();
     } catch (err: unknown) {
       const message =
@@ -168,7 +165,13 @@ export default function SettingsPage() {
               {/* Avatar */}
               <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
                 <Avatar className="h-16 w-16 border-2 border-violet-200 dark:border-violet-800">
-                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarImage
+                    src={
+                      avatarFile
+                        ? URL.createObjectURL(avatarFile)
+                        : profile.avatar_url || undefined
+                    }
+                  />
                   <AvatarFallback className="text-xl bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300">
                     {profile.display_name?.[0]?.toUpperCase() ||
                       profile.username[0]?.toUpperCase()}
@@ -182,13 +185,35 @@ export default function SettingsPage() {
                     id="avatar"
                     type="file"
                     accept="image/png, image/jpeg"
-                    onChange={(e) =>
-                      setAvatarFile(e.target.files?.[0] || null)
-                    }
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setCropImageSrc(reader.result as string);
+                      reader.readAsDataURL(file);
+                      // reset so re-selecting same file re-triggers
+                      e.target.value = "";
+                    }}
                     className="bg-background"
                   />
+                  {avatarFile && (
+                    <p className="text-xs text-violet-600 dark:text-violet-400">
+                      New picture ready — save to apply.
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {cropImageSrc && (
+                <AvatarCropModal
+                  imageSrc={cropImageSrc}
+                  onCancel={() => setCropImageSrc(null)}
+                  onCrop={(blob) => {
+                    setAvatarFile(new File([blob], "avatar.jpg", { type: "image/jpeg" }));
+                    setCropImageSrc(null);
+                  }}
+                />
+              )}
 
               <div className="space-y-2">
                 <Label>Username</Label>

@@ -18,7 +18,7 @@ import { LikeButton } from "./LikeButton";
 import { ShareButton } from "./ShareButton";
 import { StarButton } from "./StarButton";
 import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
-import type { Space, SpaceType } from "@/lib/types";
+import type { Space, SpaceType, Tag } from "@/lib/types";
 
 const typeLabels: Record<SpaceType, { label: string; icon: React.ReactNode }> = {
   url: { label: "Website", icon: <Globe className="size-2.5" /> },
@@ -34,9 +34,10 @@ interface SpaceCardProps {
   compact?: boolean;
   collectionId?: string;
   isOwn?: boolean;
+  tags?: Tag[];
 }
 
-export function SpaceCard({ space, username, editable, liked, saved, compact, collectionId, isOwn }: SpaceCardProps) {
+export function SpaceCard({ space, username, editable, liked, saved, compact, collectionId, isOwn, tags = [] }: SpaceCardProps) {
   const router = useRouter();
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(saved ?? false);
@@ -106,10 +107,15 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
             </span>
           </div>
         </div>
-        <div className="px-1.5 py-1">
+        <div className="px-2 pt-1.5 pb-2.5 h-[52px]">
           <p className="text-[10px] font-medium truncate text-foreground/80 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
             {space.title}
           </p>
+          {space.description && (
+            <p className="text-[9px] text-muted-foreground line-clamp-2 mt-0.5 leading-tight">
+              {space.description}
+            </p>
+          )}
         </div>
       </Link>
     </Card>
@@ -122,11 +128,19 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         <CardContent className="p-4 flex flex-col">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center flex-wrap gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full bg-violet-100/80 dark:bg-violet-900/40 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:text-violet-300 tracking-wide">
               {typeLabels[space.type].icon}
               {typeLabels[space.type].label}
             </span>
+            {tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+              >
+                {tag.name}
+              </span>
+            ))}
           </div>
           <h3 className="text-lg font-bold truncate mt-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
             {space.title}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SpaceCard } from "./SpaceCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, LayoutGrid, Grid3X3, Globe, FileCode2 } from "lucide-react";
-import type { SpaceWithProfile, Space, SpaceType } from "@/lib/types";
+import type { SpaceWithProfile, Space, SpaceType, Tag } from "@/lib/types";
 
 type FilterType = "all" | SpaceType;
 
@@ -24,6 +24,7 @@ interface SpaceGridProps {
   savedSpaceIds?: string[];
   collectionId?: string;
   currentUserId?: string;
+  spaceTagsMap?: Record<string, Tag[]>;
 }
 
 export function SpaceGrid({
@@ -35,6 +36,7 @@ export function SpaceGrid({
   savedSpaceIds = [],
   collectionId,
   currentUserId,
+  spaceTagsMap = {},
 }: SpaceGridProps) {
   const [compact, setCompact] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
@@ -124,6 +126,7 @@ export function SpaceGrid({
               compact={compact}
               collectionId={collectionId}
               isOwn={!!currentUserId && space.user_id === currentUserId}
+              tags={spaceTagsMap[space.id] ?? []}
             />
           );
         })}

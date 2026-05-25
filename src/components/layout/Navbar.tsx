@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,15 @@ export function Navbar() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const fetchProfile = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    if (data) setProfile(data);
+  }, [supabase]);
+
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -30,12 +39,7 @@ export function Navbar() {
       } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        if (data) setProfile(data);
+        fetchProfile(user.id);
       }
     };
     getUser();
@@ -52,7 +56,15 @@ export function Navbar() {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, [supabase, fetchProfile]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (user) fetchProfile(user.id);
+    };
+    window.addEventListener("profile-updated", handler);
+    return () => window.removeEventListener("profile-updated", handler);
+  }, [user, fetchProfile]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

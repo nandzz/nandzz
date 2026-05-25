@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,9 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Code, Globe, Rocket } from "lucide-react";
-import type { Space, SpaceType } from "@/lib/types";
+import { Code, Globe, Rocket, UploadCloud, FileCode2, X } from "lucide-react";
+import { TagPicker } from "./TagPicker";
+import type { Space, SpaceType, Tag } from "@/lib/types";
 
 /** Render HTML in a hidden iframe and capture a screenshot using html2canvas */
 async function captureHtmlScreenshot(
@@ -67,9 +68,10 @@ async function captureHtmlScreenshot(
 
 interface SpaceFormProps {
   space?: Space;
+  initialTags?: Tag[];
 }
 
-export function SpaceForm({ space }: SpaceFormProps) {
+export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const isEditing = !!space;
@@ -85,6 +87,23 @@ export function SpaceForm({ space }: SpaceFormProps) {
   const [isPublic, setIsPublic] = useState(space?.is_public ?? true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [htmlFileName, setHtmlFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(initialTags);
+
+  useEffect(() => {
+    supabase
+      .from("tags")
+      .select("*")
+      .order("name")
+      .then(({ data }) => {
+        if (data) setAvailableTags(data as Tag[]);
+      });
+  }, [supabase]);
+
 
   const MAX_HTML_SIZE = 5 * 1024 * 1024; // 5 MB
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -94,6 +113,7 @@ export function SpaceForm({ space }: SpaceFormProps) {
       setError("HTML file must be under 5 MB");
       return;
     }
+    setHtmlFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
@@ -229,15 +249,31 @@ export function SpaceForm({ space }: SpaceFormProps) {
         user_id: user.id,
       };
 
+      let spaceId: string;
+
       if (isEditing && space) {
         const { error } = await supabase
           .from("spaces")
           .update(spaceData)
           .eq("id", space.id);
         if (error) throw error;
+        spaceId = space.id;
       } else {
-        const { error } = await supabase.from("spaces").insert(spaceData);
+        const { data: inserted, error } = await supabase
+          .from("spaces")
+          .insert(spaceData)
+          .select("id")
+          .single();
         if (error) throw error;
+        spaceId = inserted.id;
+      }
+
+      // Save tags: replace all existing with the current selection
+      await supabase.from("space_tags").delete().eq("space_id", spaceId);
+      if (selectedTags.length > 0) {
+        await supabase.from("space_tags").insert(
+          selectedTags.map((t) => ({ space_id: spaceId, tag_id: t.id }))
+        );
       }
 
       router.push("/dashboard");
@@ -349,6 +385,16 @@ export function SpaceForm({ space }: SpaceFormProps) {
           </div>
 
           <div className="space-y-2">
+            <Label>Category *</Label>
+            <p className="text-xs text-muted-foreground">Pick one tag that best describes your space</p>
+            <TagPicker
+              availableTags={availableTags}
+              selectedTag={selectedTags[0] ?? null}
+              onChange={(tag) => setSelectedTags(tag ? [tag] : [])}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input
               id="title"
@@ -382,36 +428,77 @@ export function SpaceForm({ space }: SpaceFormProps) {
           {/* HTML input */}
           {spaceType === "html" && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="htmlFile">Upload HTML File</Label>
-                <Input
-                  id="htmlFile"
-                  type="file"
-                  accept=".html,.htm"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
+              {/* Drop zone */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".html,.htm"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleHtmlFileUpload(file);
+                }}
+              />
+
+              {htmlFileName ? (
+                <div className="flex items-center gap-3 rounded-xl border border-violet-400/50 bg-violet-50 dark:bg-violet-950/30 px-4 py-3">
+                  <FileCode2 className="h-5 w-5 shrink-0 text-violet-500" />
+                  <span className="flex-1 text-sm font-medium text-violet-700 dark:text-violet-300 truncate">
+                    {htmlFileName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHtmlFileName("");
+                      setHtmlContent("");
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="rounded-full p-1 hover:bg-violet-100 dark:hover:bg-violet-900 transition-colors"
+                  >
+                    <X className="h-4 w-4 text-violet-500" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
                     if (file) handleHtmlFileUpload(file);
                   }}
-                  className="bg-muted/50 border-border/60"
-                />
-              </div>
+                  className={`w-full rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+                    dragOver
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-950/30"
+                      : "border-border/60 hover:border-violet-400/60 hover:bg-muted/40"
+                  }`}
+                >
+                  <UploadCloud className={`mx-auto h-8 w-8 mb-3 ${dragOver ? "text-violet-500" : "text-muted-foreground"}`} />
+                  <p className="text-sm font-medium text-foreground">
+                    Drop your HTML file here
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    or <span className="text-violet-600 dark:text-violet-400 underline underline-offset-2">browse</span> — .html / .htm, up to 5 MB
+                  </p>
+                </button>
+              )}
 
               <div className="relative flex items-center">
                 <div className="flex-1 border-t border-border/50" />
-                <span className="px-3 text-xs text-muted-foreground">
-                  or paste HTML directly
-                </span>
+                <span className="px-3 text-xs text-muted-foreground">or paste HTML directly</span>
                 <div className="flex-1 border-t border-border/50" />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="htmlContent">HTML Content *</Label>
                 <Textarea
                   id="htmlContent"
-                  placeholder="<!DOCTYPE html>&#10;<html>&#10;  <head>...</head>&#10;  <body>...</body>&#10;</html>"
+                  placeholder={"<!DOCTYPE html>\n<html>\n  <head>...</head>\n  <body>...</body>\n</html>"}
                   value={htmlContent}
-                  onChange={(e) => setHtmlContent(e.target.value)}
-                  rows={8}
+                  onChange={(e) => { setHtmlContent(e.target.value); setHtmlFileName(""); }}
+                  rows={6}
                   className="font-mono text-xs bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
                 />
                 {htmlContent && (
@@ -436,7 +523,6 @@ export function SpaceForm({ space }: SpaceFormProps) {
                 </div>
               )}
 
-              {/* Show existing HTML link when editing */}
               {isEditing && space?.html_url && !htmlContent && (
                 <p className="text-xs text-muted-foreground">
                   Current HTML file will be kept if no new content is provided.
@@ -498,7 +584,13 @@ export function SpaceForm({ space }: SpaceFormProps) {
             <Button
               type="submit"
               className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30"
-              disabled={loading}
+              disabled={
+                loading ||
+                !title.trim() ||
+                selectedTags.length === 0 ||
+                (spaceType === "url" && !url.trim()) ||
+                (spaceType === "html" && !htmlContent && !space?.html_url)
+              }
             >
               {loading
                 ? "Saving..."
