@@ -34,11 +34,18 @@ export default async function CollectionDetailPage({
     notFound();
   }
 
-  const { data: collectionSpaces } = await supabase
-    .from("collection_spaces")
-    .select("space_id, spaces(*)")
-    .eq("collection_id", id)
-    .order("created_at", { ascending: false });
+  const [{ data: collectionSpaces }, { data: profile }] = await Promise.all([
+    supabase
+      .from("collection_spaces")
+      .select("space_id, spaces(*)")
+      .eq("collection_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single(),
+  ]);
 
   const spaces: Space[] = (collectionSpaces || [])
     .map((cs) => cs.spaces as unknown as Space)
@@ -81,7 +88,7 @@ export default async function CollectionDetailPage({
         </div>
 
         {spaces.length > 0 ? (
-          <SpaceGrid spaces={spaces} editable collectionId={id} />
+          <SpaceGrid spaces={spaces} editable collectionId={id} ownerUsername={profile?.username || undefined} />
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border/60 rounded-2xl">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">

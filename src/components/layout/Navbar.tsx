@@ -161,7 +161,7 @@ export function Navbar() {
                   <DropdownMenuGroup>
                     {profile?.username && (
                       <DropdownMenuItem
-                        onClick={() => router.push(`/profile/${profile.username}`)}
+                        onClick={() => router.push(`/${profile.username}`)}
                         className="gap-2"
                       >
                         <User className="h-4 w-4 text-muted-foreground" />
@@ -289,7 +289,7 @@ export function Navbar() {
             <>
               {profile?.username && (
                 <Link
-                  href={`/profile/${profile.username}`}
+                  href={`/${profile.username}`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 >

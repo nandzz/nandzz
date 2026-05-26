@@ -23,6 +23,7 @@ import type { Space, Tag } from "@/lib/types";
 interface SpaceCardProps {
   space: Space;
   username?: string;
+  routeUsername?: string;
   editable?: boolean;
   liked?: boolean;
   saved?: boolean;
@@ -32,7 +33,8 @@ interface SpaceCardProps {
   tags?: Tag[];
 }
 
-export function SpaceCard({ space, username, editable, liked, saved, compact, collectionId, isOwn, tags = [] }: SpaceCardProps) {
+export function SpaceCard({ space, username, routeUsername, editable, liked, saved, compact, collectionId, isOwn, tags = [] }: SpaceCardProps) {
+  const spaceUrl = routeUsername ? `/${routeUsername}/space/${space.id}` : `/space/${space.id}`;
   const router = useRouter();
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(saved ?? false);
@@ -92,7 +94,7 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
 
   const cardContent = compact ? (
     <Card className="group overflow-hidden transition-all duration-200 hover:shadow-md hover:shadow-violet-500/10 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
-      <Link href={`/space/${space.id}`} className="block">
+      <Link href={spaceUrl} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           <SpacePreview space={space} />
           {/* Hover gradient overlay with title */}
@@ -132,7 +134,7 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
     </Card>
   ) : (
     <Card className="group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
-      <Link href={`/space/${space.id}`} className="block">
+      <Link href={spaceUrl} className="block">
         <div className="aspect-video bg-muted relative overflow-hidden">
           <SpacePreview space={space} />
           {/* Hover gradient overlay */}
@@ -192,7 +194,7 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
                   <StarButton spaceId={space.id} initialSaved={isSaved} size="sm" onToggle={setIsSaved} />
                 </>
               )}
-              <ShareButton url={`/space/${space.id}`} title={space.title} size="sm" />
+              <ShareButton url={spaceUrl} title={space.title} size="sm" />
             </div>
           </div>
         </CardContent>
@@ -205,7 +207,7 @@ export function SpaceCard({ space, username, editable, liked, saved, compact, co
       <ContextMenu>
         <ContextMenuTrigger>{cardContent}</ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={() => router.push(`/space/${space.id}`)}>
+          <ContextMenuItem onClick={() => router.push(spaceUrl)}>
             <ExternalLink className="size-4" />
             Open
           </ContextMenuItem>

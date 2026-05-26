@@ -81,7 +81,7 @@ export default async function DashboardPage() {
         </div>
 
         {spaces && spaces.length > 0 ? (
-          <SpaceGrid spaces={spaces} showCreateCard editable spaceTagsMap={spaceTagsMap} />
+          <SpaceGrid spaces={spaces} showCreateCard editable spaceTagsMap={spaceTagsMap} ownerUsername={profile?.username || undefined} />
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">

@@ -97,7 +97,13 @@ export function ProfileTabs({
       {/* Content */}
       <div className="mt-6">
         {visibleSpaces.length > 0 ? (
-          <SpaceGrid spaces={visibleSpaces} likedSpaceIds={likedSpaceIds} savedSpaceIds={savedSpaceIds} currentUserId={currentUserId} />
+          <SpaceGrid
+            spaces={visibleSpaces}
+            likedSpaceIds={likedSpaceIds}
+            savedSpaceIds={savedSpaceIds}
+            currentUserId={currentUserId}
+            ownerUsername={activeTab === "all" ? profile.username : undefined}
+          />
         ) : (
           <p className="py-12 text-center text-muted-foreground">
             {emptyMessage}

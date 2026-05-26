@@ -19,6 +19,7 @@ interface SpaceGridProps {
   collectionId?: string;
   currentUserId?: string;
   spaceTagsMap?: Record<string, Tag[]>;
+  ownerUsername?: string;
 }
 
 export function SpaceGrid({
@@ -31,6 +32,7 @@ export function SpaceGrid({
   collectionId,
   currentUserId,
   spaceTagsMap = {},
+  ownerUsername,
 }: SpaceGridProps) {
   const [compact, setCompact] = useState(false);
   const [filter, setFilter] = useState<FilterValue>("all");
@@ -105,20 +107,28 @@ export function SpaceGrid({
       <div
         className={
           compact
-            ? "grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9"
+            ? "grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6"
             : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
         }
       >
         {filtered.map((space) => {
-          const username =
-            showAuthor && "profiles" in space
-              ? (space as SpaceWithProfile).profiles?.display_name || (space as SpaceWithProfile).profiles?.username
-              : undefined;
+          const profileUsername = "profiles" in space
+            ? (space as SpaceWithProfile).profiles?.username
+            : undefined;
+          const displayUsername = showAuthor
+            ? (
+                "profiles" in space
+                  ? (space as SpaceWithProfile).profiles?.display_name || profileUsername
+                  : undefined
+              )
+            : undefined;
+          const routeUsername = profileUsername || ownerUsername;
           return (
             <SpaceCard
               key={space.id}
               space={space}
-              username={username || undefined}
+              username={displayUsername || undefined}
+              routeUsername={routeUsername || undefined}
               editable={editable}
               liked={likedSpaceIds.includes(space.id)}
               saved={savedSpaceIds.includes(space.id)}
