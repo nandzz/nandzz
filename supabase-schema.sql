@@ -121,6 +121,9 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   values ('profile-backgrounds', 'profile-backgrounds', true, 1572864, array['image/jpeg','image/png','image/webp'])
   on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('space-assets', 'space-assets', true, 2097152, array['image/jpeg','image/png','image/gif','image/webp'])
+  on conflict (id) do nothing;
 
 -- Storage policies for avatars
 drop policy if exists "Avatar images are publicly accessible" on storage.objects;
@@ -392,6 +395,27 @@ create policy "Users can remove spaces from their own collections"
       where c.id = collection_id and c.user_id = auth.uid()
     )
   );
+
+-- Storage policies for space assets (images attached to HTML spaces)
+drop policy if exists "Space assets are publicly accessible" on storage.objects;
+create policy "Space assets are publicly accessible"
+  on storage.objects for select
+  using (bucket_id = 'space-assets');
+
+drop policy if exists "Users can upload space assets" on storage.objects;
+create policy "Users can upload space assets"
+  on storage.objects for insert
+  with check (bucket_id = 'space-assets' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update space assets" on storage.objects;
+create policy "Users can update space assets"
+  on storage.objects for update
+  using (bucket_id = 'space-assets' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete space assets" on storage.objects;
+create policy "Users can delete space assets"
+  on storage.objects for delete
+  using (bucket_id = 'space-assets' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Storage policies for profile backgrounds
 drop policy if exists "Profile backgrounds are publicly accessible" on storage.objects;

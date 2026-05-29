@@ -14,7 +14,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download, Wand2, ImageIcon, Check } from "lucide-react";
+import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download, Wand2, ImageIcon, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { PREVIEW_GRADIENTS, GRADIENT_KEYS, DEFAULT_GRADIENT, type GradientKey } from "@/lib/preview-gradients";
 import { TagPicker } from "./TagPicker";
 import { PreviewCropper } from "./PreviewCropper";
@@ -114,6 +114,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   );
   const [previewTitle, setPreviewTitle] = useState(space?.preview_title || "");
   const [clearExistingImage, setClearExistingImage] = useState(false);
+  const [htmlAreaCollapsed, setHtmlAreaCollapsed] = useState(false);
 
   useEffect(() => {
     supabase
@@ -190,6 +191,13 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   };
 
   const MAX_HTML_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
+
+  const extractStoragePath = (publicUrl: string, bucket: string): string | null => {
+    const marker = `/object/public/${bucket}/`;
+    const idx = publicUrl.indexOf(marker);
+    if (idx === -1) return null;
+    return publicUrl.slice(idx + marker.length).split("?")[0];
+  };
   const MAX_IMAGE_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
   const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -282,6 +290,14 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         return;
       }
 
+      // Delete old preview image from bucket when replacing or removing it
+      if (space?.preview_image_url && (previewImage || clearExistingImage)) {
+        const oldPath = extractStoragePath(space.preview_image_url, "space-previews");
+        if (oldPath) {
+          await supabase.storage.from("space-previews").remove([oldPath]);
+        }
+      }
+
       // Upload preview image if provided
       if (previewImage) {
         const fileExt = previewImage.name.split(".").pop();
@@ -322,24 +338,6 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
           .getPublicUrl(filePath);
         html_url = publicUrlData.publicUrl;
 
-        // Auto-generate screenshot if no manual preview image was provided
-        if (!previewImage && !preview_image_url) {
-          const screenshotBlob = await captureHtmlScreenshot(htmlContent);
-          if (screenshotBlob) {
-            const screenshotPath = `${user.id}/${Date.now()}-auto.png`;
-            const { error: ssError } = await supabase.storage
-              .from("space-previews")
-              .upload(screenshotPath, screenshotBlob, {
-                contentType: "image/png",
-              });
-            if (!ssError) {
-              const { data: ssUrl } = supabase.storage
-                .from("space-previews")
-                .getPublicUrl(screenshotPath);
-              preview_image_url = ssUrl.publicUrl;
-            }
-          }
-        }
       }
 
       // Upload PDF to storage bucket
@@ -716,25 +714,37 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
 
               <div className="relative flex items-center">
                 <div className="flex-1 border-t border-border/50" />
-                <span className="px-3 text-xs text-muted-foreground">or paste HTML directly</span>
+                <button
+                  type="button"
+                  onClick={() => setHtmlAreaCollapsed((v) => !v)}
+                  className="flex items-center gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {htmlAreaCollapsed ? (
+                    <><ChevronDown className="h-3 w-3" />show HTML editor</>
+                  ) : (
+                    <><ChevronUp className="h-3 w-3" />or paste HTML directly</>
+                  )}
+                </button>
                 <div className="flex-1 border-t border-border/50" />
               </div>
 
-              <div className="space-y-2">
-                <Textarea
-                  id="htmlContent"
-                  placeholder={"<!DOCTYPE html>\n<html>\n  <head>...</head>\n  <body>...</body>\n</html>"}
-                  value={htmlContent}
-                  onChange={(e) => { setHtmlContent(e.target.value); setHtmlFileName(""); }}
-                  rows={6}
-                  className="font-mono text-xs bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
-                />
-                {htmlContent && (
-                  <p className="text-xs text-muted-foreground">
-                    {htmlContent.length.toLocaleString()} characters loaded
-                  </p>
-                )}
-              </div>
+              {!htmlAreaCollapsed && (
+                <div className="space-y-2">
+                  <Textarea
+                    id="htmlContent"
+                    placeholder={"<!DOCTYPE html>\n<html>\n  <head>...</head>\n  <body>...</body>\n</html>"}
+                    value={htmlContent}
+                    onChange={(e) => { setHtmlContent(e.target.value); setHtmlFileName(""); }}
+                    rows={6}
+                    className="font-mono text-xs bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+                  />
+                  {htmlContent && (
+                    <p className="text-xs text-muted-foreground">
+                      {htmlContent.length.toLocaleString()} characters loaded
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Live Preview */}
               {htmlContent && (
@@ -912,7 +922,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
                           type="text"
                           placeholder="e.g. My Portfolio"
                           value={previewTitle}
-                          maxLength={60}
+                          maxLength={64}
                           onChange={(e) => setPreviewTitle(e.target.value)}
                           className="w-full rounded-lg border border-border/60 bg-muted/50 px-3 py-2 text-sm focus:outline-none focus:border-violet-500/50 focus:bg-background transition-colors placeholder:text-muted-foreground/50"
                         />
@@ -924,7 +934,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
                           className={`flex h-full w-full items-center justify-center ${gradient.bg}`}
                         >
                           {previewTitle.trim() ? (
-                            <span className={`text-center text-xs font-semibold leading-snug px-3 line-clamp-3 ${gradient.text}`}>
+                            <span className={`text-center text-2xl font-bold leading-tight px-3 line-clamp-3 ${gradient.text}`}>
                               {previewTitle}
                             </span>
                           ) : (
@@ -939,9 +949,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
 
                   {hasImage && (
                     <p className="text-xs text-muted-foreground">
-                      {spaceType === "html"
-                        ? "A screenshot is auto-generated if no image is uploaded"
-                        : "Shown as the space thumbnail"}
+                      Shown as the space thumbnail
                     </p>
                   )}
                 </>

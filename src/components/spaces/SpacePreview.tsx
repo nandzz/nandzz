@@ -24,7 +24,7 @@ export function SpacePreview({ space }: SpacePreviewProps) {
   return (
     <div className={`flex h-full w-full items-center justify-center ${gradient.bg}`}>
       {space.preview_title ? (
-        <span className={`text-center text-sm font-semibold leading-snug px-4 line-clamp-3 ${gradient.text}`}>
+        <span className={`text-center text-5xl font-bold leading-tight px-4 line-clamp-3 ${gradient.text}`}>
           {space.preview_title}
         </span>
       ) : (

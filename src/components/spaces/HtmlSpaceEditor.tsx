@@ -50,27 +50,22 @@ async function captureHtmlScreenshot(htmlContent: string): Promise<Blob | null> 
 interface HtmlSpaceEditorProps {
   spaceId: string;
   htmlUrl: string;
-  initialHtml: string;
   spaceTitle: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type GrapesjsEditor = any;
 
-export function HtmlSpaceEditor({
-  spaceId,
-  htmlUrl,
-  initialHtml,
-  spaceTitle,
-}: HtmlSpaceEditorProps) {
+export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [currentHtml, setCurrentHtml] = useState(initialHtml);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  // Incremented after each save to force the sandbox iframe to reload
+  const [iframeVersion, setIframeVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const grapesjsRef = useRef<GrapesjsEditor>(null);
-  // Capture the HTML at the moment editing starts so GrapeJS is seeded correctly
-  const htmlAtEditStartRef = useRef(currentHtml);
+  const htmlAtEditStartRef = useRef("");
 
   // Inject GrapeJS CSS once on mount
   useEffect(() => {
@@ -104,11 +99,53 @@ export function HtmlSpaceEditor({
         width: "auto",
         fromElement: false,
         components: htmlAtEditStartRef.current,
-        storageManager: false, // we handle saving manually
+        storageManager: false,
         plugins: [gjsPreset],
+        assetManager: {
+          // Custom upload handler — sends files to our asset API (2 MB limit enforced server-side)
+          uploadFile: async (e: Event) => {
+            const files =
+              (e as DragEvent).dataTransfer?.files ??
+              (e.target as HTMLInputElement)?.files;
+            if (!files?.length) return;
+
+            for (const file of Array.from(files)) {
+              const fd = new FormData();
+              fd.append("file", file);
+              try {
+                const res = await fetch(`/api/spaces/${spaceId}/assets`, {
+                  method: "POST",
+                  body: fd,
+                });
+                if (!res.ok) {
+                  const { error: msg } = await res.json();
+                  console.error("Asset upload failed:", msg);
+                  continue;
+                }
+                const { src, name } = await res.json() as { src: string; name: string };
+                editor?.AssetManager.add([{ src, name, type: "image" }]);
+              } catch {
+                console.error("Asset upload error");
+              }
+            }
+          },
+          assets: [],
+        },
       });
 
       grapesjsRef.current = editor;
+
+      // Pre-load existing assets for this space
+      fetch(`/api/spaces/${spaceId}/assets`)
+        .then((r) => r.json())
+        .then(({ assets }: { assets: Array<{ src: string; name: string }> }) => {
+          if (assets?.length) {
+            editor?.AssetManager.add(
+              assets.map((a) => ({ src: a.src, name: a.name, type: "image" }))
+            );
+          }
+        })
+        .catch(() => {});
     };
 
     init();
@@ -120,13 +157,22 @@ export function HtmlSpaceEditor({
         grapesjsRef.current = null;
       }
     };
-  }, [isEditing]);
+  }, [isEditing, spaceId]);
 
-  const handleEdit = useCallback(() => {
-    htmlAtEditStartRef.current = currentHtml;
+  const handleEdit = useCallback(async () => {
     setError(null);
-    setIsEditing(true);
-  }, [currentHtml]);
+    setIsLoadingEdit(true);
+    try {
+      // Fetch the latest HTML via our sandbox route (auth-aware, cache-busted)
+      const res = await fetch(`/sandbox/${spaceId}?v=${Date.now()}`, { cache: "no-store" });
+      htmlAtEditStartRef.current = await res.text();
+      setIsEditing(true);
+    } catch {
+      setError("Failed to load content for editing.");
+    } finally {
+      setIsLoadingEdit(false);
+    }
+  }, [spaceId]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
@@ -159,10 +205,7 @@ export function HtmlSpaceEditor({
 
       const { error: uploadError } = await supabase.storage
         .from("space-html")
-        .upload(storagePath, htmlBlob, {
-          contentType: "text/html",
-          upsert: true,
-        });
+        .upload(storagePath, htmlBlob, { contentType: "text/html", upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -182,7 +225,8 @@ export function HtmlSpaceEditor({
         await supabase.from("spaces").update({ preview_image_url: publicUrl }).eq("id", spaceId);
       });
 
-      setCurrentHtml(fullHtml);
+      // Bump version so the sandbox iframe reloads with the new content
+      setIframeVersion((v) => v + 1);
       setIsEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed. Please try again.");
@@ -194,7 +238,6 @@ export function HtmlSpaceEditor({
   if (isEditing) {
     return (
       <div className="flex flex-col h-full">
-        {/* Editor toolbar */}
         <div className="flex items-center justify-between border-b px-4 py-2 bg-background/95 backdrop-blur-xl z-10">
           <span className="text-sm font-medium text-muted-foreground truncate max-w-xs">
             Editing: <span className="text-foreground">{spaceTitle}</span>
@@ -233,8 +276,6 @@ export function HtmlSpaceEditor({
             </Button>
           </div>
         </div>
-
-        {/* GrapeJS mounts here */}
         <div ref={editorContainerRef} className="flex-1 min-h-0" />
       </div>
     );
@@ -243,19 +284,23 @@ export function HtmlSpaceEditor({
   return (
     <div className="relative h-full w-full">
       <iframe
-        srcDoc={sandboxHtml(currentHtml)}
+        src={`/sandbox/${spaceId}?v=${iframeVersion}`}
         className="h-full w-full border-0"
-        sandbox="allow-scripts allow-forms"
+        sandbox="allow-scripts allow-forms allow-downloads"
         title={spaceTitle}
       />
-      {/* Floating Edit Page button — only rendered when this component is mounted (owner only) */}
       <div className="absolute bottom-4 right-4 hidden lg:flex">
         <Button
           size="sm"
           onClick={handleEdit}
+          disabled={isLoadingEdit}
           className="gap-1.5"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          {isLoadingEdit ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Pencil className="h-3.5 w-3.5" />
+          )}
           Edit Page
         </Button>
       </div>

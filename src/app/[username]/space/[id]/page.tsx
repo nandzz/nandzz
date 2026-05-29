@@ -13,7 +13,6 @@ import { StarButton } from "@/components/spaces/StarButton";
 import { ExternalLink, Lock, Pencil } from "lucide-react";
 import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
 import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
-import { sandboxHtml } from "@/lib/sandbox-html";
 import { BackButton } from "@/components/ui/BackButton";
 import { DeleteSpaceButton } from "@/components/spaces/DeleteSpaceButton";
 
@@ -257,14 +256,13 @@ export default async function SpaceViewPage({
             <HtmlSpaceEditor
               spaceId={space.id}
               htmlUrl={space.html_url!}
-              initialHtml={htmlContent}
               spaceTitle={space.title}
             />
           ) : (
             <iframe
-              srcDoc={sandboxHtml(htmlContent)}
+              src={`/sandbox/${space.id}`}
               className="h-full w-full border-0"
-              sandbox="allow-scripts allow-forms"
+              sandbox="allow-scripts allow-forms allow-downloads"
               title={space.title}
             />
           )

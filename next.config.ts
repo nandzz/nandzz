@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Note: the /sandbox/:path* entry below overrides the CSP for sandbox routes.
         source: "/(.*)",
         headers: [
           {
@@ -66,6 +67,29 @@ const nextConfig: NextConfig = {
               `object-src 'none'`,
               `base-uri 'self'`,
               `form-action 'self'`,
+            ].join("; "),
+          },
+        ],
+      },
+      // Sandbox route: user HTML pages that need CDN scripts, fonts, and images.
+      // connect-src stays 'none' to block data exfiltration from untrusted content.
+      // This entry is listed last so it overrides the global CSP for /sandbox/* paths.
+      {
+        source: "/sandbox/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "script-src * 'unsafe-inline' 'unsafe-eval'",
+              "style-src * 'unsafe-inline'",
+              "img-src * data: blob:",
+              "font-src *",
+              "media-src * data: blob:",
+              "connect-src blob:",
+              "form-action 'none'",
+              "worker-src 'none'",
+              "child-src 'none'",
+              "object-src 'none'",
             ].join("; "),
           },
         ],
