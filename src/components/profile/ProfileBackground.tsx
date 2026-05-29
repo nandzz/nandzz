@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Camera, X, Move, Check } from "lucide-react";
+import { Camera, X, Move, Check, Share2 } from "lucide-react";
 
 const MAX_BG_SIZE = 1.5 * 1024 * 1024;
 
@@ -18,6 +18,8 @@ interface ProfileBackgroundProps {
   backgroundPosition: string | null;
   isOwner: boolean;
   profileId: string;
+  username: string;
+  displayName: string;
 }
 
 export function ProfileBackground({
@@ -25,6 +27,8 @@ export function ProfileBackground({
   backgroundPosition,
   isOwner,
   profileId,
+  username,
+  displayName,
 }: ProfileBackgroundProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -40,6 +44,23 @@ export function ProfileBackground({
   const initPos = parsePosition(backgroundPosition);
   const [position, setPosition] = useState(initPos);       // live drag state
   const [savedPosition, setSavedPosition] = useState(initPos); // last saved state
+
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined"
+      ? `${window.location.origin}/${username}`
+      : `/${username}`;
+    if (navigator.share) {
+      try { await navigator.share({ url, title: `${displayName} on Nandzz` }); return; }
+      catch { /* user cancelled — fall through */ }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard unavailable */ }
+  };
 
   const isDragging = useRef(false);
   const dragStart = useRef({ clientX: 0, clientY: 0, posX: 50, posY: 50 });
@@ -304,6 +325,17 @@ export function ProfileBackground({
               >
                 <Camera className="h-3.5 w-3.5" />
                 {uploading ? "Uploading…" : "Edit cover"}
+              </button>
+              <button
+                onClick={handleShare}
+                className={`flex items-center gap-1.5 rounded-full backdrop-blur-sm border px-3 py-1.5 text-xs transition-all shadow-sm ${
+                  copied
+                    ? "bg-green-500/15 border-green-500/40 text-green-600 dark:text-green-400"
+                    : "bg-background/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-violet-500/50"
+                }`}
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+                {copied ? "Copied!" : "Share"}
               </button>
             </div>
           )}

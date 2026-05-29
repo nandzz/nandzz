@@ -14,8 +14,9 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download } from "lucide-react";
+import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download, Wand2, ImageIcon } from "lucide-react";
 import { TagPicker } from "./TagPicker";
+import { PreviewCropper } from "./PreviewCropper";
 import type { Space, Tag } from "@/lib/types";
 import { sandboxHtml } from "@/lib/sandbox-html";
 
@@ -100,6 +101,13 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>(initialTags);
 
+  const [generatedPreviewSrc, setGeneratedPreviewSrc] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const previewFileInputRef = useRef<HTMLInputElement>(null);
+  const generatedBlobUrlRef = useRef<string | null>(null);
+
   useEffect(() => {
     supabase
       .from("tags")
@@ -127,6 +135,52 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
     }
   }, [spaceType, availableTags]);
 
+
+  // Track object URL for preview image thumbnail
+  useEffect(() => {
+    if (!previewImage) { setPreviewObjectUrl(null); return; }
+    const url = URL.createObjectURL(previewImage);
+    setPreviewObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [previewImage]);
+
+  // Cleanup generated blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (generatedBlobUrlRef.current) URL.revokeObjectURL(generatedBlobUrlRef.current);
+    };
+  }, []);
+
+  const cleanupGeneratedPreview = () => {
+    if (generatedBlobUrlRef.current) {
+      URL.revokeObjectURL(generatedBlobUrlRef.current);
+      generatedBlobUrlRef.current = null;
+    }
+    setGeneratedPreviewSrc(null);
+    setShowCropper(false);
+  };
+
+  const handleGeneratePreview = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await captureHtmlScreenshot(htmlContent);
+      if (blob) {
+        if (generatedBlobUrlRef.current) URL.revokeObjectURL(generatedBlobUrlRef.current);
+        const src = URL.createObjectURL(blob);
+        generatedBlobUrlRef.current = src;
+        setGeneratedPreviewSrc(src);
+        setShowCropper(true);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCropConfirm = (blob: Blob) => {
+    const file = new File([blob], "preview.jpg", { type: "image/jpeg" });
+    setPreviewImage(file);
+    cleanupGeneratedPreview();
+  };
 
   const MAX_HTML_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
   const MAX_IMAGE_SIZE = 1.5 * 1024 * 1024; // 1.5 MB
@@ -708,20 +762,112 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="preview">Preview Image (optional)</Label>
-            <Input
-              id="preview"
-              type="file"
-              accept="image/*"
-              onChange={(e) =>
-                setPreviewImage(e.target.files?.[0] || null)
-              }
-              className="bg-muted/50 border-border/60"
-            />
-            <p className="text-xs text-muted-foreground">
-              Optional — a live preview will be shown if no image is provided
-            </p>
+          {/* Preview Image */}
+          <div className="space-y-3">
+            <Label>
+              Preview Image{" "}
+              <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+
+            {showCropper && generatedPreviewSrc ? (
+              <PreviewCropper
+                imageSrc={generatedPreviewSrc}
+                onConfirm={handleCropConfirm}
+                onCancel={cleanupGeneratedPreview}
+              />
+            ) : (
+              <>
+                {/* Thumbnail of selected/existing preview */}
+                {previewImage && previewObjectUrl ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-violet-400/50 bg-violet-50 dark:bg-violet-950/30 px-4 py-3">
+                    <div className="relative w-16 h-10 rounded overflow-hidden shrink-0 border border-violet-300/50">
+                      <img
+                        src={previewObjectUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-violet-700 dark:text-violet-300 truncate">
+                        {previewImage.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(previewImage.size / 1024).toFixed(0)} KB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage(null)}
+                      className="rounded-full p-1 hover:bg-violet-100 dark:hover:bg-violet-900 transition-colors shrink-0"
+                    >
+                      <X className="h-4 w-4 text-violet-500" />
+                    </button>
+                  </div>
+                ) : space?.preview_image_url ? (
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="relative w-16 h-10 rounded overflow-hidden shrink-0 border border-border/60">
+                      <img
+                        src={space.preview_image_url}
+                        alt="Current preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span>Current preview — upload or generate a new one to replace it</span>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                  {/* Generate from content — HTML only */}
+                  {spaceType === "html" && (htmlContent || space?.html_url) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGeneratePreview}
+                      disabled={isGenerating}
+                      className="gap-1.5 border-violet-400/50 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                          Generating…
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="h-3.5 w-3.5" />
+                          Generate from content
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Manual upload */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => previewFileInputRef.current?.click()}
+                    className="gap-1.5 border-border/60"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Upload image
+                  </Button>
+                  <input
+                    ref={previewFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setPreviewImage(e.target.files?.[0] || null)}
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  {spaceType === "html"
+                    ? "A screenshot will be auto-generated if no image is provided"
+                    : "Optional — shown as the space thumbnail"}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="space-y-2">

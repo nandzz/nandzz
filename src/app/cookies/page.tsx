@@ -12,7 +12,7 @@ export default function CookiesPage() {
         Cookie Policy
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Last updated: May 24, 2026
+        Last updated: May 29, 2026
       </p>
 
       <div className="mt-10 space-y-8 text-muted-foreground leading-7">
@@ -22,8 +22,8 @@ export default function CookiesPage() {
           </h2>
           <p className="mt-3">
             Cookies are small text files stored on your device when you visit a
-            website. They help us provide you with a better experience by
-            remembering your preferences and enabling core functionality.
+            website. They help us provide a functional and secure experience by
+            maintaining your session and remembering your preferences.
           </p>
         </section>
 
@@ -31,41 +31,42 @@ export default function CookiesPage() {
           <h2 className="text-lg font-semibold text-foreground">
             2. Cookies We Use
           </h2>
-          <div className="mt-3 space-y-4">
+          <p className="mt-3">
+            We currently use only essential cookies necessary for the Platform
+            to function. We do not use advertising cookies or behavioral
+            tracking cookies.
+          </p>
+          <div className="mt-4 space-y-4">
             <div>
               <h3 className="font-medium text-foreground">
                 Essential Cookies (Required)
               </h3>
               <p className="mt-1">
-                These cookies are necessary for the Platform to function. They
-                handle authentication, session management, and security. Without
-                them, you cannot log in or use core features.
+                These cookies are strictly necessary for the Platform to
+                operate. They enable authentication, maintain your login
+                session, and protect against security threats. The Platform
+                cannot function without them.
               </p>
               <ul className="mt-2 list-disc pl-6 space-y-1">
                 <li>
-                  <span className="font-medium text-foreground">Authentication cookies</span>{" "}
-                  — Maintain your login session
+                  <span className="font-medium text-foreground">
+                    Authentication cookies
+                  </span>{" "}
+                  — Maintain your login session across page visits
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Security cookies</span>{" "}
-                  — Protect against cross-site request forgery (CSRF)
+                  <span className="font-medium text-foreground">
+                    Security cookies
+                  </span>{" "}
+                  — Protect against cross-site request forgery (CSRF) attacks
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Preference cookies</span>{" "}
+                  <span className="font-medium text-foreground">
+                    Preference cookies
+                  </span>{" "}
                   — Store your theme preference (light/dark mode)
                 </li>
               </ul>
-            </div>
-
-            <div>
-              <h3 className="font-medium text-foreground">
-                Analytics Cookies (Optional)
-              </h3>
-              <p className="mt-1">
-                These cookies help us understand how users interact with the
-                Platform so we can improve it. They collect anonymized usage data
-                such as pages visited and time on site.
-              </p>
             </div>
           </div>
         </section>
@@ -75,9 +76,19 @@ export default function CookiesPage() {
             3. Third-Party Cookies
           </h2>
           <p className="mt-3">
-            We use Supabase for authentication, which may set its own cookies to
-            manage your session securely. We do not use advertising cookies or
-            share cookie data with advertisers.
+            We use Supabase for authentication and data storage, which sets
+            session cookies to manage your login securely. These cookies are
+            governed by{" "}
+            <a
+              href="https://supabase.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-600 hover:underline"
+            >
+              Supabase&apos;s Privacy Policy
+            </a>
+            . We do not use advertising cookies or share cookie data with
+            third-party advertisers.
           </p>
         </section>
 
@@ -86,30 +97,35 @@ export default function CookiesPage() {
             4. Managing Cookies
           </h2>
           <p className="mt-3">
-            You can control cookies through your browser settings. Most browsers
-            allow you to:
+            You can control and delete cookies through your browser settings.
+            Most browsers allow you to:
           </p>
           <ul className="mt-2 list-disc pl-6 space-y-1">
-            <li>View what cookies are stored on your device</li>
+            <li>View which cookies are stored on your device</li>
             <li>Delete individual or all cookies</li>
-            <li>Block cookies from specific or all sites</li>
+            <li>Block cookies from specific or all websites</li>
             <li>Set preferences for first-party vs. third-party cookies</li>
           </ul>
           <p className="mt-3">
             Please note that blocking essential cookies will prevent you from
-            using core features of the Platform, including logging in.
+            logging in and using core features of the Platform.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-foreground">
-            5. Cookie Consent
+            5. Legal Basis for Cookies
           </h2>
           <p className="mt-3">
-            When you first visit the Platform, we ask for your consent to use
-            non-essential cookies. You can change your preferences at any time
-            through the cookie settings in the footer. Essential cookies do not
-            require consent as they are necessary for the Platform to function.
+            Essential cookies are used on the basis of our legitimate interest
+            in operating a secure and functional platform, and as strictly
+            necessary to provide the service you have requested. No consent is
+            required for essential cookies under applicable law.
+          </p>
+          <p className="mt-3">
+            If we introduce non-essential cookies (such as analytics) in the
+            future, we will update this policy and request your consent before
+            placing them.
           </p>
         </section>
 
@@ -119,7 +135,9 @@ export default function CookiesPage() {
           </h2>
           <p className="mt-3">
             We may update this Cookie Policy as our use of cookies evolves. Any
-            changes will be reflected on this page with an updated date.
+            changes will be reflected on this page with an updated date. If we
+            begin using non-essential cookies, we will notify users via the
+            Platform before doing so.
           </p>
         </section>
 
@@ -130,10 +148,10 @@ export default function CookiesPage() {
           <p className="mt-3">
             If you have questions about our use of cookies, contact us at{" "}
             <a
-              href="mailto:nandz.it@gmail.com"
+              href="mailto:support@nandzz.com"
               className="text-violet-600 hover:underline"
             >
-              nandz.it@gmail.com
+              support@nandzz.com
             </a>
             .
           </p>

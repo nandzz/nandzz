@@ -17,8 +17,9 @@ import { sandboxHtml } from "@/lib/sandbox-html";
 import { BackButton } from "@/components/ui/BackButton";
 import { DeleteSpaceButton } from "@/components/spaces/DeleteSpaceButton";
 
+// react.cache deduplicates within a single request (generateMetadata + page share one DB hit)
+// No cross-request caching — space data must always be fresh (is_public changes take effect immediately)
 const getSpace = cache(async (id: string) => {
-  // connection() ensures SUPABASE_SERVICE_ROLE_KEY is read at request time, not inlined at build time (Next.js 16)
   await connection();
   const admin = createAdminClient();
   const { data } = await admin
@@ -158,7 +159,7 @@ export default async function SpaceViewPage({
   let htmlContent: string | null = null;
   if (space.html_url) {
     try {
-      const res = await fetch(space.html_url);
+      const res = await fetch(space.html_url, { cache: "no-store" });
       htmlContent = await res.text();
     } catch {
       // fall through — no content available

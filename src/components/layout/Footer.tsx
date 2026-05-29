@@ -59,6 +59,17 @@ export function Footer() {
                 Cookie Policy
               </Link>
             </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Support
+              </span>
+              <Link
+                href="/contact"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Contact Us
+              </Link>
+            </div>
           </div>
         </div>
 

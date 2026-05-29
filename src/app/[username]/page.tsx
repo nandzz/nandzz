@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { ProfileBackground } from "@/components/profile/ProfileBackground";
 
-// React cache deduplicates this call within a single request,
-// so generateMetadata and ProfilePage share the same DB hit.
-const getProfile = cache(async (username: string) => {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("username", username)
-    .single();
-  return data;
-});
+const fetchProfileCached = unstable_cache(
+  async (username: string) => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("profiles")
+      .select("*")
+      .eq("username", username)
+      .single();
+    return data;
+  },
+  ["profile"],
+  { revalidate: 60 }
+);
+
+// react.cache deduplicates within a single request so generateMetadata and ProfilePage share one DB hit
+const getProfile = cache(fetchProfileCached);
 
 export async function generateMetadata({
   params,
@@ -132,6 +139,8 @@ export default async function ProfilePage({
         backgroundPosition={profile.background_position ?? null}
         isOwner={isOwner}
         profileId={profile.id}
+        username={profile.username}
+        displayName={profile.display_name || profile.username}
       />
 
       <div className="mx-auto max-w-7xl px-4 py-12">
