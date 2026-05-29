@@ -54,6 +54,7 @@ export function Navbar() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        fetchProfile(session.user.id);
       } else {
         setUser(null);
         setProfile(null);
