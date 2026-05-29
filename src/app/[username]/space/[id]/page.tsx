@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
@@ -15,8 +16,8 @@ import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
 import { BackButton } from "@/components/ui/BackButton";
 
 const getSpace = cache(async (id: string) => {
-  // Use the admin client so private spaces are visible server-side.
-  // Privacy is enforced at the application layer below.
+  // connection() ensures SUPABASE_SERVICE_ROLE_KEY is read at request time, not inlined at build time (Next.js 16)
+  await connection();
   const admin = createAdminClient();
   const { data } = await admin
     .from("spaces")

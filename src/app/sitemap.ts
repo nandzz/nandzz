@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BASE_URL = "https://nandzz.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
