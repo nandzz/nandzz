@@ -3,7 +3,14 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Camera, X, Move, Check, Share2 } from "lucide-react";
+import { Camera, X, Move, Check, Share2, Pencil, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MAX_BG_SIZE = 1.5 * 1024 * 1024;
 
@@ -299,33 +306,39 @@ export function ProfileBackground({
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
-              {localUrl && (
-                <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <button
-                    onClick={handleRemove}
                     disabled={uploading}
-                    className="flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-all shadow-sm"
-                  >
-                    <X className="h-3 w-3" />
-                    Remove
-                  </button>
-                  <button
-                    onClick={() => { setPosition(savedPosition); setRepositioning(true); }}
                     className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-all shadow-sm"
                   >
-                    <Move className="h-3.5 w-3.5" />
-                    Reposition
+                    <Pencil className="h-3.5 w-3.5" />
+                    {uploading ? "Uploading…" : "Edit"}
                   </button>
-                </>
-              )}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-all shadow-sm"
-              >
-                <Camera className="h-3.5 w-3.5" />
-                {uploading ? "Uploading…" : "Edit cover"}
-              </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                    <Camera className="h-3.5 w-3.5 mr-2" />
+                    {localUrl ? "Change cover" : "Add cover"}
+                  </DropdownMenuItem>
+                  {localUrl && (
+                    <>
+                      <DropdownMenuItem onClick={() => { setPosition(savedPosition); setRepositioning(true); }}>
+                        <Move className="h-3.5 w-3.5 mr-2" />
+                        Reposition
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={handleRemove}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Remove cover
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
                 onClick={handleShare}
                 className={`flex items-center gap-1.5 rounded-full backdrop-blur-sm border px-3 py-1.5 text-xs transition-all shadow-sm ${
