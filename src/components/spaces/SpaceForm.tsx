@@ -17,6 +17,7 @@ import {
 import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download } from "lucide-react";
 import { TagPicker } from "./TagPicker";
 import type { Space, Tag } from "@/lib/types";
+import { sandboxHtml } from "@/lib/sandbox-html";
 
 type SpaceMode = "html" | "url" | "pdf";
 
@@ -32,7 +33,7 @@ async function captureHtmlScreenshot(
     iframe.style.width = "1024px";
     iframe.style.height = "768px";
     iframe.style.border = "none";
-    iframe.srcdoc = htmlContent;
+    iframe.srcdoc = sandboxHtml(htmlContent);
 
     iframe.onload = async () => {
       try {
@@ -108,6 +109,16 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         if (data) setAvailableTags(data as Tag[]);
       });
   }, [supabase]);
+
+  useEffect(() => {
+    if (space?.html_url && !htmlContent) {
+      fetch(space.html_url)
+        .then((r) => r.text())
+        .then(setHtmlContent)
+        .catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [space?.html_url]);
 
   useEffect(() => {
     if (spaceType === "pdf") {
@@ -668,7 +679,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
                   <Label>Preview</Label>
                   <div className="rounded-xl border border-border/60 overflow-hidden bg-white shadow-sm">
                     <iframe
-                      srcDoc={htmlContent}
+                      srcDoc={sandboxHtml(htmlContent)}
                       className="w-full h-64 border-0"
                       sandbox="allow-scripts"
                       title="HTML Preview"

@@ -13,8 +13,7 @@ export function Footer() {
               <span className="font-semibold">nandzz</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
-              A platform for saving and sharing AI-generated web apps with the
-              world.
+              A gallery for web pages, PDFs, tools, and interactive creations.
             </p>
           </div>
 

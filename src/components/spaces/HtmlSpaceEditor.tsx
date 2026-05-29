@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Pencil, X, Save, Loader2 } from "lucide-react";
+import { sandboxHtml } from "@/lib/sandbox-html";
 
 // Extract the Supabase Storage path from the public URL.
 // URL format: https://<ref>.supabase.co/storage/v1/object/public/space-html/<path>
@@ -25,7 +26,7 @@ async function captureHtmlScreenshot(htmlContent: string): Promise<Blob | null> 
     iframe.style.width = "1024px";
     iframe.style.height = "768px";
     iframe.style.border = "none";
-    iframe.srcdoc = htmlContent;
+    iframe.srcdoc = sandboxHtml(htmlContent);
 
     iframe.onload = async () => {
       try {
@@ -242,7 +243,7 @@ export function HtmlSpaceEditor({
   return (
     <div className="relative h-full w-full">
       <iframe
-        srcDoc={currentHtml}
+        srcDoc={sandboxHtml(currentHtml)}
         className="h-full w-full border-0"
         sandbox="allow-scripts allow-forms"
         title={spaceTitle}

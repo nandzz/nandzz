@@ -10,9 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LikeButton } from "@/components/spaces/LikeButton";
 import { ShareButton } from "@/components/spaces/ShareButton";
 import { StarButton } from "@/components/spaces/StarButton";
-import { ExternalLink, Lock } from "lucide-react";
+import { ExternalLink, Lock, Pencil } from "lucide-react";
 import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
 import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
+import { sandboxHtml } from "@/lib/sandbox-html";
 import { BackButton } from "@/components/ui/BackButton";
 import { DeleteSpaceButton } from "@/components/spaces/DeleteSpaceButton";
 
@@ -173,11 +174,6 @@ export default async function SpaceViewPage({
           <BackButton />
           <div className="h-4 w-px bg-border" />
           <h1 className="font-semibold truncate max-w-md">{space.title}</h1>
-          {space.description && (
-            <span className="hidden lg:inline text-sm text-muted-foreground truncate max-w-xs">
-              — {space.description}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-3">
           <LikeButton
@@ -202,7 +198,11 @@ export default async function SpaceViewPage({
                 </AvatarFallback>
               </Avatar>
               <span className="hidden sm:inline">
-                {profile.display_name || profile.username}
+                {(profile.display_name || profile.username || "")
+                  .split(" ")
+                  .filter(Boolean)
+                  .map((w) => w[0].toUpperCase() + ".")
+                  .join("")}
               </span>
             </Link>
           )}
@@ -231,6 +231,18 @@ export default async function SpaceViewPage({
             </a>
           )}
           {isOwner && (
+            <Link href={`/dashboard/edit-space/${space.id}`}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-border/60 hover:border-violet-500/50 transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </Button>
+            </Link>
+          )}
+          {isOwner && (
             <DeleteSpaceButton spaceId={space.id} redirectTo={`/${username}`} />
           )}
         </div>
@@ -249,7 +261,7 @@ export default async function SpaceViewPage({
             />
           ) : (
             <iframe
-              srcDoc={htmlContent}
+              srcDoc={sandboxHtml(htmlContent)}
               className="h-full w-full border-0"
               sandbox="allow-scripts allow-forms"
               title={space.title}
@@ -261,7 +273,7 @@ export default async function SpaceViewPage({
           <iframe
             src={space.url}
             className="h-full w-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            sandbox="allow-scripts allow-forms allow-popups"
             title={space.title}
           />
         ) : (
