@@ -23,6 +23,10 @@ export function PdfViewer({ url }: PdfViewerProps) {
   );
 
   useEffect(() => {
+    if (containerRef.current) containerRef.current.scrollTop = 0;
+  }, [url]);
+
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const observer = new ResizeObserver((entries) => {

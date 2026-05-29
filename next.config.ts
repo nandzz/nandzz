@@ -3,8 +3,6 @@ import type { NextConfig } from "next";
 // Supabase project host — used in CSP directives
 const supabaseHost = "*.supabase.co";
 
-// Verify the key is present at build time (visible in Amplify build logs)
-console.log("[next.config] SUPABASE_SERVICE_ROLE_KEY at build time:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "SET" : "MISSING");
 
 const nextConfig: NextConfig = {
   // Bake server-only env vars into the bundle at build time.
