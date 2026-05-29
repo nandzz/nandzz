@@ -89,7 +89,6 @@ export function ChangePasswordForm() {
 
       <Button
         type="submit"
-        className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30"
         disabled={loading}
       >
         {loading ? "Updating..." : "Update password"}

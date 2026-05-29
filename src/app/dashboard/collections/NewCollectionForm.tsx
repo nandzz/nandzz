@@ -108,7 +108,7 @@ export function NewCollectionForm() {
           <Button
             type="submit"
             disabled={loading || !name.trim()}
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25"
+            className="w-full"
           >
             {loading ? "Creating..." : "Create Collection"}
           </Button>

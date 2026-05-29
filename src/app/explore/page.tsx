@@ -99,7 +99,7 @@ export default async function ExplorePage({
         <div className="absolute left-0 bottom-0 h-[300px] w-[300px] rounded-full bg-fuchsia-100/30 blur-3xl dark:bg-fuchsia-950/15" />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         {/* Page header */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
@@ -159,8 +159,8 @@ export default async function ExplorePage({
             <p className="text-muted-foreground max-w-sm mb-6">
               Be the first to share an AI-generated web app with the community.
             </p>
-            <Link href="/login?tab=signup">
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25">
+            <Link href={user ? "/dashboard/create-space" : "/login?tab=signup"}>
+              <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Create the First Space
               </Button>

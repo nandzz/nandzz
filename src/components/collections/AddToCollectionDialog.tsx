@@ -210,7 +210,6 @@ export function AddToCollectionDialog({
               size="sm"
               onClick={handleSave}
               disabled={saving}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
             >
               {saving ? "Saving..." : "Save"}
             </Button>

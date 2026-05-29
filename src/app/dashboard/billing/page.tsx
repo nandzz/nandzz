@@ -60,7 +60,7 @@ export default async function BillingPage({
         <div className="absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-violet-100/30 blur-3xl dark:bg-violet-950/15" />
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl px-4 py-12">
         {/* Header */}
         <div className="mb-10 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
@@ -172,7 +172,7 @@ export default async function BillingPage({
               </ul>
               <div className="flex flex-wrap gap-3">
                 <Link href="/dashboard/billing?checkout=pro&billing=monthly">
-                  <Button className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25">
+                  <Button>
                     Upgrade — $9/mo
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>

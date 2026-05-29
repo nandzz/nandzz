@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
@@ -69,43 +70,23 @@ const websiteSchema = {
 export default async function HomePage() {
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+    redirect(profile?.username ? `/${profile.username}` : "/dashboard");
+  }
+
   const { data: spaces } = await supabase
     .from("spaces")
     .select("*, profiles(username, display_name, avatar_url)")
     .eq("is_public", true)
     .order("created_at", { ascending: false })
     .limit(6);
-
-  const { data: { user } } = await supabase.auth.getUser();
-  let likedSpaceIds: string[] = [];
-  let savedSpaceIds: string[] = [];
-
-  if (user && spaces) {
-    const spaceIds = spaces.map(s => s.id);
-    const [{ data: likes }, { data: starredCol }] = await Promise.all([
-      supabase
-        .from("space_likes")
-        .select("space_id")
-        .eq("user_id", user.id)
-        .in("space_id", spaceIds),
-      supabase
-        .from("collections")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_default", true)
-        .maybeSingle(),
-    ]);
-    likedSpaceIds = likes?.map(l => l.space_id) || [];
-
-    if (starredCol) {
-      const { data: savedEntries } = await supabase
-        .from("collection_spaces")
-        .select("space_id")
-        .eq("collection_id", starredCol.id)
-        .in("space_id", spaceIds);
-      savedSpaceIds = savedEntries?.map(e => e.space_id) || [];
-    }
-  }
 
   return (
     <div>
@@ -115,7 +96,7 @@ export default async function HomePage() {
       />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:py-28">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
             {/* Left: Text */}
@@ -138,10 +119,10 @@ export default async function HomePage() {
               </p>
 
               <div className="mt-10 flex flex-wrap items-center gap-4">
-                <Link href="/login?tab=signup">
+                <Link href="/login">
                   <Button
                     size="lg"
-                    className="bg-violet-600 hover:bg-violet-700 text-white px-8 shadow-lg shadow-violet-600/25 hover:shadow-xl hover:shadow-violet-600/30 transition-all"
+                    className="px-8"
                   >
                     Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -212,7 +193,7 @@ export default async function HomePage() {
 
       {/* Recent Spaces */}
       {spaces && spaces.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-7xl px-4 pb-20">
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">
@@ -232,7 +213,7 @@ export default async function HomePage() {
               </Button>
             </Link>
           </div>
-          <SpaceGrid spaces={spaces} showAuthor likedSpaceIds={likedSpaceIds} savedSpaceIds={savedSpaceIds} currentUserId={user?.id} />
+          <SpaceGrid spaces={spaces} showAuthor />
         </section>
       )}
 
@@ -240,7 +221,7 @@ export default async function HomePage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-violet-700 to-fuchsia-700 dark:from-violet-800 dark:via-violet-900 dark:to-fuchsia-900" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,oklch(1_0_0_/_0.05)_1px,transparent_1px),linear-gradient(to_bottom,oklch(1_0_0_/_0.05)_1px,transparent_1px)] bg-[size:3rem_3rem]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 py-20">
           <div className="flex flex-col items-center justify-between gap-8 sm:flex-row">
             <div>
               <h2 className="text-3xl font-bold text-white tracking-tight">

@@ -23,7 +23,6 @@ export default function SpaceError({
       <div className="flex gap-3">
         <Button
           onClick={reset}
-          className="bg-violet-600 hover:bg-violet-700 text-white"
         >
           Try again
         </Button>

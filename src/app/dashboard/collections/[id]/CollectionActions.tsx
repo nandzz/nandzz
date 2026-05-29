@@ -114,7 +114,6 @@ export function CollectionActions({ collection }: CollectionActionsProps) {
               size="sm"
               onClick={handleSave}
               disabled={saving || !name.trim()}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
             >
               {saving ? "Saving..." : "Save"}
             </Button>

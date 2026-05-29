@@ -65,7 +65,7 @@ export function PricingClient() {
       </div>
 
       {/* Hero */}
-      <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6 text-center">
+      <section className="mx-auto max-w-4xl px-4 py-20 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200/60 bg-violet-50/80 px-4 py-1.5 dark:border-violet-800/60 dark:bg-violet-950/40">
           <Zap className="h-3.5 w-3.5 text-violet-500" />
           <span className="text-xs font-medium text-violet-700 dark:text-violet-300">
@@ -111,7 +111,7 @@ export function PricingClient() {
       </section>
 
       {/* Plan cards */}
-      <section className="mx-auto max-w-4xl px-4 pb-20 sm:px-6">
+      <section className="mx-auto max-w-4xl px-4 pb-20">
         <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
 
           {/* Free */}
@@ -202,7 +202,7 @@ export function PricingClient() {
             <Link
               href={`/dashboard/billing?checkout=pro&billing=${annual ? "annual" : "monthly"}`}
             >
-              <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30">
+              <Button className="w-full">
                 Upgrade to Pro
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -219,7 +219,7 @@ export function PricingClient() {
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto max-w-2xl px-4 pb-24 sm:px-6">
+      <section className="mx-auto max-w-2xl px-4 pb-24">
         <div className="flex items-center gap-3 mb-10">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
             <HelpCircle className="h-5 w-5 text-violet-600 dark:text-violet-400" />

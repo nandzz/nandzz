@@ -76,7 +76,7 @@ export function CheckoutPanel({ billingCycle }: { billingCycle: "monthly" | "ann
       <Button
         onClick={handleCheckout}
         disabled={loading}
-        className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 h-11"
+        className="w-full h-11"
       >
         {loading ? (
           <>

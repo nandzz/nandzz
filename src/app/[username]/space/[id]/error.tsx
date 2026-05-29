@@ -27,7 +27,7 @@ export default function SpaceError({
           Try again
         </Button>
         <Link href="/">
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white">
+          <Button>
             Go home
           </Button>
         </Link>

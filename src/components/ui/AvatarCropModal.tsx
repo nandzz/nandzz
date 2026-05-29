@@ -104,7 +104,6 @@ export function AvatarCropModal({ imageSrc, onCancel, onCrop }: AvatarCropModalP
         <Button
           onClick={handleConfirm}
           disabled={loading}
-          className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25"
         >
           {loading ? "Processing..." : "Apply"}
         </Button>

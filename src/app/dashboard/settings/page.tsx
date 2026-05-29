@@ -150,7 +150,7 @@ export default function SettingsPage() {
         <div className="absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-violet-100/30 blur-3xl dark:bg-violet-950/15" />
       </div>
 
-      <div className="mx-auto flex max-w-7xl justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl justify-center px-4 py-12">
         <div className="w-full max-w-2xl">
           <Tabs defaultValue="profile" className="gap-6">
             <TabsList className="w-full">
@@ -436,7 +436,6 @@ export default function SettingsPage() {
 
               <Button
                 type="submit"
-                className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30"
                 disabled={loading}
               >
                 {loading ? "Saving..." : "Save Changes"}

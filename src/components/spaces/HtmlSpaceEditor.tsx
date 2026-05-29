@@ -216,7 +216,7 @@ export function HtmlSpaceEditor({
               size="sm"
               onClick={handleSave}
               disabled={isSaving}
-              className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
+              className="gap-1.5"
             >
               {isSaving ? (
                 <>
@@ -252,7 +252,7 @@ export function HtmlSpaceEditor({
         <Button
           size="sm"
           onClick={handleEdit}
-          className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white shadow-lg"
+          className="gap-1.5"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit Page

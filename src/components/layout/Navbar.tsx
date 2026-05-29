@@ -236,7 +236,6 @@ export function Navbar() {
               <Link href="/login?tab=signup">
                 <Button
                   size="sm"
-                  className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25"
                 >
                   Sign up
                 </Button>
@@ -370,7 +369,7 @@ export function Navbar() {
               <Link href="/login?tab=signup" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
                 <Button
                   size="sm"
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                  className="w-full"
                 >
                   Sign up
                 </Button>

@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         <div className="absolute right-0 top-0 h-[300px] w-[300px] rounded-full bg-violet-100/30 blur-3xl dark:bg-violet-950/15" />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         {/* Page header */}
         <div className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
               </Button>
             </Link>
             <Link href="/dashboard/create-space">
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25 transition-all hover:shadow-md hover:shadow-violet-600/30">
+              <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Space
               </Button>
@@ -138,7 +138,7 @@ export default async function DashboardPage() {
               Create your first Space to start building your web app collection.
             </p>
             <Link href="/dashboard/create-space">
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-600/25">
+              <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Space
               </Button>

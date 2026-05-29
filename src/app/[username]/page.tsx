@@ -134,7 +134,7 @@ export default async function ProfilePage({
         profileId={profile.id}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         <ProfileHeader profile={profile} />
         <div className="mt-12">
           <ProfileTabs

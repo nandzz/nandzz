@@ -22,7 +22,6 @@ export default function DashboardError({
       </p>
       <Button
         onClick={reset}
-        className="bg-violet-600 hover:bg-violet-700 text-white"
       >
         Try again
       </Button>
