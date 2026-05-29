@@ -14,7 +14,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download, Wand2, ImageIcon } from "lucide-react";
+import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download, Wand2, ImageIcon, Check } from "lucide-react";
+import { PREVIEW_GRADIENTS, GRADIENT_KEYS, DEFAULT_GRADIENT, type GradientKey } from "@/lib/preview-gradients";
 import { TagPicker } from "./TagPicker";
 import { PreviewCropper } from "./PreviewCropper";
 import type { Space, Tag } from "@/lib/types";
@@ -107,6 +108,12 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
   const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
   const previewFileInputRef = useRef<HTMLInputElement>(null);
   const generatedBlobUrlRef = useRef<string | null>(null);
+
+  const [previewGradient, setPreviewGradient] = useState<GradientKey>(
+    (space?.preview_gradient as GradientKey) || DEFAULT_GRADIENT
+  );
+  const [previewTitle, setPreviewTitle] = useState(space?.preview_title || "");
+  const [clearExistingImage, setClearExistingImage] = useState(false);
 
   useEffect(() => {
     supabase
@@ -264,7 +271,7 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         return;
       }
 
-      let preview_image_url = space?.preview_image_url || null;
+      let preview_image_url = (clearExistingImage && !previewImage) ? null : (space?.preview_image_url || null);
       let html_url = space?.html_url || null;
       let pdf_url = space?.pdf_url || null;
 
@@ -363,6 +370,8 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         html_url: spaceType === "html" ? html_url : null,
         pdf_url: spaceType === "pdf" ? pdf_url : null,
         preview_image_url,
+        preview_gradient: previewGradient,
+        preview_title: previewTitle.trim() || null,
         is_public: isPublic,
         user_id: user.id,
       };
@@ -762,12 +771,9 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
             />
           </div>
 
-          {/* Preview Image */}
+          {/* Preview Image / Gradient */}
           <div className="space-y-3">
-            <Label>
-              Preview Image{" "}
-              <span className="font-normal text-muted-foreground">(optional)</span>
-            </Label>
+            <Label>Preview</Label>
 
             {showCropper && generatedPreviewSrc ? (
               <PreviewCropper
@@ -775,99 +781,172 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
                 onConfirm={handleCropConfirm}
                 onCancel={cleanupGeneratedPreview}
               />
-            ) : (
-              <>
-                {/* Thumbnail of selected/existing preview */}
-                {previewImage && previewObjectUrl ? (
-                  <div className="flex items-center gap-3 rounded-xl border border-violet-400/50 bg-violet-50 dark:bg-violet-950/30 px-4 py-3">
-                    <div className="relative w-16 h-10 rounded overflow-hidden shrink-0 border border-violet-300/50">
-                      <img
-                        src={previewObjectUrl}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-violet-700 dark:text-violet-300 truncate">
-                        {previewImage.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(previewImage.size / 1024).toFixed(0)} KB
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewImage(null)}
-                      className="rounded-full p-1 hover:bg-violet-100 dark:hover:bg-violet-900 transition-colors shrink-0"
-                    >
-                      <X className="h-4 w-4 text-violet-500" />
-                    </button>
-                  </div>
-                ) : space?.preview_image_url ? (
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <div className="relative w-16 h-10 rounded overflow-hidden shrink-0 border border-border/60">
-                      <img
-                        src={space.preview_image_url}
-                        alt="Current preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <span>Current preview — upload or generate a new one to replace it</span>
-                  </div>
-                ) : null}
+            ) : (() => {
+              const hasNewImage = !!previewImage && !!previewObjectUrl;
+              const hasExistingImage = !!space?.preview_image_url && !clearExistingImage;
+              const hasImage = hasNewImage || hasExistingImage;
+              const gradient = PREVIEW_GRADIENTS[previewGradient];
 
-                <div className="flex flex-wrap gap-2">
-                  {/* Generate from content — HTML only */}
-                  {spaceType === "html" && (htmlContent || space?.html_url) && (
+              return (
+                <>
+                  {/* Active image */}
+                  {hasNewImage ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-violet-400/50 bg-violet-50 dark:bg-violet-950/30 px-4 py-3">
+                      <div className="relative w-16 h-10 rounded overflow-hidden shrink-0 border border-violet-300/50">
+                        <img src={previewObjectUrl!} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-violet-700 dark:text-violet-300 truncate">{previewImage!.name}</p>
+                        <p className="text-xs text-muted-foreground">{(previewImage!.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setPreviewImage(null); setClearExistingImage(true); }}
+                        className="rounded-full p-1 hover:bg-violet-100 dark:hover:bg-violet-900 transition-colors shrink-0"
+                        title="Remove image"
+                      >
+                        <X className="h-4 w-4 text-violet-500" />
+                      </button>
+                    </div>
+                  ) : hasExistingImage ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+                      <div className="relative w-16 h-10 rounded overflow-hidden shrink-0 border border-border/60">
+                        <img src={space!.preview_image_url!} alt="Current preview" className="w-full h-full object-cover" />
+                      </div>
+                      <span className="flex-1 text-xs text-muted-foreground">Current preview image</span>
+                      <button
+                        type="button"
+                        onClick={() => setClearExistingImage(true)}
+                        className="rounded-full p-1 hover:bg-muted transition-colors shrink-0"
+                        title="Remove image"
+                      >
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {/* Upload / generate buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {spaceType === "html" && (htmlContent || space?.html_url) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGeneratePreview}
+                        disabled={isGenerating}
+                        className="gap-1.5 border-violet-400/50 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                            Generating…
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-3.5 w-3.5" />
+                            Generate from content
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={handleGeneratePreview}
-                      disabled={isGenerating}
-                      className="gap-1.5 border-violet-400/50 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                      onClick={() => previewFileInputRef.current?.click()}
+                      className="gap-1.5 border-border/60"
                     >
-                      {isGenerating ? (
-                        <>
-                          <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                          Generating…
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="h-3.5 w-3.5" />
-                          Generate from content
-                        </>
-                      )}
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      {hasImage ? "Replace image" : "Upload image"}
                     </Button>
+                    <input
+                      ref={previewFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) { setPreviewImage(f); setClearExistingImage(false); }
+                      }}
+                    />
+                  </div>
+
+                  {/* Gradient section — shown when no image */}
+                  {!hasImage && (
+                    <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+                      <p className="text-xs font-medium text-foreground/70">Background color</p>
+
+                      {/* Swatch picker */}
+                      <div className="flex gap-2 flex-wrap">
+                        {GRADIENT_KEYS.map((key) => {
+                          const g = PREVIEW_GRADIENTS[key];
+                          const selected = previewGradient === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              title={g.label}
+                              onClick={() => setPreviewGradient(key)}
+                              className="relative h-7 w-7 rounded-full transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              style={{ background: g.swatch }}
+                            >
+                              {selected && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <Check className="h-3.5 w-3.5 text-white drop-shadow" strokeWidth={3} />
+                                </span>
+                              )}
+                              {selected && (
+                                <span className="absolute -inset-0.5 rounded-full ring-2 ring-offset-1 ring-offset-background ring-foreground/30" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Optional title */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-foreground/70">
+                          Preview title <span className="font-normal text-muted-foreground">(optional)</span>
+                        </p>
+                        <input
+                          type="text"
+                          placeholder="e.g. My Portfolio"
+                          value={previewTitle}
+                          maxLength={60}
+                          onChange={(e) => setPreviewTitle(e.target.value)}
+                          className="w-full rounded-lg border border-border/60 bg-muted/50 px-3 py-2 text-sm focus:outline-none focus:border-violet-500/50 focus:bg-background transition-colors placeholder:text-muted-foreground/50"
+                        />
+                      </div>
+
+                      {/* Mini preview */}
+                      <div className="overflow-hidden rounded-lg aspect-video border border-border/40">
+                        <div
+                          className={`flex h-full w-full items-center justify-center ${gradient.bg}`}
+                        >
+                          {previewTitle.trim() ? (
+                            <span className={`text-center text-xs font-semibold leading-snug px-3 line-clamp-3 ${gradient.text}`}>
+                              {previewTitle}
+                            </span>
+                          ) : (
+                            <span className={`text-2xl font-bold ${gradient.text}`}>
+                              {title[0]?.toUpperCase() || "?"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
 
-                  {/* Manual upload */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => previewFileInputRef.current?.click()}
-                    className="gap-1.5 border-border/60"
-                  >
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    Upload image
-                  </Button>
-                  <input
-                    ref={previewFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setPreviewImage(e.target.files?.[0] || null)}
-                  />
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {spaceType === "html"
-                    ? "A screenshot will be auto-generated if no image is provided"
-                    : "Optional — shown as the space thumbnail"}
-                </p>
-              </>
-            )}
+                  {hasImage && (
+                    <p className="text-xs text-muted-foreground">
+                      {spaceType === "html"
+                        ? "A screenshot is auto-generated if no image is uploaded"
+                        : "Shown as the space thumbnail"}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <div className="space-y-2">

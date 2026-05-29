@@ -41,6 +41,8 @@ export type Space = {
   html_url: string | null;
   pdf_url: string | null;
   preview_image_url: string | null;
+  preview_gradient: string | null;
+  preview_title: string | null;
   is_public: boolean;
   likes_count: number;
   created_at: string;

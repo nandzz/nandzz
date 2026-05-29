@@ -39,6 +39,8 @@ create table if not exists public.spaces (
 alter table public.spaces add column if not exists likes_count integer default 0;
 alter table public.spaces drop column if exists type;
 alter table public.spaces add column if not exists pdf_url text;
+alter table public.spaces add column if not exists preview_gradient text default 'violet';
+alter table public.spaces add column if not exists preview_title text;
 
 -- 3. Enable RLS
 alter table public.profiles enable row level security;
