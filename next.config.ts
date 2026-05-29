@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
               `style-src 'self' 'unsafe-inline'`,
               `img-src 'self' data: blob: https://${supabaseHost}`,
               `font-src 'self'`,
-              `connect-src 'self' https://${supabaseHost} wss://${supabaseHost}`,
+              `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.web3forms.com`,
               `worker-src 'self'`,
               `frame-src *`,
               `object-src 'none'`,
