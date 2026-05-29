@@ -50,7 +50,7 @@ export function ProfileTabs({
   return (
     <div className="w-full">
       {/* Tab bar */}
-      <div className="flex items-center gap-0 overflow-x-auto border-b border-border/50 scrollbar-hide">
+      <div className="flex items-center gap-0 overflow-x-auto overflow-y-hidden border-b border-border/50 scrollbar-hide">
         {/* All tab */}
         <button
           onClick={() => setActiveTab("all")}
