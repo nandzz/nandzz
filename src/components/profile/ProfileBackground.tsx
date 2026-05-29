@@ -307,14 +307,12 @@ export function ProfileBackground({
           ) : (
             <div className="flex items-center gap-1.5">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    disabled={uploading}
-                    className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-all shadow-sm"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    {uploading ? "Uploading…" : "Edit"}
-                  </button>
+                <DropdownMenuTrigger
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-all shadow-sm"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  {uploading ? "Uploading…" : "Edit"}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
