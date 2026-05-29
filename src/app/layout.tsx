@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { ConditionalFooter } from "@/components/layout/ConditionalFooter";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,8 +16,62 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "nandzz — Save & Share Web Apps",
-  description: "A platform for saving and sharing your favorite web apps with the world.",
+  metadataBase: new URL("https://nandzz.com"),
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png" }],
+    other: [
+      { rel: "manifest", url: "/site.webmanifest" },
+    ],
+  },
+  title: {
+    default: "Nandzz — Share what you create.",
+    template: "%s — Nandzz",
+  },
+  description:
+    "Nandzz — Share what you create. A gallery for web pages, PDFs, tools, and interactive AI creations.",
+  keywords: [
+    "share web apps",
+    "your gallery",
+    "web app community",
+    "HTML app hosting",
+    "interactive page sharing",
+    "AI generated apps",
+    "creative coding gallery",
+  ],
+  authors: [{ name: "nandzz" }],
+  creator: "nandzz",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://nandzz.com",
+    siteName: "Nandzz",
+    title: "Nandzz — Share what you create.",
+    description:
+      "A gallery for web pages, PDFs, tools, and interactive AI creations.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nandzz — Share what you create.",
+    description:
+      "A gallery for web pages, PDFs, tools, and interactive AI creations.",
+    creator: "@nandzz",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({
@@ -40,7 +94,7 @@ export default function RootLayout({
         >
           <Navbar />
           <main className="flex-1">{children}</main>
-          <Footer />
+          <ConditionalFooter />
         </ThemeProvider>
       </body>
     </html>

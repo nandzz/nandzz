@@ -25,7 +25,9 @@ import {
   Video,
   User,
   ShieldCheck,
+  CreditCard,
 } from "lucide-react";
+import { FEATURES } from "@/lib/flags";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
 import type { Profile, SocialLinks } from "@/lib/types";
@@ -160,6 +162,12 @@ export default function SettingsPage() {
                 <ShieldCheck className="h-4 w-4" />
                 Security
               </TabsTrigger>
+              {FEATURES.monetization && (
+                <TabsTrigger value="billing" className="flex-1 gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Billing
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="profile">
@@ -449,6 +457,35 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {FEATURES.monetization && (
+              <TabsContent value="billing">
+                <Card className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl">Billing & Plans</CardTitle>
+                    <CardDescription>Manage your subscription and payment details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      View your current plan, upgrade, or manage your billing on the dedicated billing page.
+                    </p>
+                    <div className="flex gap-3">
+                      <a href="/dashboard/billing">
+                        <button className="inline-flex items-center gap-2 rounded-md bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 text-sm font-medium shadow-sm shadow-violet-600/25 transition-colors">
+                          <CreditCard className="h-4 w-4" />
+                          Go to Billing
+                        </button>
+                      </a>
+                      <a href="/pricing">
+                        <button className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background hover:bg-accent px-4 py-2 text-sm font-medium transition-colors">
+                          View Plans
+                        </button>
+                      </a>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

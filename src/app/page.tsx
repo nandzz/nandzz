@@ -1,8 +1,70 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { ArrowRight } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Nandzz — Share what you create.",
+  description:
+    "Nandzz — Share what you create. A gallery for web pages, PDFs, tools, and interactive AI creations.",
+  alternates: {
+    canonical: "https://nandzz.com",
+  },
+};
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://nandzz.com/#website",
+      url: "https://nandzz.com",
+      name: "nandzz",
+      description: "A gallery for web pages, PDFs, tools, and interactive AI creations.",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: "https://nandzz.com/explore",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://nandzz.com/#organization",
+      name: "nandzz",
+      url: "https://nandzz.com",
+      description:
+        "Nandzz is a creative community where makers share web apps, interactive tools, and AI-generated creations.",
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://nandzz.com/#app",
+      name: "nandzz",
+      applicationCategory: "WebApplication",
+      operatingSystem: "Web",
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Free",
+          price: "0",
+          priceCurrency: "USD",
+          description: "5 Spaces, public sharing, community profile",
+        },
+        {
+          "@type": "Offer",
+          name: "Pro",
+          price: "9",
+          priceCurrency: "USD",
+          description: "Unlimited Spaces, private spaces, Pro badge, HTML editor",
+        },
+      ],
+    },
+  ],
+};
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -47,6 +109,10 @@ export default async function HomePage() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
@@ -57,7 +123,7 @@ export default async function HomePage() {
               <div className="mb-8 flex items-center gap-3">
                 <span className="h-px w-8 bg-violet-500 flex-shrink-0" />
                 <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  AI Gallery · Community
+                  Your Gallery · Community
                 </span>
               </div>
 

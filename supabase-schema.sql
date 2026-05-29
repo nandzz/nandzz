@@ -409,6 +409,19 @@ create policy "Users can delete their own background"
   using (bucket_id = 'profile-backgrounds' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ============================================================
+-- Billing / Stripe (run after Stripe integration is set up)
+-- ============================================================
+
+-- Add billing columns to profiles
+alter table public.profiles add column if not exists plan_tier text default 'free' check (plan_tier in ('free', 'pro'));
+alter table public.profiles add column if not exists stripe_customer_id text;
+
+-- Index for webhook lookups by Stripe customer
+create index if not exists idx_profiles_stripe_customer
+  on public.profiles(stripe_customer_id)
+  where stripe_customer_id is not null;
+
+-- ============================================================
 -- Performance indexes (critical for scale)
 -- Run these once; all are idempotent via CREATE INDEX IF NOT EXISTS
 -- ============================================================

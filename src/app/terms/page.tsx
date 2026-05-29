@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions — nandzz",
+  title: "Terms & Conditions — Nandzz",
   description: "Terms and conditions for using the nandzz platform.",
 };
 

@@ -1,8 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
 import { Compass, Plus } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Explore Spaces",
+  description:
+    "Discover web apps, interactive tools, PDFs, and AI-generated creations shared by the nandzz community.",
+  openGraph: {
+    title: "Explore Spaces — Nandzz",
+    description:
+      "Discover web apps, interactive tools, PDFs, and AI-generated creations shared by the community.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Explore Spaces — Nandzz",
+    description: "Discover web apps and AI creations shared by the nandzz community.",
+  },
+};
 
 const PAGE_SIZE = 24;
 

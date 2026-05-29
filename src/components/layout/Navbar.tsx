@@ -16,8 +16,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Moon, Sun, Menu, X, User, Settings, LogOut } from "lucide-react";
+import { Moon, Sun, Menu, X, User, Settings, LogOut, CreditCard } from "lucide-react";
 import type { Profile } from "@/lib/types";
+import { FEATURES } from "@/lib/flags";
 
 export function Navbar() {
   const router = useRouter();
@@ -95,6 +96,14 @@ export function Navbar() {
             >
               Explore
             </Link>
+            {FEATURES.monetization && (
+              <Link
+                href="/pricing"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                Pricing
+              </Link>
+            )}
             {user && (
               <Link
                 href="/dashboard/create-space"
@@ -175,6 +184,15 @@ export function Navbar() {
                       <Settings className="h-4 w-4 text-muted-foreground" />
                       Settings
                     </DropdownMenuItem>
+                    {FEATURES.monetization && (
+                      <DropdownMenuItem
+                        onClick={() => router.push("/dashboard/billing")}
+                        className="gap-2"
+                      >
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        Billing & Plans
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuGroup>
 
                   <DropdownMenuSeparator />
@@ -255,6 +273,15 @@ export function Navbar() {
           >
             Explore
           </Link>
+          {FEATURES.monetization && (
+            <Link
+              href="/pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              Pricing
+            </Link>
+          )}
           {user && (
             <Link
               href="/dashboard/create-space"

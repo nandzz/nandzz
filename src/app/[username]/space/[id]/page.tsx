@@ -34,7 +34,7 @@ export async function generateMetadata({
   const { id, username } = await params;
   const space = await getSpace(id);
 
-  if (!space) return { title: "Space Not Found — nandzz" };
+  if (!space) return { title: "Space Not Found — Nandzz" };
 
   const profile = space.profiles as unknown as {
     display_name: string | null;
@@ -42,23 +42,32 @@ export async function generateMetadata({
   } | null;
 
   // 404 if space doesn't belong to the username in the URL
-  if (profile?.username !== username) return { title: "Space Not Found — nandzz" };
+  if (profile?.username !== username) return { title: "Space Not Found — Nandzz" };
 
-  if (!space.is_public) return { title: "Private Space — nandzz" };
+  if (!space.is_public) return { title: "Private Space — Nandzz" };
 
   const author = profile?.display_name || profile?.username || "Unknown";
+  const description = space.description || `A web app shared by ${author} on nandzz.`;
 
   return {
-    title: `${space.title} — nandzz`,
-    description:
-      space.description || `A web app shared by ${author} on nandzz.`,
+    title: space.title,
+    description,
+    alternates: {
+      canonical: `https://nandzz.com/${username}/space/${id}`,
+    },
     openGraph: {
       title: space.title,
-      description:
-        space.description || `A web app shared by ${author} on nandzz.`,
+      description,
+      type: "website",
       ...(space.preview_image_url && {
-        images: [{ url: space.preview_image_url }],
+        images: [{ url: space.preview_image_url, alt: space.title }],
       }),
+    },
+    twitter: {
+      card: space.preview_image_url ? "summary_large_image" : "summary",
+      title: `${space.title} — Nandzz`,
+      description,
+      ...(space.preview_image_url && { images: [space.preview_image_url] }),
     },
   };
 }
@@ -100,9 +109,9 @@ export default async function SpaceViewPage({
             Only the owner can view this space.
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/${username}`}>View profile</Link>
-        </Button>
+        <Link href={`/${username}`}>
+          <Button variant="outline">View profile</Button>
+        </Link>
       </div>
     );
   }

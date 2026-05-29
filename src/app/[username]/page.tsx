@@ -27,22 +27,32 @@ export async function generateMetadata({
   const profile = await getProfile(username);
 
   if (!profile) {
-    return { title: "Profile Not Found — nandzz" };
+    return { title: "Profile Not Found — Nandzz" };
   }
 
   const name = profile.display_name || profile.username;
 
+  const description = profile.tagline || `Check out ${name}'s web apps on nandzz.`;
+
   return {
-    title: `${name} (@${profile.username}) — nandzz`,
-    description:
-      profile.tagline || `Check out ${name}'s web apps on nandzz.`,
+    title: `${name} (@${profile.username})`,
+    description,
+    alternates: {
+      canonical: `https://nandzz.com/${profile.username}`,
+    },
     openGraph: {
       title: `${name} (@${profile.username})`,
-      description:
-        profile.tagline || `Check out ${name}'s web apps on nandzz.`,
+      description,
+      type: "profile",
       ...(profile.avatar_url && {
-        images: [{ url: profile.avatar_url }],
+        images: [{ url: profile.avatar_url, alt: `${name}'s avatar` }],
       }),
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} (@${profile.username}) — Nandzz`,
+      description,
+      ...(profile.avatar_url && { images: [profile.avatar_url] }),
     },
   };
 }

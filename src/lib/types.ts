@@ -7,6 +7,8 @@ export type SocialLinks = {
   youtube?: string;
 };
 
+export type PlanTier = "free" | "pro";
+
 export type Profile = {
   id: string;
   username: string;
@@ -19,6 +21,8 @@ export type Profile = {
   website_url: string | null;
   social_links: SocialLinks | null;
   created_at: string;
+  plan_tier?: PlanTier | null;
+  stripe_customer_id?: string | null;
 };
 
 export type Tag = {

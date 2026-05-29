@@ -3,8 +3,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Layers, Plus, Rocket } from "lucide-react";
+import { LayoutGrid, Layers, Plus, Rocket, Zap, AlertTriangle } from "lucide-react";
 import type { Space, Tag } from "@/lib/types";
+import { FEATURES } from "@/lib/flags";
+
+const FREE_SPACES_LIMIT = 5;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -20,7 +23,7 @@ export default async function DashboardPage() {
   const [{ data: profile }, { data: rawSpaces }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name, username")
+      .select("display_name, username, plan_tier")
       .eq("id", user.id)
       .single(),
     supabase
@@ -42,6 +45,10 @@ export default async function DashboardPage() {
     const { space_tags: _st, ...space } = raw as unknown as Space & { space_tags: unknown };
     return space as Space;
   });
+
+  const isPro = (profile as { plan_tier?: string } | null)?.plan_tier === "pro";
+  const atLimit = !isPro && spaces.length >= FREE_SPACES_LIMIT;
+  const nearLimit = !isPro && spaces.length === FREE_SPACES_LIMIT - 1;
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
@@ -79,6 +86,43 @@ export default async function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Space limit banners */}
+        {FEATURES.monetization && atLimit && (
+          <div className="mb-6 rounded-xl border border-orange-200 dark:border-orange-800/60 bg-orange-50/80 dark:bg-orange-950/20 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                  You&apos;ve reached your {FREE_SPACES_LIMIT}-space limit
+                </p>
+                <p className="text-xs text-orange-700/80 dark:text-orange-400/80 mt-0.5">
+                  Upgrade to Pro for unlimited Spaces, private publishing, and more.
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard/billing?checkout=pro">
+              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm shrink-0 gap-1.5">
+                <Zap className="h-3.5 w-3.5" />
+                Upgrade to Pro
+              </Button>
+            </Link>
+          </div>
+        )}
+        {FEATURES.monetization && nearLimit && (
+          <div className="mb-6 rounded-xl border border-yellow-200 dark:border-yellow-800/60 bg-yellow-50/60 dark:bg-yellow-950/20 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <div className="flex items-center gap-3">
+              <Zap className="h-4 w-4 text-yellow-600 shrink-0" />
+              <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                <span className="font-medium">1 Space remaining</span> on the Free plan.{" "}
+                <Link href="/dashboard/billing" className="underline underline-offset-2 hover:text-yellow-900 dark:hover:text-yellow-200">
+                  Upgrade to Pro
+                </Link>{" "}
+                for unlimited Spaces.
+              </p>
+            </div>
+          </div>
+        )}
 
         {spaces && spaces.length > 0 ? (
           <SpaceGrid spaces={spaces} showCreateCard editable spaceTagsMap={spaceTagsMap} ownerUsername={profile?.username || undefined} />
