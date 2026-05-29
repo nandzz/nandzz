@@ -90,7 +90,7 @@ export default async function CollectionDetailPage({
         </div>
 
         {spaces.length > 0 ? (
-          <SpaceGrid spaces={spaces} editable collectionId={id} ownerUsername={profile?.username || undefined} />
+          <SpaceGrid spaces={spaces} editable collectionId={id} currentUserId={user.id} ownerUsername={profile?.username || undefined} />
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border/60 rounded-2xl">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">

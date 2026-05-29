@@ -1,43 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Search, X, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialQ = searchParams.get("q") ?? "";
-  const [value, setValue] = useState(initialQ);
+  const [value, setValue] = useState(() => searchParams.get("q") ?? "");
+  const [isPending, startTransition] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setValue(searchParams.get("q") ?? "");
-  }, [searchParams]);
 
   const navigate = (q: string) => {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    router.push(`/explore${params.size ? `?${params}` : ""}`);
+    startTransition(() => {
+      router.replace(`/explore${params.size ? `?${params}` : ""}`);
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setValue(q);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => navigate(q.trim()), 300);
+    timer.current = setTimeout(() => navigate(q.trim()), 400);
   };
 
   const clear = () => {
     setValue("");
     if (timer.current) clearTimeout(timer.current);
-    router.push("/explore");
+    startTransition(() => {
+      router.replace("/explore");
+    });
   };
 
   return (
     <div className="relative w-full max-w-md">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      {isPending ? (
+        <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin pointer-events-none" />
+      ) : (
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      )}
       <Input
         value={value}
         onChange={handleChange}

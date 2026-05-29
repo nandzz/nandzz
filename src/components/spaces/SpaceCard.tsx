@@ -93,13 +93,13 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
   };
 
   const cardContent = compact ? (
-    <Card className="group overflow-hidden transition-all duration-200 hover:shadow-md hover:shadow-violet-500/10 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
+    <Card className="@container group overflow-hidden transition-all duration-200 hover:shadow-md hover:shadow-violet-500/10 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
       <Link href={spaceUrl} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           <SpacePreview space={space} />
           {/* Hover gradient overlay with title */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-1.5">
-            <span className="text-[10px] font-medium text-white leading-tight line-clamp-2">
+            <span className="text-[8px] @[120px]:text-[10px] font-medium text-white leading-tight line-clamp-2">
               {space.title}
             </span>
           </div>
@@ -107,12 +107,12 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
           {editable && (
             <div className="absolute top-1.5 right-1.5 z-10">
               {space.is_public ? (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-black/55 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-medium text-white">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-black/55 backdrop-blur-sm px-1.5 py-0.5 text-[7px] @[120px]:text-[9px] font-medium text-white">
                   <Globe className="h-2 w-2" />
                   Public
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-black/55 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-medium text-white">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-black/55 backdrop-blur-sm px-1.5 py-0.5 text-[7px] @[120px]:text-[9px] font-medium text-white">
                   <Lock className="h-2 w-2" />
                   Private
                 </span>
@@ -121,11 +121,11 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
           )}
         </div>
         <div className="px-2 pt-1.5 pb-2.5 h-[52px]">
-          <p className="text-[10px] font-medium truncate text-foreground/80 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+          <p className="text-[8px] @[120px]:text-[10px] font-medium truncate text-foreground/80 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
             {space.title}
           </p>
           {space.description && (
-            <p className="text-[9px] text-muted-foreground line-clamp-2 mt-0.5 leading-tight">
+            <p className="text-[7px] @[120px]:text-[9px] text-muted-foreground line-clamp-2 mt-0.5 leading-tight">
               {space.description}
             </p>
           )}
@@ -133,7 +133,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
       </Link>
     </Card>
   ) : (
-    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
+    <Card className="@container group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
       <Link href={spaceUrl} className="block">
         <div className="aspect-video bg-muted relative overflow-hidden">
           <SpacePreview space={space} />
@@ -143,13 +143,13 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
           {editable && (
             <div className="absolute top-2 right-2 z-10">
               {space.is_public ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
-                  <Globe className="h-2.5 w-2.5" />
+                <span className="inline-flex items-center gap-0.5 @[280px]:gap-1 rounded-full bg-black/55 backdrop-blur-sm px-1.5 @[280px]:px-2 py-0.5 text-[8px] @[280px]:text-[10px] font-medium text-white">
+                  <Globe className="h-2 w-2 @[280px]:h-2.5 @[280px]:w-2.5" />
                   Public
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
-                  <Lock className="h-2.5 w-2.5" />
+                <span className="inline-flex items-center gap-0.5 @[280px]:gap-1 rounded-full bg-black/55 backdrop-blur-sm px-1.5 @[280px]:px-2 py-0.5 text-[8px] @[280px]:text-[10px] font-medium text-white">
+                  <Lock className="h-2 w-2 @[280px]:h-2.5 @[280px]:w-2.5" />
                   Private
                 </span>
               )}
@@ -161,21 +161,21 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
             {tags.map((tag) => (
               <span
                 key={tag.id}
-                className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[8px] @[300px]:text-[10px] font-medium text-muted-foreground"
               >
                 {tag.name}
               </span>
             ))}
           </div>
-          <h3 className="text-lg font-bold truncate mt-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+          <h3 className="text-sm @[280px]:text-base @[380px]:text-lg font-bold truncate mt-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
             {space.title}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2 h-10">
+          <p className="mt-1 text-[10px] @[280px]:text-xs @[380px]:text-sm text-muted-foreground line-clamp-2 h-10">
             {space.description ?? ""}
           </p>
           <div className="mt-3 flex items-center justify-between">
             {username ? (
-              <p className="text-xs text-muted-foreground">by {username}</p>
+              <p className="text-[10px] @[280px]:text-xs text-muted-foreground">by {username}</p>
             ) : (
               <span />
             )}
@@ -230,17 +230,21 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
                   Remove from Collection
                 </ContextMenuItem>
               )}
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={() => router.push(`/dashboard/edit-space/${space.id}`)}
-              >
-                <Pencil className="size-4" />
-                Edit
-              </ContextMenuItem>
-              <ContextMenuItem variant="destructive" onClick={handleDelete}>
-                <Trash2 className="size-4" />
-                Delete Space
-              </ContextMenuItem>
+              {isOwn && (
+                <>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onClick={() => router.push(`/dashboard/edit-space/${space.id}`)}
+                  >
+                    <Pencil className="size-4" />
+                    Edit
+                  </ContextMenuItem>
+                  <ContextMenuItem variant="destructive" onClick={handleDelete}>
+                    <Trash2 className="size-4" />
+                    Delete Space
+                  </ContextMenuItem>
+                </>
+              )}
             </>
           )}
         </ContextMenuContent>

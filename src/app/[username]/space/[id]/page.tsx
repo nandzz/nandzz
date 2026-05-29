@@ -10,11 +10,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LikeButton } from "@/components/spaces/LikeButton";
 import { ShareButton } from "@/components/spaces/ShareButton";
 import { StarButton } from "@/components/spaces/StarButton";
-import { ExternalLink, Lock, Pencil } from "lucide-react";
+import { ExternalLink, Lock, Pencil, Smartphone } from "lucide-react";
 import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
 import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
 import { BackButton } from "@/components/ui/BackButton";
 import { DeleteSpaceButton } from "@/components/spaces/DeleteSpaceButton";
+
+function hasDownloadableContent(html: string): boolean {
+  return (
+    /<a[^>]+\bdownload\b/i.test(html) ||
+    /\.download\s*=/i.test(html) ||
+    /createObjectURL/i.test(html) ||
+    /saveAs\s*\(/i.test(html)
+  );
+}
 
 // react.cache deduplicates within a single request (generateMetadata + page share one DB hit)
 // No cross-request caching — space data must always be fresh (is_public changes take effect immediately)
@@ -166,7 +175,7 @@ export default async function SpaceViewPage({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100dvh-4rem)]">
       {/* Top bar */}
       <div className="border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5">
@@ -249,8 +258,16 @@ export default async function SpaceViewPage({
       </div>
       </div>
 
+      {/* Mobile download warning — only for HTML spaces with download patterns */}
+      {htmlContent && !isOwner && hasDownloadableContent(htmlContent) && (
+        <div className="sm:hidden flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs">
+          <Smartphone className="h-3.5 w-3.5 shrink-0" />
+          <span>Downloads may not work on mobile. Open on desktop for the full experience.</span>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="flex-1 bg-muted/50">
+      <div className="flex-1 bg-muted/50 min-h-0">
         {htmlContent ? (
           isOwner ? (
             <HtmlSpaceEditor

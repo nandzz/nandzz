@@ -24,11 +24,11 @@ export function SpacePreview({ space }: SpacePreviewProps) {
   return (
     <div className={`flex h-full w-full items-center justify-center ${gradient.bg}`}>
       {space.preview_title ? (
-        <span className={`text-center text-5xl font-bold leading-tight px-4 line-clamp-3 ${gradient.text}`}>
+        <span className={`w-full text-center text-base @[200px]:text-xl @[320px]:text-3xl font-bold leading-tight px-4 line-clamp-3 ${gradient.text}`}>
           {space.preview_title}
         </span>
       ) : (
-        <span className={`text-4xl font-bold ${gradient.text}`}>
+        <span className={`text-lg @[200px]:text-xl @[320px]:text-3xl font-bold ${gradient.text}`}>
           {space.title[0]?.toUpperCase()}
         </span>
       )}
