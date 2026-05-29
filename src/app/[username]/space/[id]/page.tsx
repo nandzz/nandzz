@@ -33,7 +33,12 @@ export async function generateMetadata({
   params: Promise<{ username: string; id: string }>;
 }): Promise<Metadata> {
   const { id, username } = await params;
-  const space = await getSpace(id);
+  let space: Awaited<ReturnType<typeof getSpace>>;
+  try {
+    space = await getSpace(id);
+  } catch {
+    return { title: "Space — Nandzz" };
+  }
 
   if (!space) return { title: "Space Not Found — Nandzz" };
 
