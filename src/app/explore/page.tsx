@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
+import { SearchBar } from "@/components/explore/SearchBar";
 import { Compass, Plus } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -27,23 +28,31 @@ const PAGE_SIZE = 24;
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
-  const { page } = await searchParams;
+  const { page, q } = await searchParams;
+  const query = q?.trim() ?? "";
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
   const supabase = await createClient();
 
-  const { data: spaces, count } = await supabase
+  let dbQuery = supabase
     .from("spaces")
-    .select("*, profiles(username, display_name, avatar_url)", {
-      count: "exact",
-    })
+    .select("*, profiles(username, display_name, avatar_url)", { count: "exact" })
     .eq("is_public", true)
     .order("created_at", { ascending: false })
     .range(from, to);
+
+  if (query) {
+    dbQuery = dbQuery.textSearch("search_vector", query, {
+      type: "websearch",
+      config: "english",
+    });
+  }
+
+  const { data: spaces, count } = await dbQuery;
 
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
@@ -101,7 +110,7 @@ export default async function ExplorePage({
 
       <div className="mx-auto max-w-7xl px-4 py-12">
         {/* Page header */}
-        <div className="mb-10">
+        <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
               <Compass className="h-5 w-5 text-violet-600 dark:text-violet-400" />
@@ -115,18 +124,24 @@ export default async function ExplorePage({
           </p>
         </div>
 
+        {/* Search */}
+        <div className="mb-8 flex items-center gap-4">
+          <SearchBar />
+          {query && (
+            <p className="text-sm text-muted-foreground shrink-0">
+              {count ?? 0} result{count !== 1 ? "s" : ""} for &ldquo;{query}&rdquo;
+            </p>
+          )}
+        </div>
+
         {spaces && spaces.length > 0 ? (
           <>
             <SpaceGrid spaces={spaces} showAuthor likedSpaceIds={likedSpaceIds} savedSpaceIds={savedSpaceIds} currentUserId={user?.id} spaceTagsMap={spaceTagsMap} />
             {totalPages > 1 && (
               <div className="mt-10 flex items-center justify-center gap-2">
                 {currentPage > 1 && (
-                  <Link href={`/explore?page=${currentPage - 1}`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-border/60"
-                    >
+                  <Link href={`/explore?${query ? `q=${encodeURIComponent(query)}&` : ""}page=${currentPage - 1}`}>
+                    <Button variant="outline" size="sm" className="border-border/60">
                       Previous
                     </Button>
                   </Link>
@@ -135,12 +150,8 @@ export default async function ExplorePage({
                   Page {currentPage} of {totalPages}
                 </span>
                 {currentPage < totalPages && (
-                  <Link href={`/explore?page=${currentPage + 1}`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-border/60"
-                    >
+                  <Link href={`/explore?${query ? `q=${encodeURIComponent(query)}&` : ""}page=${currentPage + 1}`}>
+                    <Button variant="outline" size="sm" className="border-border/60">
                       Next
                     </Button>
                   </Link>
@@ -153,18 +164,27 @@ export default async function ExplorePage({
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">
               <Compass className="h-10 w-10 text-violet-400 dark:text-violet-500" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">
-              No spaces yet
-            </h2>
-            <p className="text-muted-foreground max-w-sm mb-6">
-              Be the first to share an AI-generated web app with the community.
-            </p>
-            <Link href={user ? "/dashboard/create-space" : "/login?tab=signup"}>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create the First Space
-              </Button>
-            </Link>
+            {query ? (
+              <>
+                <h2 className="text-xl font-semibold mb-2">No results found</h2>
+                <p className="text-muted-foreground max-w-sm">
+                  No spaces matched &ldquo;{query}&rdquo;. Try a different search.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold mb-2">No spaces yet</h2>
+                <p className="text-muted-foreground max-w-sm mb-6">
+                  Be the first to share an AI-generated web app with the community.
+                </p>
+                <Link href={user ? "/dashboard/create-space" : "/login?tab=signup"}>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create the First Space
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>

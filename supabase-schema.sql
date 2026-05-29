@@ -42,6 +42,18 @@ alter table public.spaces add column if not exists pdf_url text;
 alter table public.spaces add column if not exists preview_gradient text default 'violet';
 alter table public.spaces add column if not exists preview_title text;
 
+-- Full-text search: stored tsvector + GIN index
+alter table public.spaces
+  add column if not exists search_vector tsvector
+  generated always as (
+    to_tsvector('english',
+      coalesce(title, '') || ' ' || coalesce(description, '')
+    )
+  ) stored;
+
+create index if not exists spaces_search_vector_idx
+  on public.spaces using gin(search_vector);
+
 -- 3. Enable RLS
 alter table public.profiles enable row level security;
 alter table public.spaces enable row level security;
