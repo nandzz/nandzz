@@ -74,9 +74,10 @@ async function captureHtmlScreenshot(
 interface SpaceFormProps {
   space?: Space;
   initialTags?: Tag[];
+  collectionId?: string;
 }
 
-export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
+export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormProps) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const isEditing = !!space;
@@ -401,7 +402,14 @@ export function SpaceForm({ space, initialTags = [] }: SpaceFormProps) {
         );
       }
 
-      router.push("/dashboard");
+      // Link to collection if creating from a collection page
+      if (!isEditing && collectionId) {
+        await supabase
+          .from("collection_spaces")
+          .insert({ collection_id: collectionId, space_id: spaceId });
+      }
+
+      router.push(collectionId ? `/dashboard/collections/${collectionId}` : "/dashboard");
       router.refresh();
     } catch (err: unknown) {
       const supaErr = err as {

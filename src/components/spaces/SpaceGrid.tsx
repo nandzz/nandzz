@@ -140,7 +140,7 @@ export function SpaceGrid({
           );
         })}
         {showCreateCard && filter === "all" && (
-          <Link href="/dashboard/create-space">
+          <Link href={collectionId ? `/dashboard/create-space?collectionId=${collectionId}` : "/dashboard/create-space"}>
             <Card
               className={
                 compact
@@ -171,7 +171,7 @@ export function SpaceGrid({
             </Card>
           </Link>
         )}
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !(showCreateCard && filter === "all") && (
           <p className="col-span-full py-12 text-center text-muted-foreground text-sm">
             No spaces match this filter.
           </p>

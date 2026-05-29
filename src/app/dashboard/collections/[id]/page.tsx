@@ -4,8 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, FolderOpen, Pencil } from "lucide-react";
+import { ArrowLeft, FolderOpen } from "lucide-react";
 import { CollectionActions } from "./CollectionActions";
 import type { Space } from "@/lib/types";
 
@@ -89,23 +88,14 @@ export default async function CollectionDetailPage({
           <CollectionActions collection={collection} />
         </div>
 
-        {spaces.length > 0 ? (
-          <SpaceGrid spaces={spaces} editable collectionId={id} currentUserId={user.id} ownerUsername={profile?.username || undefined} />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border/60 rounded-2xl">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">
-              <FolderOpen className="h-8 w-8 text-violet-400 dark:text-violet-500" />
-            </div>
-            <h2 className="text-lg font-semibold mb-1">No spaces yet</h2>
-            <p className="text-muted-foreground text-sm max-w-xs">
-              Go to{" "}
-              <Link href="/dashboard" className="text-violet-600 hover:underline">
-                My Spaces
-              </Link>{" "}
-              and right-click any space to add it to this collection.
-            </p>
-          </div>
-        )}
+        <SpaceGrid
+          spaces={spaces}
+          editable
+          showCreateCard
+          collectionId={id}
+          currentUserId={user.id}
+          ownerUsername={profile?.username || undefined}
+        />
       </div>
     </div>
   );

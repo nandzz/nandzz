@@ -3,12 +3,14 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import type { Collection } from "@/lib/types";
 
 interface CollectionActionsProps {
@@ -48,6 +50,13 @@ export function CollectionActions({ collection }: CollectionActionsProps) {
   return (
     <>
       <div className="flex items-center gap-2 flex-shrink-0">
+        <Link
+          href={`/dashboard/create-space?collectionId=${collection.id}`}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-violet-400/60 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/30 gap-1.5")}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          New Space
+        </Link>
         <Button
           variant="outline"
           size="sm"
