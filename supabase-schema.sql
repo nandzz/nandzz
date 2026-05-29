@@ -87,15 +87,19 @@ create policy "Users can delete their own spaces"
   using (auth.uid() = user_id);
 
 -- 6. Auto-create profile on signup
+-- For email/password signups: uses username/display_name from metadata.
+-- For OAuth (Google, etc): skips insert; app redirects to /setup-username.
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, username, display_name)
-  values (
-    new.id,
-    new.raw_user_meta_data->>'username',
-    new.raw_user_meta_data->>'display_name'
-  );
+  if new.raw_user_meta_data->>'username' is not null then
+    insert into public.profiles (id, username, display_name)
+    values (
+      new.id,
+      new.raw_user_meta_data->>'username',
+      coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'username')
+    );
+  end if;
   return new;
 end;
 $$ language plpgsql security definer;
