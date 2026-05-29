@@ -14,6 +14,7 @@ import { ExternalLink, Lock } from "lucide-react";
 import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
 import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
 import { BackButton } from "@/components/ui/BackButton";
+import { DeleteSpaceButton } from "@/components/spaces/DeleteSpaceButton";
 
 const getSpace = cache(async (id: string) => {
   // connection() ensures SUPABASE_SERVICE_ROLE_KEY is read at request time, not inlined at build time (Next.js 16)
@@ -166,7 +167,8 @@ export default async function SpaceViewPage({
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b px-4 sm:px-6 lg:px-8 py-2.5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5">
         <div className="flex items-center gap-3">
           <BackButton />
           <div className="h-4 w-px bg-border" />
@@ -228,7 +230,11 @@ export default async function SpaceViewPage({
               </Button>
             </a>
           )}
+          {isOwner && (
+            <DeleteSpaceButton spaceId={space.id} redirectTo={`/${username}`} />
+          )}
         </div>
+      </div>
       </div>
 
       {/* Content */}
