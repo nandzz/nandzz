@@ -179,13 +179,13 @@ export default async function SpaceViewPage({
     <div className="flex flex-col h-[calc(100dvh-4rem)]">
       {/* Top bar */}
       <div className="border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5">
+        <div className="flex items-center gap-3 min-w-0">
           <BackButton />
-          <div className="h-4 w-px bg-border" />
-          <h1 className="font-semibold truncate max-w-md">{space.title}</h1>
+          <div className="h-4 w-px bg-border shrink-0" />
+          <h1 className="font-semibold truncate">{space.title}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <LikeButton
             spaceId={space.id}
             initialLikesCount={space.likes_count ?? 0}

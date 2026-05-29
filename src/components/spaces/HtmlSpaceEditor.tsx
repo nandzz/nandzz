@@ -61,6 +61,7 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   // Incremented after each save to force the sandbox iframe to reload
   const [iframeVersion, setIframeVersion] = useState(0);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -226,6 +227,7 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
       });
 
       // Bump version so the sandbox iframe reloads with the new content
+      setIframeLoaded(false);
       setIframeVersion((v) => v + 1);
       setIsEditing(false);
     } catch (err) {
@@ -283,11 +285,18 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
 
   return (
     <div className="relative h-full w-full">
+      {!iframeLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
       <iframe
         src={`/sandbox/${spaceId}?v=${iframeVersion}`}
         className="h-full w-full border-0"
         sandbox="allow-scripts allow-forms allow-downloads"
         title={spaceTitle}
+        style={{ opacity: iframeLoaded ? 1 : 0 }}
+        onLoad={() => setIframeLoaded(true)}
       />
       <div className="absolute bottom-4 right-4 hidden lg:flex">
         <Button
