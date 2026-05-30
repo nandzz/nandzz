@@ -74,10 +74,40 @@ export function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="mt-8 pt-6 border-t border-border/50">
+        <div className="mt-8 pt-6 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground/70">
             &copy; {new Date().getFullYear()} nandzz. All rights reserved.
           </p>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://www.producthunt.com/products/nandzz?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-nandzz"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt="Nandzz - Share what you create | Product Hunt"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1158982&theme=light&t=1780131092412"
+                width={120}
+                height={26}
+                style={{ height: "26px", width: "auto" }}
+              />
+            </a>
+            <a
+              href="https://www.buymeacoffee.com/felipenandz"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt="Buy Me A Coffee"
+                src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+                width={100}
+                height={28}
+                style={{ height: "26px", width: "auto" }}
+              />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
