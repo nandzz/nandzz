@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/card";
 import { Code, Globe, Rocket, UploadCloud, FileCode2, FileText, X, Download, Wand2, ImageIcon, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { PREVIEW_GRADIENTS, GRADIENT_KEYS, DEFAULT_GRADIENT, type GradientKey } from "@/lib/preview-gradients";
-import { TagPicker } from "./TagPicker";
+import { HashtagPicker } from "./HashtagPicker";
 import { PreviewCropper } from "./PreviewCropper";
-import type { Space, Tag } from "@/lib/types";
+import type { Space } from "@/lib/types";
 import { sandboxHtml } from "@/lib/sandbox-html";
 
 type SpaceMode = "html" | "url" | "pdf";
@@ -73,11 +73,10 @@ async function captureHtmlScreenshot(
 
 interface SpaceFormProps {
   space?: Space;
-  initialTags?: Tag[];
   collectionId?: string;
 }
 
-export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormProps) {
+export function SpaceForm({ space, collectionId }: SpaceFormProps) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const isEditing = !!space;
@@ -100,8 +99,8 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
   const [pdfDragOver, setPdfDragOver] = useState(false);
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>(initialTags);
+  const [hashtagSuggestions, setHashtagSuggestions] = useState<string[]>([]);
+  const [selectedHashtags, setSelectedHashtags] = useState<string[]>(space?.hashtags ?? []);
 
   const [generatedPreviewSrc, setGeneratedPreviewSrc] = useState<string | null>(null);
   const [showCropper, setShowCropper] = useState(false);
@@ -119,11 +118,15 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
 
   useEffect(() => {
     supabase
-      .from("tags")
-      .select("*")
-      .order("name")
+      .from("spaces")
+      .select("hashtags")
+      .eq("is_public", true)
+      .limit(200)
       .then(({ data }) => {
-        if (data) setAvailableTags(data as Tag[]);
+        if (data) {
+          const all = [...new Set(data.flatMap((s) => s.hashtags ?? []))].sort();
+          setHashtagSuggestions(all);
+        }
       });
   }, [supabase]);
 
@@ -137,12 +140,6 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [space?.html_url]);
 
-  useEffect(() => {
-    if (spaceType === "pdf") {
-      const pdfTag = availableTags.find((t) => t.slug === "pdf");
-      if (pdfTag) setSelectedTags([pdfTag]);
-    }
-  }, [spaceType, availableTags]);
 
 
   // Track object URL for preview image thumbnail
@@ -373,6 +370,7 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
         preview_title: previewTitle.trim() || null,
         is_public: isPublic,
         user_id: user.id,
+        hashtags: selectedHashtags,
       };
 
       let spaceId: string;
@@ -392,14 +390,6 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
           .single();
         if (error) throw error;
         spaceId = inserted.id;
-      }
-
-      // Save tags: replace all existing with the current selection
-      await supabase.from("space_tags").delete().eq("space_id", spaceId);
-      if (selectedTags.length > 0) {
-        await supabase.from("space_tags").insert(
-          selectedTags.map((t) => ({ space_id: spaceId, tag_id: t.id }))
-        );
       }
 
       // Link to collection if creating from a collection page
@@ -549,12 +539,12 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
           </div>
 
           <div className="space-y-2">
-            <Label>Category *</Label>
-            <p className="text-xs text-muted-foreground">Pick one tag that best describes your space</p>
-            <TagPicker
-              availableTags={availableTags}
-              selectedTag={selectedTags[0] ?? null}
-              onChange={(tag) => setSelectedTags(tag ? [tag] : [])}
+            <Label>Hashtags</Label>
+            <p className="text-xs text-muted-foreground">Add up to 3 hashtags — search existing or create new ones</p>
+            <HashtagPicker
+              suggestions={hashtagSuggestions}
+              selectedHashtags={selectedHashtags}
+              onChange={setSelectedHashtags}
             />
           </div>
 
@@ -1000,7 +990,6 @@ export function SpaceForm({ space, initialTags = [], collectionId }: SpaceFormPr
               disabled={
                 loading ||
                 !title.trim() ||
-                selectedTags.length === 0 ||
                 (spaceType === "url" && !url.trim()) ||
                 (spaceType === "html" && !htmlContent && !space?.html_url) ||
                 (spaceType === "pdf" && !pdfFile && !space?.pdf_url)

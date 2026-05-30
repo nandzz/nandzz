@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SpaceGrid } from "./SpaceGrid";
-import type { Space, Tag } from "@/lib/types";
+import type { Space } from "@/lib/types";
 
-// Mock SpaceCard so SpaceGrid tests stay focused on filtering/layout logic
 vi.mock("./SpaceCard", () => ({
   SpaceCard: ({ space }: { space: Space }) => (
     <div data-testid="space-card" data-space-id={space.id}>
@@ -13,14 +12,13 @@ vi.mock("./SpaceCard", () => ({
   ),
 }));
 
-// Mock next/link to avoid router context requirement
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
   ),
 }));
 
-const makeSpace = (id: string, title: string): Space => ({
+const makeSpace = (id: string, title: string, hashtags: string[] = []): Space => ({
   id,
   title,
   description: null,
@@ -33,24 +31,15 @@ const makeSpace = (id: string, title: string): Space => ({
   preview_title: null,
   is_public: true,
   likes_count: 0,
+  hashtags,
   created_at: new Date().toISOString(),
 });
 
-const tagTool: Tag = { id: "t1", name: "Tool", slug: "tool", created_at: "" };
-const tagService: Tag = { id: "t2", name: "Service", slug: "service", created_at: "" };
-
-const space1 = makeSpace("1", "Space 1");
-const space2 = makeSpace("2", "Space 2");
-const space3 = makeSpace("3", "Space 3");
+const space1 = makeSpace("1", "Space 1", ["tool"]);
+const space2 = makeSpace("2", "Space 2", ["service"]);
+const space3 = makeSpace("3", "Space 3", ["tool", "service"]);
 
 const allSpaces = [space1, space2, space3];
-
-// space1 → Tool, space2 → Service, space3 → Tool+Service
-const spaceTagsMap = {
-  "1": [tagTool],
-  "2": [tagService],
-  "3": [tagTool, tagService],
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -59,7 +48,7 @@ beforeEach(() => {
 describe("SpaceGrid", () => {
   describe("rendering", () => {
     it("renders all spaces with no filter", () => {
-      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
+      render(<SpaceGrid spaces={allSpaces} />);
       expect(screen.getAllByTestId("space-card")).toHaveLength(3);
     });
 
@@ -84,36 +73,32 @@ describe("SpaceGrid", () => {
     });
   });
 
-  describe("tag filter", () => {
-    it("lists all unique tags in the dropdown", () => {
-      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
-      const select = screen.getByRole("combobox");
-      expect(select).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: /tool/i })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: /service/i })).toBeInTheDocument();
+  describe("hashtag filter", () => {
+    it("lists all unique hashtags in the dropdown", () => {
+      render(<SpaceGrid spaces={allSpaces} />);
+      expect(screen.getByRole("option", { name: /#tool/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /#service/i })).toBeInTheDocument();
     });
 
-    it("filters to Tool-tagged spaces when Tool is selected", async () => {
+    it("filters to #tool spaces when tool is selected", async () => {
       const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
+      render(<SpaceGrid spaces={allSpaces} />);
 
       await user.selectOptions(screen.getByRole("combobox"), "tag:tool");
 
       const cards = screen.getAllByTestId("space-card");
-      // space1 and space3 have Tool tag
       expect(cards).toHaveLength(2);
       expect(screen.getByText("Space 1")).toBeInTheDocument();
       expect(screen.getByText("Space 3")).toBeInTheDocument();
     });
 
-    it("filters to Service-tagged spaces when Service is selected", async () => {
+    it("filters to #service spaces when service is selected", async () => {
       const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
+      render(<SpaceGrid spaces={allSpaces} />);
 
       await user.selectOptions(screen.getByRole("combobox"), "tag:service");
 
       const cards = screen.getAllByTestId("space-card");
-      // space2 and space3 have Service tag
       expect(cards).toHaveLength(2);
       expect(screen.getByText("Space 2")).toBeInTheDocument();
       expect(screen.getByText("Space 3")).toBeInTheDocument();
@@ -121,7 +106,7 @@ describe("SpaceGrid", () => {
 
     it("resets to all spaces when All is selected", async () => {
       const user = userEvent.setup();
-      render(<SpaceGrid spaces={allSpaces} spaceTagsMap={spaceTagsMap} />);
+      render(<SpaceGrid spaces={allSpaces} />);
 
       await user.selectOptions(screen.getByRole("combobox"), "tag:tool");
       expect(screen.getAllByTestId("space-card")).toHaveLength(2);

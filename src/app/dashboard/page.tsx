@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Layers, Plus, Rocket, Zap, AlertTriangle } from "lucide-react";
-import type { Space, Tag } from "@/lib/types";
+import type { Space } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
 
 const FREE_SPACES_LIMIT = 5;
@@ -30,23 +30,13 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from("spaces")
-      .select("*, space_tags(tags(*))")
+      .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
   ]);
 
   const greeting = profile?.display_name || profile?.username || "there";
-
-  // Build spaceTagsMap from embedded join — single query instead of two
-  const spaceTagsMap: Record<string, Tag[]> = {};
-  const spaces: Space[] = (rawSpaces ?? []).map((raw) => {
-    const embedded = (raw as unknown as { space_tags: { tags: Tag | null }[] }).space_tags;
-    if (embedded) {
-      spaceTagsMap[raw.id] = embedded.map((st) => st.tags).filter((t): t is Tag => t !== null);
-    }
-    const { space_tags: _st, ...space } = raw as unknown as Space & { space_tags: unknown };
-    return space as Space;
-  });
+  const spaces: Space[] = (rawSpaces ?? []) as Space[];
 
   const isPro = (profile as { plan_tier?: string } | null)?.plan_tier === "pro";
   const atLimit = !isPro && spaces.length >= FREE_SPACES_LIMIT;
@@ -127,7 +117,7 @@ export default async function DashboardPage() {
         )}
 
         {spaces && spaces.length > 0 ? (
-          <SpaceGrid spaces={spaces} showCreateCard editable spaceTagsMap={spaceTagsMap} currentUserId={user.id} ownerUsername={profile?.username || undefined} />
+          <SpaceGrid spaces={spaces} showCreateCard editable currentUserId={user.id} ownerUsername={profile?.username || undefined} />
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">

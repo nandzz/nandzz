@@ -18,7 +18,7 @@ import { LikeButton } from "./LikeButton";
 import { ShareButton } from "./ShareButton";
 import { StarButton } from "./StarButton";
 import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
-import type { Space, Tag } from "@/lib/types";
+import type { Space } from "@/lib/types";
 
 interface SpaceCardProps {
   space: Space;
@@ -30,10 +30,10 @@ interface SpaceCardProps {
   compact?: boolean;
   collectionId?: string;
   isOwn?: boolean;
-  tags?: Tag[];
+  hashtags?: string[];
 }
 
-export function SpaceCard({ space, username, routeUsername, editable, liked, saved, compact, collectionId, isOwn, tags = [] }: SpaceCardProps) {
+export function SpaceCard({ space, username, routeUsername, editable, liked, saved, compact, collectionId, isOwn, hashtags = [] }: SpaceCardProps) {
   const spaceUrl = routeUsername ? `/${routeUsername}/space/${space.id}` : `/space/${space.id}`;
   const router = useRouter();
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
@@ -158,13 +158,15 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
         </div>
         <CardContent className="p-4 flex flex-col">
           <div className="flex items-center flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[8px] @[300px]:text-[10px] font-medium text-muted-foreground"
+            {hashtags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/hashtag/${tag}`); }}
+                className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[8px] @[300px]:text-[10px] font-medium text-muted-foreground hover:bg-violet-100 dark:hover:bg-violet-900/40 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
               >
-                {tag.name}
-              </span>
+                #{tag}
+              </button>
             ))}
           </div>
           <h3 className="text-sm @[280px]:text-base @[380px]:text-lg font-bold truncate mt-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">

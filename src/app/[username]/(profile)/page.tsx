@@ -51,6 +51,8 @@ export async function generateMetadata({
       title: `${name} (@${profile.username})`,
       description,
       type: "profile",
+      url: `https://nandzz.com/${profile.username}`,
+      siteName: "Nandzz",
       ...(profile.avatar_url && {
         images: [{ url: profile.avatar_url, alt: `${name}'s avatar` }],
       }),

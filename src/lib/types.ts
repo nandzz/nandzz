@@ -25,13 +25,6 @@ export type Profile = {
   stripe_customer_id?: string | null;
 };
 
-export type Tag = {
-  id: string;
-  name: string;
-  slug: string;
-  created_at: string;
-};
-
 export type Space = {
   id: string;
   user_id: string;
@@ -45,6 +38,7 @@ export type Space = {
   preview_title: string | null;
   is_public: boolean;
   likes_count: number;
+  hashtags: string[];
   created_at: string;
 };
 

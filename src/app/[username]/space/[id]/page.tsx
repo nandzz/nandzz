@@ -77,6 +77,8 @@ export async function generateMetadata({
       title: space.title,
       description,
       type: "website",
+      url: `https://nandzz.com/${username}/space/${id}`,
+      siteName: "Nandzz",
       ...(space.preview_image_url && {
         images: [{ url: space.preview_image_url, alt: space.title }],
       }),

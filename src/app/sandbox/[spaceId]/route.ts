@@ -11,14 +11,14 @@ const SANDBOX_CSP = [
   "font-src *",
   "media-src * data: blob:",
   "connect-src blob:",
-  "form-action 'none'",
+  "form-action 'self'",
   "worker-src 'none'",
   "child-src 'none'",
   "object-src 'none'",
 ].join("; ");
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ spaceId: string }> }
 ) {
   const { spaceId } = await params;

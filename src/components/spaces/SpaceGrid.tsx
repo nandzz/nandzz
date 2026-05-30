@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SpaceCard } from "./SpaceCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, LayoutGrid, Grid3X3, ChevronDown } from "lucide-react";
-import type { SpaceWithProfile, Space, Tag } from "@/lib/types";
+import type { SpaceWithProfile, Space } from "@/lib/types";
 
 type FilterValue = "all" | `tag:${string}`;
 
@@ -18,7 +18,6 @@ interface SpaceGridProps {
   savedSpaceIds?: string[];
   collectionId?: string;
   currentUserId?: string;
-  spaceTagsMap?: Record<string, Tag[]>;
   ownerUsername?: string;
 }
 
@@ -31,34 +30,29 @@ export function SpaceGrid({
   savedSpaceIds = [],
   collectionId,
   currentUserId,
-  spaceTagsMap = {},
   ownerUsername,
 }: SpaceGridProps) {
   const [compact, setCompact] = useState(false);
   const [filter, setFilter] = useState<FilterValue>("all");
 
-  // Collect all unique tags present across the visible spaces
-  const availableTags = useMemo(() => {
-    const seen = new Map<string, Tag>();
+  const availableHashtags = useMemo(() => {
+    const seen = new Set<string>();
     for (const space of spaces) {
-      for (const tag of spaceTagsMap[space.id] ?? []) {
-        if (!seen.has(tag.slug)) seen.set(tag.slug, tag);
-      }
+      for (const tag of space.hashtags ?? []) seen.add(tag);
     }
-    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [spaces, spaceTagsMap]);
+    return Array.from(seen).sort();
+  }, [spaces]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return spaces;
     const slug = filter.slice(4);
-    return spaces.filter((s) => (spaceTagsMap[s.id] ?? []).some((t) => t.slug === slug));
-  }, [filter, spaces, spaceTagsMap]);
+    return spaces.filter((s) => (s.hashtags ?? []).includes(slug));
+  }, [filter, spaces]);
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2">
-        {/* View toggle */}
         <button
           onClick={() => setCompact((v) => !v)}
           className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -77,10 +71,8 @@ export function SpaceGrid({
           )}
         </button>
 
-        {/* Divider */}
         <div className="h-4 w-px bg-border/60" />
 
-        {/* Filter dropdown */}
         <div className="relative flex items-center">
           <select
             value={filter}
@@ -88,13 +80,11 @@ export function SpaceGrid({
             className="appearance-none rounded-md border border-border/60 bg-background pl-2.5 pr-7 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground focus:outline-none focus:ring-1 focus:ring-violet-500/50 cursor-pointer"
           >
             <option value="all">All ({spaces.length})</option>
-            {availableTags.map((tag) => {
-              const count = spaces.filter((s) =>
-                (spaceTagsMap[s.id] ?? []).some((t) => t.slug === tag.slug)
-              ).length;
+            {availableHashtags.map((tag) => {
+              const count = spaces.filter((s) => (s.hashtags ?? []).includes(tag)).length;
               return (
-                <option key={tag.slug} value={`tag:${tag.slug}`}>
-                  {tag.name} ({count})
+                <option key={tag} value={`tag:${tag}`}>
+                  #{tag} ({count})
                 </option>
               );
             })}
@@ -135,7 +125,7 @@ export function SpaceGrid({
               compact={compact}
               collectionId={collectionId}
               isOwn={!!currentUserId && space.user_id === currentUserId}
-              tags={spaceTagsMap[space.id] ?? []}
+              hashtags={space.hashtags ?? []}
             />
           );
         })}

@@ -26,7 +26,9 @@ import {
   User,
   ShieldCheck,
   CreditCard,
+  Trash2,
 } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
 import { FEATURES } from "@/lib/flags";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
 import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
@@ -47,6 +49,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -130,6 +136,25 @@ export default function SettingsPage() {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/account/delete", { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json();
+        setDeleteError(body.error || "Failed to delete account");
+        return;
+      }
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch {
+      setDeleteError("Something went wrong. Please try again.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -486,6 +511,72 @@ export default function SettingsPage() {
               </TabsContent>
             )}
           </Tabs>
+
+          {/* Danger Zone */}
+          <div className="mt-8 rounded-xl border border-destructive/30 bg-destructive/5 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-destructive">Delete Account</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Permanently delete your account and all your spaces. This cannot be undone.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  setDeleteDialogOpen(true);
+                  setDeleteConfirm("");
+                  setDeleteError("");
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Account
+              </Button>
+            </div>
+          </div>
+
+          <Dialog
+            open={deleteDialogOpen}
+            onClose={() => setDeleteDialogOpen(false)}
+            title="Delete Account"
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete your account, all your spaces, and all associated data.
+                Type <span className="font-mono font-semibold text-foreground">{profile.username}</span> to confirm.
+              </p>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder={profile.username}
+                className="w-full rounded-md border border-border/60 bg-muted/50 px-3 py-2 text-sm focus:border-destructive/50 focus:outline-none focus:ring-1 focus:ring-destructive/30"
+              />
+              {deleteError && (
+                <p className="text-sm text-destructive">{deleteError}</p>
+              )}
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  disabled={deleteLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteConfirm !== profile.username || deleteLoading}
+                  onClick={handleDeleteAccount}
+                >
+                  {deleteLoading ? "Deleting..." : "Delete my account"}
+                </Button>
+              </div>
+            </div>
+          </Dialog>
         </div>
       </div>
     </div>

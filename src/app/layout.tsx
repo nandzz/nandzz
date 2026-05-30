@@ -53,6 +53,7 @@ export const metadata: Metadata = {
     title: "Nandzz — Share what you create.",
     description:
       "A gallery for web pages, PDFs, tools, and interactive AI creations.",
+    images: [{ url: "/logo.png", alt: "Nandzz" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -60,6 +61,7 @@ export const metadata: Metadata = {
     description:
       "A gallery for web pages, PDFs, tools, and interactive AI creations.",
     creator: "@nandzz",
+    images: ["/logo.png"],
   },
   robots: {
     index: true,

@@ -32,6 +32,7 @@ create table if not exists public.spaces (
   preview_image_url text,
   is_public         boolean default true,
   likes_count       integer default 0,
+  hashtags          text[]  not null default '{}',
   created_at        timestamptz default now()
 );
 
@@ -41,8 +42,15 @@ alter table public.spaces drop column if exists type;
 alter table public.spaces add column if not exists pdf_url text;
 alter table public.spaces add column if not exists preview_gradient text default 'violet';
 alter table public.spaces add column if not exists preview_title text;
+alter table public.spaces add column if not exists hashtags text[] not null default '{}';
 
--- Full-text search: stored tsvector + GIN index
+-- GIN index for fast hashtag filtering (WHERE 'react' = ANY(hashtags))
+create index if not exists spaces_hashtags_gin
+  on public.spaces using gin(hashtags);
+
+-- Full-text search: stored tsvector + GIN index (title + description only)
+-- Note: hashtags are intentionally excluded — array_to_string is STABLE not IMMUTABLE,
+-- which PostgreSQL rejects in generated columns. Hashtags are searchable via the GIN index above.
 alter table public.spaces
   add column if not exists search_vector tsvector
   generated always as (
@@ -216,65 +224,12 @@ create policy "Users can delete space PDFs"
   on storage.objects for delete
   using (bucket_id = 'space-pdfs' and (storage.foldername(name))[1] = auth.uid()::text);
 
--- 8. Tags system
+-- 8. Tags system — REMOVED
+-- Hashtags are now stored as text[] directly on spaces.hashtags.
+-- Run these once to clean up existing deployments:
 
-create table if not exists public.tags (
-  id         uuid default gen_random_uuid() primary key,
-  name       text not null,
-  slug       text not null unique,
-  created_at timestamptz default now()
-);
-
--- Seed tags (idempotent)
-insert into public.tags (name, slug) values
-  ('Tool',    'tool'),
-  ('Service', 'service'),
-  ('Util',    'util'),
-  ('PDF',     'pdf')
-on conflict (slug) do nothing;
-
--- Remove deprecated type-based tags
-delete from public.tags where slug in ('website', 'custom-page');
-
-create table if not exists public.space_tags (
-  space_id uuid references public.spaces(id) on delete cascade not null,
-  tag_id   uuid references public.tags(id)   on delete cascade not null,
-  primary key (space_id, tag_id)
-);
-
-alter table public.tags       enable row level security;
-alter table public.space_tags enable row level security;
-
-drop policy if exists "Anyone can read tags" on public.tags;
-create policy "Anyone can read tags"
-  on public.tags for select using (true);
-
--- Tags are managed by admins only; no user insert policy
-
-drop policy if exists "Anyone can read space tags" on public.space_tags;
-create policy "Anyone can read space tags"
-  on public.space_tags for select using (true);
-
-drop policy if exists "Users can manage their space tags" on public.space_tags;
-create policy "Users can manage their space tags"
-  on public.space_tags for all
-  using (
-    exists (
-      select 1 from public.spaces s
-      where s.id = space_id and s.user_id = auth.uid()
-    )
-  );
-
--- (Re-run safe) insert policy needs WITH CHECK too
-drop policy if exists "Users can insert their space tags" on public.space_tags;
-create policy "Users can insert their space tags"
-  on public.space_tags for insert
-  with check (
-    exists (
-      select 1 from public.spaces s
-      where s.id = space_id and s.user_id = auth.uid()
-    )
-  );
+drop table if exists public.space_tags;
+drop table if exists public.tags;
 
 -- 9. Likes system
 
