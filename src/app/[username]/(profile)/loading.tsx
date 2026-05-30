@@ -1,22 +1,26 @@
 export default function ProfileLoading() {
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
-      {/* Background placeholder */}
-      <div className="h-48 w-full bg-muted animate-pulse" />
+      {/* Background: violet blur circle like the real no-cover state */}
+      <div className="absolute inset-0 -z-10 pointer-events-none">
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[400px] w-[600px] rounded-full bg-violet-100/40 blur-3xl dark:bg-violet-950/20" />
+      </div>
 
       <div className="mx-auto max-w-7xl px-4 py-12">
-        {/* Profile header skeleton */}
-        <div className="flex flex-col sm:flex-row items-start gap-6">
-          <div className="h-20 w-20 rounded-full bg-muted animate-pulse shrink-0" />
-          <div className="flex-1 space-y-3 pt-1">
-            <div className="h-7 w-48 rounded bg-muted animate-pulse" />
-            <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+        {/* Profile header skeleton — centered, matching ProfileHeader layout */}
+        <div className="flex flex-col items-center text-center">
+          <div className="h-28 w-28 rounded-full bg-muted animate-pulse border-4 border-background shadow-xl" />
+          <div className="mt-5 h-7 w-44 rounded bg-muted animate-pulse" />
+          <div className="mt-1.5 h-4 w-28 rounded bg-muted animate-pulse" />
+          <div className="mt-2 h-4 w-52 rounded bg-muted animate-pulse" />
+          <div className="mt-3 space-y-2 flex flex-col items-center">
             <div className="h-4 w-72 rounded bg-muted animate-pulse" />
-            <div className="flex gap-2 pt-1">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-              ))}
-            </div>
+            <div className="h-4 w-56 rounded bg-muted animate-pulse" />
+          </div>
+          <div className="mt-5 flex items-center gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-9 w-9 rounded-lg bg-muted animate-pulse" />
+            ))}
           </div>
         </div>
 
