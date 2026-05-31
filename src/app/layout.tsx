@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Navbar } from "@/components/layout/Navbar";
 import { ConditionalFooter } from "@/components/layout/ConditionalFooter";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import "./globals.css";
 
 const inter = Inter({
@@ -95,8 +96,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Navbar />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 pb-16 md:pb-0">{children}</main>
           <ConditionalFooter />
+          <MobileTabBar />
         </ThemeProvider>
       </body>
     </html>
