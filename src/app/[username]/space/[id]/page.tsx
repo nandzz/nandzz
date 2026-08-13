@@ -18,7 +18,7 @@ import type { CommentWithLike } from "@/lib/types";
 import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
 import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
 import { IframeLoader } from "@/components/spaces/IframeLoader";
-import { VideoEmbed } from "@/components/spaces/VideoEmbed";
+import { VideoEmbed, detectVideo } from "@/components/spaces/VideoEmbed";
 import { MarkdownViewer } from "@/components/spaces/MarkdownViewer";
 import { MarkdownSpaceEditor } from "@/components/spaces/MarkdownSpaceEditor";
 import { BackButton } from "@/components/ui/BackButton";
@@ -225,7 +225,7 @@ export default async function SpaceViewPage({
   return (
     <div
       className="chrome-immersive-space fixed left-0 right-0 flex flex-col overflow-hidden md:static md:h-[calc(100dvh-4rem)]"
-      style={{ top: '4rem', bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+      style={{ top: 0, bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
     >
       <IdleChromeActivator />
       <ViewTracker spaceId={space.id} ownerId={space.user_id} />
@@ -322,7 +322,7 @@ export default async function SpaceViewPage({
           {isOwner && (
             <SpaceOwnerMenu
               spaceId={space.id}
-              editHref={`/dashboard/edit-space/${space.id}`}
+              editHref={`/dashboard/contents/edit-space/${space.id}`}
               redirectTo={`/${username}`}
             />
           )}
@@ -366,17 +366,22 @@ export default async function SpaceViewPage({
             />
           </div>
         ) : space.video_url ? (
+          // Legacy rows only — video URLs now live in the `url` column below.
           <VideoEmbed url={space.video_url} />
         ) : space.markdown_content ? (
           isOwner
             ? <MarkdownSpaceEditor spaceId={space.id} initialContent={space.markdown_content} />
             : <MarkdownViewer content={space.markdown_content} />
         ) : space.url ? (
-          <IframeLoader
-            src={space.url}
-            title={space.title}
-            sandbox="allow-scripts allow-forms allow-popups"
-          />
+          detectVideo(space.url) ? (
+            <VideoEmbed url={space.url} />
+          ) : (
+            <IframeLoader
+              src={space.url}
+              title={space.title}
+              sandbox="allow-scripts allow-forms allow-popups"
+            />
+          )
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-muted-foreground">No content available</p>

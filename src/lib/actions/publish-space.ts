@@ -17,6 +17,7 @@ export type PublishSpacePayload = {
   preview_title?: string | null;
   is_public?: boolean;
   hashtags?: string[];
+  content_type?: string;
 };
 
 // Only error results are returned to the client. On success the action
@@ -65,5 +66,5 @@ export async function publishSpace(
   // in Next.js server actions. Throws NEXT_REDIRECT which Next.js turns into
   // a 303 the client always honors; avoids the router.push race with the
   // enclosing server-action transition.
-  redirect(collectionId ? `/dashboard/collections/${collectionId}` : "/dashboard");
+  redirect(collectionId ? `/dashboard/collections/${collectionId}` : "/dashboard/contents");
 }

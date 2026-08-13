@@ -7,7 +7,7 @@ import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import { ConditionalFooter } from "./ConditionalFooter";
 import { MobileTabBar } from "./MobileTabBar";
-import { isImmersiveRoute, isProfilePage } from "@/lib/layout/appShell";
+import { isImmersiveRoute, isProfilePage, isWidgetRoute } from "@/lib/layout/appShell";
 import { cn } from "@/lib/utils";
 import type { ProfileLite } from "@/lib/types";
 
@@ -60,6 +60,13 @@ export function AppChrome({ initialUserId, initialProfile, children }: AppChrome
   }, [userId, fetchProfile]);
 
   const onProfilePage = isProfilePage(pathname);
+  // The public booking widget is a self-contained, branded page: it renders its
+  // own hero and controls, so every piece of app chrome is suppressed.
+  const onWidgetPage = isWidgetRoute(pathname);
+  // The immersive space viewer renders its own top bar (back / title / actions),
+  // so the app Navbar is suppressed there too — leaving the viewer chromeless
+  // above its own header.
+  const onImmersivePage = isImmersiveRoute(pathname);
 
   useEffect(() => {
     // Auto-collapse to the rail when landing on a profile page (full-width
@@ -100,25 +107,31 @@ export function AppChrome({ initialUserId, initialProfile, children }: AppChrome
         <Sidebar collapsed={collapsed} onToggle={handleToggleCollapsed} initialProfile={profile} />
       )}
 
-      {/* Top Navbar only when the sidebar isn't taking over (logged out, or the
-          immersive viewer). On mobile it stays visible since the sidebar is
-          desktop-only. */}
-      <div className={cn(showSidebar && "md:hidden")}>
-        <Navbar />
-      </div>
+      {/* Top Navbar only when the sidebar isn't taking over (logged out). On
+          mobile it stays visible since the sidebar is desktop-only. Profile,
+          widget, and immersive space pages never show the Navbar — they render
+          their own chrome. */}
+      {!onProfilePage && !onWidgetPage && !onImmersivePage && (
+        <div className={cn(showSidebar && "md:hidden")}>
+          <Navbar />
+        </div>
+      )}
 
       <main
         className={cn(
-          "flex-1 pb-16 md:pb-0 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
+          "flex-1 md:pb-0 transition-[padding] duration-300 ease-out motion-reduce:transition-none",
+          (!userId && onProfilePage) || onWidgetPage ? "pb-0" : "pb-16",
           showSidebar && (collapsed ? "md:pl-16" : "md:pl-64")
         )}
       >
         {children}
       </main>
 
-      {!showSidebar && <ConditionalFooter />}
+      {!showSidebar && !onWidgetPage && <ConditionalFooter />}
 
-      <MobileTabBar />
+      {/* Hidden for logged-out visitors on a profile page, and on the widget
+          page (which owns its whole viewport). */}
+      {!(!userId && onProfilePage) && !onWidgetPage && <MobileTabBar />}
     </>
   );
 }

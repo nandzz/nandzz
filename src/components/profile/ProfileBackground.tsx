@@ -86,7 +86,7 @@ export function ProfileBackground({
     if (!file) return;
 
     if (file.size > MAX_BG_SIZE) {
-      setError("Background image must be under 1.5 MB");
+      setError("Background image must be under 1.5 MB");
       e.target.value = "";
       return;
     }
@@ -152,6 +152,7 @@ export function ProfileBackground({
 
   // ── Remove ────────────────────────────────────────────────────────────────
   const handleRemove = async () => {
+    if (!window.confirm("Remove your cover image? This can't be undone.")) return;
     setUploading(true);
     setError("");
     try {
@@ -309,14 +310,14 @@ export function ProfileBackground({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleCancelReposition}
-                className="flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 px-2.5 py-1.5 text-xs text-white/80 hover:text-white transition-all shadow-sm"
+                className="flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 px-2.5 py-1.5 text-xs text-white/80 hover:text-white transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 <X className="h-3 w-3" />
                 Cancel
               </button>
               <button
                 onClick={handleSavePosition}
-                className="flex items-center gap-1.5 rounded-full bg-violet-600/90 backdrop-blur-sm border border-violet-400/40 px-3 py-1.5 text-xs text-white hover:bg-violet-600 transition-all shadow-sm"
+                className="flex items-center gap-1.5 rounded-full bg-violet-600/90 backdrop-blur-sm border border-violet-400/40 px-3 py-1.5 text-xs text-white hover:bg-violet-600 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 <Check className="h-3.5 w-3.5" />
                 Save position
@@ -327,7 +328,7 @@ export function ProfileBackground({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   disabled={uploading}
-                  className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-all shadow-sm"
+                  className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                   {uploading ? "Uploading…" : "Edit"}
@@ -357,7 +358,7 @@ export function ProfileBackground({
               </DropdownMenu>
               <button
                 onClick={handleShare}
-                className={`flex items-center gap-1.5 rounded-full backdrop-blur-sm border px-3 py-1.5 text-xs transition-all shadow-sm ${
+                className={`flex items-center gap-1.5 rounded-full backdrop-blur-sm border px-3 py-1.5 text-xs transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${
                   copied
                     ? "bg-green-500/15 border-green-500/40 text-green-600 dark:text-green-400"
                     : "bg-background/80 border-border/60 text-muted-foreground hover:text-foreground hover:border-violet-500/50"

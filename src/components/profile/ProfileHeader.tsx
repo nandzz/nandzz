@@ -15,7 +15,6 @@ import {
 import type { Profile, WidgetInstanceWithCatalog } from "@/lib/types";
 import { FollowButton } from "./FollowButton";
 import { FollowersDialog } from "./FollowersDialog";
-import { AgentEmbed } from "@/components/agent/AgentEmbed";
 import { WidgetStrip } from "@/components/widgets/WidgetStrip";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
 import { createClient } from "@/lib/supabase/client";
@@ -68,7 +67,7 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_AVATAR_SIZE) {
-      setAvatarError("Profile picture must be under 1.5 MB");
+      setAvatarError("Profile picture must be under 1.5 MB");
       e.target.value = "";
       return;
     }
@@ -175,7 +174,7 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
     <div className="flex flex-col items-center text-center">
       <div className="relative group">
         <Avatar className="h-28 w-28 border-4 border-background shadow-xl ring-2 ring-violet-200/50 dark:ring-violet-800/30">
-          <AvatarImage src={localAvatarUrl || undefined} />
+          <AvatarImage src={localAvatarUrl || undefined} alt={profile.display_name || profile.username} />
           <AvatarFallback className="text-3xl bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300">
             {profile.display_name?.[0]?.toUpperCase() ||
               profile.username[0]?.toUpperCase()}
@@ -196,7 +195,7 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
               onClick={() => avatarInputRef.current?.click()}
               disabled={avatarUploading}
               aria-label="Change profile picture"
-              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus:opacity-100 focus:outline-none disabled:cursor-not-allowed"
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:cursor-not-allowed"
             >
               {avatarUploading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/60 border-t-transparent" />
@@ -234,7 +233,7 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
         </p>
       )}
       {profile.bio && (
-        <p className="mt-3 max-w-lg text-sm text-muted-foreground leading-relaxed">
+        <p className="mt-3 max-w-lg text-sm text-muted-foreground leading-relaxed break-words">
           {profile.bio}
         </p>
       )}
@@ -271,7 +270,7 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
                 rel={
                   link.key === "email" ? undefined : "noopener noreferrer"
                 }
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 bg-background text-muted-foreground transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 ${link.hoverClass}`}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 bg-background text-muted-foreground transition-[color,box-shadow,transform] duration-200 hover:shadow-sm motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${link.hoverClass}`}
               >
                 <Icon className="h-4 w-4" />
               </a>
@@ -280,12 +279,8 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
         </div>
       )}
 
-      {FEATURES.agent && profile.agent_enabled && (
-        <AgentEmbed profile={profile} isAuthenticated={!!currentUserId} />
-      )}
-
       {FEATURES.widgets && widgets.length > 0 && (
-        <WidgetStrip widgets={widgets} profile={profile} />
+        <WidgetStrip widgets={widgets} profile={profile} isAuthenticated={!!currentUserId} />
       )}
     </div>
   );

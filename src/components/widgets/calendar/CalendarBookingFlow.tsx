@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Clock, Loader2, Check, ChevronLeft, Pencil, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { CalendarDays, Clock, Loader2, Check, ChevronLeft, ChevronRight, Pencil, Sparkles, Tag, MapPin } from "lucide-react";
 import type { CalendarService, Location, StaffMember } from "@/lib/types";
 import { eligibleStaffForService, todayInZone, type Slot } from "@/lib/widgets/calendar";
 import { BOOKING_ERROR_KEYS } from "@/lib/widgets/booking-errors";
@@ -272,8 +272,10 @@ export function CalendarBookingFlow({
     setCalendarOpen(false);
   }
 
-  // Name of the chosen specialist (empty for "any available"), used in summaries.
-  const chosenStaffName = staffId ? staff.find((m) => m.id === staffId)?.name ?? null : null;
+  // The chosen specialist (null for "any available"), used in summaries — carries
+  // the photo so the summary can show their avatar, not just their name.
+  const chosenStaff = staffId ? staff.find((m) => m.id === staffId) ?? null : null;
+  const chosenStaffName = chosenStaff?.name ?? null;
 
   const back = () => {
     setError(null);
@@ -312,18 +314,19 @@ export function CalendarBookingFlow({
       {step === "location" && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold">{t.booking.chooseLocation}</h3>
-          {locations.map((loc) => (
+          {locations.map((loc, i) => (
             <button
               key={loc.id}
               onClick={() => pickLocation(loc)}
-              className="w-full text-left rounded-xl border border-border bg-background px-4 py-3 transition hover:border-emerald-400 hover:shadow-sm"
+              style={{ animationDelay: `${i * 60}ms` }}
+              className="group w-full text-left rounded-xl border border-border bg-background px-4 py-3 transition hover:border-emerald-400 hover:shadow-sm active:scale-[0.99] animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none"
             >
               <div className="flex items-center gap-3">
                 <Avatar size="lg" className="shrink-0">
                   <AvatarImage src={loc.photo_url || undefined} alt={loc.name} />
                   <AvatarFallback>{loc.name.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{loc.name}</span>
                   {loc.address && (
                     <span className="mt-0.5 block truncate text-xs text-muted-foreground">
@@ -331,6 +334,7 @@ export function CalendarBookingFlow({
                     </span>
                   )}
                 </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-emerald-500 motion-reduce:transition-none" />
               </div>
             </button>
           ))}
@@ -507,14 +511,52 @@ export function CalendarBookingFlow({
       {/* Step 4 — details */}
       {step === "details" && slot && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">{t.booking.yourDetails}</h3>
-          <p className="text-sm text-muted-foreground">
-            {t.booking.specialistSummary
-              .replace("{service}", service?.name ?? "")
-              .replace("{date}", fmtDay(slot.start))
-              .replace("{time}", fmtTime(slot.start))}
-            {chosenStaffName && <>{t.booking.withNameSuffix.replace("{name}", chosenStaffName)}</>}
-          </p>
+          {/* Booking summary — a clear recap of every choice made so far, so the
+              visitor confirms exactly what they're booking before contact details. */}
+          <div className="overflow-hidden rounded-xl border border-border bg-muted/40 divide-y divide-border/70">
+            <SummaryRow
+              icon={<Tag className="h-4 w-4" />}
+              label={t.booking.summaryService}
+              value={service?.name ?? ""}
+              meta={[
+                t.booking.durationMin.replace("{min}", String(service?.duration_min ?? "")),
+                showPrices && typeof service?.price_cents === "number" && service.price_cents > 0
+                  ? `$${(service.price_cents / 100).toFixed(2)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            />
+            <SummaryRow
+              icon={<CalendarDays className="h-4 w-4" />}
+              label={t.booking.summaryWhen}
+              value={fmtDay(slot.start)}
+              meta={fmtTime(slot.start)}
+            />
+            {chosenStaff && (
+              <SummaryRow
+                icon={
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={chosenStaff.photo_url || undefined} alt={chosenStaff.name} />
+                    <AvatarFallback>{chosenStaff.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                }
+                bareIcon
+                label={t.booking.summarySpecialist}
+                value={chosenStaff.name}
+              />
+            )}
+            {location && (
+              <SummaryRow
+                icon={<MapPin className="h-4 w-4" />}
+                label={t.booking.summaryLocation}
+                value={location.name}
+                meta={location.address || null}
+              />
+            )}
+          </div>
+
+          <h3 className="pt-1 text-sm font-semibold">{t.booking.yourDetails}</h3>
           <input
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             placeholder={t.booking.fullNamePlaceholder}
@@ -581,6 +623,44 @@ export function CalendarBookingFlow({
       <p className="pt-2 text-center text-[10px] text-muted-foreground">
         {t.booking.poweredBy.replace("{business}", businessName).replace("{tz}", tz)}
       </p>
+    </div>
+  );
+}
+
+// One line of the booking summary: an icon, a muted label, the chosen value, and
+// an optional trailing detail (duration/price, time, address). Kept dumb and
+// presentational so the details step reads as a simple list of rows.
+function SummaryRow({
+  icon,
+  bareIcon = false,
+  label,
+  value,
+  meta,
+}: {
+  icon: ReactNode;
+  // When true the icon renders as-is (e.g. an Avatar, already a circle) instead
+  // of being wrapped in the emerald badge used for lucide glyphs.
+  bareIcon?: boolean;
+  label: string;
+  value: string;
+  meta?: string | null;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3.5 py-2.5">
+      {bareIcon ? (
+        <span className="shrink-0">{icon}</span>
+      ) : (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
+          {icon}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="truncate text-sm font-medium">{value}</p>
+      </div>
+      {meta && <span className="shrink-0 text-xs text-muted-foreground">{meta}</span>}
     </div>
   );
 }

@@ -26,9 +26,9 @@ export default function SpaceError({
         >
           Try again
         </Button>
-        <Link href="/explore">
+        <Link href="/">
           <Button variant="outline" className="border-border/60">
-            Browse Spaces
+            Go home
           </Button>
         </Link>
       </div>

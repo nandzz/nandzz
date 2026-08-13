@@ -35,6 +35,11 @@ export type Profile = {
   following_count?: number | null;
   agent_enabled?: boolean | null;
   agent_suggested_questions?: string[] | null;
+  logo_url?: string | null;
+  brand_colors?: Record<string, string> | null;
+  brand_values?: string[] | null;
+  brand_description?: string | null;
+  gallery_layout?: string | null;
 };
 
 export type CreditBucket = "free_space" | "paid";
@@ -87,6 +92,7 @@ export type Space = {
   comments_count: number;
   hashtags: string[];
   created_at: string;
+  content_type: string | null;
 };
 
 export type SpaceLike = {
@@ -201,7 +207,7 @@ export type Notification = {
 
 // ── Widgets ──────────────────────────────────────────────────────────────────
 
-export type WidgetSlug = "calendar";
+export type WidgetSlug = "calendar" | "agent";
 
 export type WidgetCatalogEntry = {
   id: string;
@@ -216,6 +222,7 @@ export type WidgetCatalogEntry = {
   billing_interval: "month" | "year";
   active: boolean;
   sort_order: number;
+  monthly_credit_limit: number;
 };
 
 export type WidgetSubscriptionStatus =

@@ -42,6 +42,11 @@ export async function PATCH(
         return NextResponse.json({ error: errors.join(" ") }, { status: 400 });
       }
       update.config = config;
+    } else if (slug === "agent") {
+      // Agent knowledge lives in agent_documents/agent_suggested_questions —
+      // the instance config is just a minimal pass-through, no validation needed.
+      const raw = body.config as { enabled?: boolean } | null | undefined;
+      update.config = { ...(raw ?? {}), enabled: raw?.enabled ?? true };
     } else {
       update.config = body.config;
     }

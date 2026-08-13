@@ -23,15 +23,7 @@ const websiteSchema = {
       "@id": "https://nandzz.com/#website",
       url: "https://nandzz.com",
       name: "nandzz",
-      description: "A gallery for web pages, PDFs, tools, and interactive AI creations.",
-      potentialAction: {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: "https://nandzz.com/explore",
-        },
-        "query-input": "required name=search_term_string",
-      },
+      description: "A branded page plus widgets — booking, content, and pools — for businesses and pros who want to be found and booked.",
     },
     {
       "@type": "Organization",
@@ -39,7 +31,7 @@ const websiteSchema = {
       name: "nandzz",
       url: "https://nandzz.com",
       description:
-        "Nandzz is a creative community where makers share web apps, interactive tools, and AI-generated creations.",
+        "Nandzz gives businesses, solo pros, and institutions a branded page and the widgets to run it — take bookings, publish content, and build pools.",
     },
     {
       "@type": "SoftwareApplication",
@@ -78,15 +70,8 @@ export default async function HomePage() {
       .select("username")
       .eq("id", user.id)
       .single();
-    redirect(profile?.username ? `/${profile.username}` : "/dashboard");
+    redirect(profile?.username ? `/${profile.username}` : "/dashboard/contents");
   }
-
-  const { data: spaces } = await supabase
-    .from("spaces")
-    .select("*, profiles(username, display_name, avatar_url)")
-    .eq("is_public", true)
-    .order("created_at", { ascending: false })
-    .limit(6);
 
   return (
     <>
@@ -94,7 +79,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
       />
-      <HomeClient spaces={spaces} />
+      <HomeClient />
     </>
   );
 }

@@ -46,13 +46,13 @@ nandzz.com/
 ├── /[username]           ← User profile pages
 │   └── /space/[id]       ← Individual space pages
 ├── /login                ← Auth (noindex)
-├── /dashboard/*          ← Private (noindex via robots.ts)
+├── /contents/*          ← Private (noindex via robots.ts)
 ├── /privacy              ← Legal
 └── /terms                ← Legal
 ```
 
 **Indexable:** `/`, `/explore`, `/pricing`, `/[username]`, `/[username]/space/[id]`, `/privacy`, `/terms`  
-**Noindex:** `/dashboard/*`, `/api/*`, `/auth/*`, `/login`, `/forgot-password`
+**Noindex:** `/contents/*`, `/api/*`, `/auth/*`, `/login`, `/forgot-password`
 
 ---
 
@@ -60,7 +60,7 @@ nandzz.com/
 
 | Item | Status | Details |
 |---|---|---|
-| `robots.ts` | ✅ Done | Blocks `/dashboard/`, `/api/`, `/auth/` |
+| `robots.ts` | ✅ Done | Blocks `/contents/`, `/api/`, `/auth/` |
 | `sitemap.ts` | ✅ Done | Dynamic — pulls public profiles + spaces from Supabase |
 | `metadataBase` | ✅ Done | Set to `https://nandzz.com` in root layout |
 | Title templates | ✅ Done | `%s — nandzz` template on all pages |

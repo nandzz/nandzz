@@ -29,12 +29,6 @@ export function Footer() {
                 {t.footer.platform}
               </span>
               <Link
-                href="/explore"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {t.footer.explore}
-              </Link>
-              <Link
                 href="/login?tab=signup"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >

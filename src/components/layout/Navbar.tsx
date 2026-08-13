@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Compass, Bot, Plug, Blocks } from "lucide-react";
+import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Bot, Plug, Blocks } from "lucide-react";
 import type { Profile } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
 import { NotificationBell } from "./NotificationBell";
@@ -104,12 +104,6 @@ export function Navbar() {
 
           {/* Nav links - desktop */}
           <div className="hidden items-center gap-1 md:flex">
-            <Link
-              href="/explore"
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              {t.nav.explore}
-            </Link>
             {user && FEATURES.monetization && (
               <Link
                 href="/pricing"
@@ -128,7 +122,7 @@ export function Navbar() {
             )}
             {user && (
               <Link
-                href="/dashboard/create-space"
+                href="/dashboard/contents/create-space"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {t.nav.create}
@@ -151,7 +145,7 @@ export function Navbar() {
               )}
               {FEATURES.agent && profile?.username && (
                 <Link
-                  href={`/${profile.username}/agent`}
+                  href="/dashboard/agent"
                   className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 >
                   <Bot className="h-3.5 w-3.5" />
@@ -159,7 +153,7 @@ export function Navbar() {
                 </Link>
               )}
               <Link
-                href="/dashboard"
+                href="/dashboard/contents"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {t.nav.mySpaces}
@@ -230,7 +224,7 @@ export function Navbar() {
                       </DropdownMenuItem>
                     )}
                     {FEATURES.agent && profile?.username && (
-                      <DropdownMenuItem onClick={() => router.push(`/${profile.username}/agent`)} className="gap-2">
+                      <DropdownMenuItem onClick={() => router.push("/dashboard/agent")} className="gap-2">
                         <Bot className="h-4 w-4 text-muted-foreground" />
                         {t.nav.myAgent}
                       </DropdownMenuItem>
@@ -318,7 +312,7 @@ export function Navbar() {
                       </DropdownMenuItem>
                     )}
                     {FEATURES.agent && profile?.username && (
-                      <DropdownMenuItem onClick={() => router.push(`/${profile.username}/agent`)} className="gap-2">
+                      <DropdownMenuItem onClick={() => router.push("/dashboard/agent")} className="gap-2">
                         <Bot className="h-4 w-4 text-muted-foreground" />
                         {t.nav.myAgent}
                       </DropdownMenuItem>
@@ -365,13 +359,6 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => router.push("/explore")} className="gap-2">
-                      <Compass className="h-4 w-4 text-muted-foreground" />
-                      {t.nav.explore}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/login")} className="gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     {t.nav.login}

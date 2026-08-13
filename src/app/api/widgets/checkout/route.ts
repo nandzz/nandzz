@@ -52,7 +52,12 @@ export async function POST(request: Request) {
 
   let instanceId = existing?.id as string | undefined;
   if (!instanceId) {
-    const seedConfig = widget.slug === "calendar" ? defaultCalendarConfig() : {};
+    const seedConfig =
+      widget.slug === "calendar"
+        ? defaultCalendarConfig()
+        : widget.slug === "agent"
+          ? { enabled: true }
+          : {};
     const { data: created, error: createErr } = await admin
       .from("widget_instances")
       .insert({ user_id: user.id, catalog_id, config: seedConfig, enabled: false })

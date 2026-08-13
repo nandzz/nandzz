@@ -8,7 +8,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const PROFILE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 const SETUP_PATH = "/setup-username";
-const POST_SETUP_PATH = "/dashboard";
+const POST_SETUP_PATH = "/dashboard/contents";
 
 function skipProfileGuard(pathname: string): boolean {
   return (

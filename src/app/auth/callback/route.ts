@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   // provider's redirectTo), so it must be restricted to a same-origin path
   // before being appended to `base` below — otherwise a value like
   // "@evil.com" parses as userinfo and sends the browser to an external host.
-  const next = safeNextPath(searchParams.get("next"), "/dashboard");
+  const next = safeNextPath(searchParams.get("next"), "/dashboard/contents");
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || origin;
 
   if (code) {

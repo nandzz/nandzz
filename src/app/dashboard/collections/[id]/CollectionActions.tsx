@@ -51,7 +51,7 @@ export function CollectionActions({ collection }: CollectionActionsProps) {
     <>
       <div className="flex items-center gap-2 flex-shrink-0">
         <Link
-          href={`/dashboard/create-space?collectionId=${collection.id}`}
+          href={`/dashboard/contents/create-space?collectionId=${collection.id}`}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-violet-400/60 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/30 gap-1.5")}
         >
           <Plus className="h-3.5 w-3.5" />

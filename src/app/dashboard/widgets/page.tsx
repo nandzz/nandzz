@@ -55,7 +55,7 @@ export default async function WidgetsDashboardPage() {
                   className="absolute inset-0 z-0 rounded-2xl"
                   aria-label={w.catalog.name}
                 />
-                <div className="relative z-[1] flex items-start justify-between">
+                <div className="pointer-events-none relative z-[1] flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
                       {renderWidgetIcon(w.catalog.icon, "h-4 w-4 text-emerald-600 dark:text-emerald-400")}
@@ -70,12 +70,12 @@ export default async function WidgetsDashboardPage() {
                   <Link
                     href={`/dashboard/widgets/${w.id}/settings`}
                     aria-label={t.booking.widgetSettingsTitle}
-                    className="relative z-10 rounded-lg p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover:opacity-100"
+                    className="pointer-events-auto relative z-10 rounded-lg p-1 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover:opacity-100"
                   >
                     <Settings className="h-4 w-4" />
                   </Link>
                 </div>
-                <div className="relative z-[1] mt-4">
+                <div className="pointer-events-none relative z-[1] mt-4">
                   {w.has_access ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                       <Check className="h-3 w-3" /> {t.booking.subscriptionActive}

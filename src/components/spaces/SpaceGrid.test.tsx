@@ -18,7 +18,12 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const makeSpace = (id: string, title: string, hashtags: string[] = []): Space => ({
+const makeSpace = (
+  id: string,
+  title: string,
+  hashtags: string[] = [],
+  contentType: Space["content_type"] = null
+): Space => ({
   id,
   title,
   description: null,
@@ -38,8 +43,11 @@ const makeSpace = (id: string, title: string, hashtags: string[] = []): Space =>
   comments_count: 0,
   hashtags,
   created_at: new Date().toISOString(),
+  content_type: contentType,
 });
 
+// All three default to `content_type: null`, which falls back to "html"
+// (legacy detection) — i.e. the "Informative" section.
 const space1 = makeSpace("1", "Space 1", ["tool"]);
 const space2 = makeSpace("2", "Space 2", ["service"]);
 const space3 = makeSpace("3", "Space 3", ["tool", "service"]);
@@ -78,6 +86,65 @@ describe("SpaceGrid", () => {
     });
   });
 
+  describe("sectioning", () => {
+    it("groups spaces into the correct section headings", () => {
+      const notesSpace = makeSpace("n1", "Notes Space", [], "notes");
+      const imageSpace = makeSpace("i1", "Image Space", [], "image");
+      const linkSpace = makeSpace("l1", "Link Space", [], "link");
+
+      render(<SpaceGrid spaces={[notesSpace, imageSpace, linkSpace]} />);
+
+      expect(screen.getByRole("heading", { name: /Informative/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Gallery/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Links/ })).toBeInTheDocument();
+
+      // Each section shows a count of its spaces.
+      expect(screen.getByRole("heading", { name: /Informative \(1\)/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Gallery \(1\)/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Links \(1\)/ })).toBeInTheDocument();
+    });
+
+    it("skips empty sections", () => {
+      render(<SpaceGrid spaces={allSpaces} />);
+
+      // allSpaces all resolve to "html" -> Informative only.
+      expect(screen.getByRole("heading", { name: /Informative/ })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /Gallery/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /Links/ })).not.toBeInTheDocument();
+    });
+
+    it("renders sections in Informative, Gallery, Links order", () => {
+      const imageSpace = makeSpace("i1", "Image Space", [], "image");
+      const notesSpace = makeSpace("n1", "Notes Space", [], "notes");
+
+      render(<SpaceGrid spaces={[imageSpace, notesSpace]} />);
+
+      const headings = screen.getAllByRole("heading").map((h) => h.textContent);
+      const informativeIdx = headings.findIndex((h) => h?.includes("Informative"));
+      const galleryIdx = headings.findIndex((h) => h?.includes("Gallery"));
+      expect(informativeIdx).toBeGreaterThanOrEqual(0);
+      expect(galleryIdx).toBeGreaterThanOrEqual(0);
+      expect(informativeIdx).toBeLessThan(galleryIdx);
+    });
+
+    it("places all spaces from every section into the DOM", () => {
+      const notesSpace = makeSpace("n1", "Notes Space", [], "notes");
+      const imageSpace = makeSpace("i1", "Image Space", [], "image");
+      const linkSpace = makeSpace("l1", "Link Space", [], "link");
+
+      render(<SpaceGrid spaces={[notesSpace, imageSpace, linkSpace]} />);
+      expect(screen.getAllByTestId("space-card")).toHaveLength(3);
+    });
+
+    it("shows only one create tile, even with multiple sections", () => {
+      const notesSpace = makeSpace("n1", "Notes Space", [], "notes");
+      const imageSpace = makeSpace("i1", "Image Space", [], "image");
+
+      render(<SpaceGrid spaces={[notesSpace, imageSpace]} showCreateCard />);
+      expect(screen.getAllByText("Create New Content")).toHaveLength(1);
+    });
+  });
+
   describe("compact toggle", () => {
     it("starts in comfortable view (Compact button visible)", () => {
       render(<SpaceGrid spaces={allSpaces} />);
@@ -99,6 +166,25 @@ describe("SpaceGrid", () => {
       await user.click(screen.getByTitle("Compact view"));
       await user.click(screen.getByTitle("Comfortable view"));
       expect(screen.getByTitle("Compact view")).toBeInTheDocument();
+    });
+
+    it("applies the compact grid classes to every section uniformly", async () => {
+      const user = userEvent.setup();
+      const notesSpace = makeSpace("n1", "Notes Space", [], "notes");
+      const imageSpace = makeSpace("i1", "Image Space", [], "image");
+
+      const { container } = render(
+        <SpaceGrid spaces={[notesSpace, imageSpace]} />
+      );
+
+      const comfortableGrids = container.querySelectorAll(".sm\\:grid-cols-2");
+      expect(comfortableGrids.length).toBe(2);
+
+      await user.click(screen.getByTitle("Compact view"));
+
+      const compactGrids = container.querySelectorAll(".sm\\:grid-cols-4");
+      expect(compactGrids.length).toBe(2);
+      expect(container.querySelectorAll(".sm\\:grid-cols-2").length).toBe(0);
     });
   });
 });

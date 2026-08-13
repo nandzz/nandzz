@@ -15,7 +15,7 @@ const WIDTHS: Record<PageWidth, string> = {
   narrow: "max-w-3xl", // forms, billing, settings
   content: "max-w-4xl", // credits (the reference), reading-width content
   medium: "max-w-5xl", // widgets
-  wide: "max-w-7xl", // card grids: dashboard, explore, feed, collections
+  wide: "max-w-7xl", // card grids: dashboard, feed, collections
 };
 
 interface PageShellProps {

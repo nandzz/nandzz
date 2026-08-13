@@ -76,8 +76,13 @@ export function FollowersDialog({ profileId, type, count, children }: FollowersD
   return (
     <>
       <button
+        type="button"
         onClick={() => count > 0 && setOpen(true)}
-        className={count > 0 ? "cursor-pointer hover:opacity-70 transition-opacity" : "cursor-default"}
+        className={
+          count > 0
+            ? "cursor-pointer rounded-sm hover:opacity-70 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+            : "cursor-default"
+        }
       >
         {children}
       </button>
@@ -89,7 +94,7 @@ export function FollowersDialog({ profileId, type, count, children }: FollowersD
           <div className="flex justify-center py-8 text-sm text-muted-foreground">{type === "followers" ? t.profile.noFollowers : t.profile.noFollowing}</div>
         ) : (
           <div className="flex flex-col gap-0">
-            <ul className="max-h-80 overflow-y-auto divide-y divide-border -mx-2">
+            <ul className="max-h-80 overflow-y-auto overscroll-contain divide-y divide-border -mx-2">
               {users.map((u) => (
                 <li key={u.id}>
                   <Link
@@ -98,7 +103,7 @@ export function FollowersDialog({ profileId, type, count, children }: FollowersD
                     className="flex items-center gap-3 px-2 py-3 hover:bg-muted/50 rounded-md transition-colors"
                   >
                     <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarImage src={u.avatar_url || undefined} />
+                      <AvatarImage src={u.avatar_url || undefined} alt="" />
                       <AvatarFallback className="text-sm bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300">
                         {(u.display_name || u.username)[0]?.toUpperCase()}
                       </AvatarFallback>

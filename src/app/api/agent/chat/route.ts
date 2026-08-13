@@ -9,14 +9,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // mode is resolved server-side: "owner" only when the authenticated session
 // user is the actual profile owner. Never trusted from the client body.
 //
-// Credits are charged to whoever is chatting — the caller, not the profile
-// owner. Owner mode (owner chatting with their own agent) bills the owner
-// because they are the caller. The pre-check below refuses early when the
-// caller is out of paid_credits. The actual debit happens inside the edge
-// function after OpenAI reports token usage.
+// Gating differs by mode:
+//   - owner (AgentStudio testing/advisor): if the owner has an active `agent`
+//     widget instance, usage bills through its monthly credit allowance (then
+//     paid credits); otherwise it falls back to a legacy direct paid-credits
+//     charge that requires MIN_CREDITS_FOR_CHAT.
+//   - visitor (the public "Talk to X" widget card / `/[username]/agent`):
+//     HARD GATE on an active `agent` widget subscription (has_widget_access).
+// Whenever an `agent` instance is in play, agent_can_serve pauses the agent
+// once that instance's included credits AND the owner's paid credits are both
+// exhausted for the billing period (usage is billed to the owner, not visitors).
 
 const MAX_MESSAGE_CHARS = 30000;
-// Refuse the request if the caller has fewer than this many paid_credits.
+// Refuse owner-mode requests if the caller has fewer than this many paid_credits.
 // A typical short chat (~1k in / 500 out on gpt-4.1-nano with 3× markup) bills ≈1 credit.
 const MIN_CREDITS_FOR_CHAT = 1;
 
@@ -38,6 +43,31 @@ function getClientIp(req: NextRequest): string {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
+// Finds the owner's live (enabled + entitled) `agent` widget instance.
+// Mirrors the lookup the agent-chat edge fn already does for the calendar
+// widget's booking context (loadBookingContext).
+async function resolveAgentInstanceId(
+  admin: ReturnType<typeof createAdminClient>,
+  ownerId: string
+): Promise<string | null> {
+  const { data: rows } = await admin
+    .from("widget_instances")
+    .select("id, catalog:widget_catalog(slug)")
+    .eq("user_id", ownerId)
+    .eq("enabled", true);
+
+  const agentRow = (rows ?? []).find((r) => {
+    const cat = Array.isArray(r.catalog) ? r.catalog[0] : r.catalog;
+    return (cat as { slug?: string } | undefined)?.slug === "agent";
+  });
+  if (!agentRow) return null;
+
+  const { data: hasAccess } = await admin.rpc("has_widget_access", {
+    p_instance_id: agentRow.id,
+  });
+  return hasAccess ? agentRow.id : null;
+}
+
 export async function POST(req: NextRequest) {
   const { messages, username, preview } = await req.json();
 
@@ -56,9 +86,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Every chat is billed to the caller, so anonymous visitors are refused
-  // outright — a signed-in account is required to identify who to charge and
-  // to keep abuse tied to a real user, not just an IP.
+  // Every chat requires a signed-in caller — owners are billed in credits,
+  // visitors are metered against the owner's widget token cap, but either way
+  // we need to know who's chatting and keep abuse tied to a real account.
   if (!user) {
     return new Response(
       JSON.stringify({ error: "AUTH_REQUIRED" }),
@@ -68,9 +98,8 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Look up the agent's owner (for id + enabled state) and the caller (for paid_credits) in parallel.
   const [{ data: profile }, { data: caller }] = await Promise.all([
-    admin.from("profiles").select("id, agent_enabled").eq("username", username).single(),
+    admin.from("profiles").select("id").eq("username", username).single(),
     admin.from("profiles").select("id, paid_credits").eq("id", user.id).single(),
   ]);
 
@@ -83,23 +112,36 @@ export async function POST(req: NextRequest) {
 
   const isOwner = profile.id === user.id;
 
-  // A disabled agent is hidden from the profile; block direct API calls to it too.
-  // The owner can always reach their own agent (studio advisor + preview).
-  if (!isOwner && !profile.agent_enabled) {
-    return new Response(JSON.stringify({ error: "Agent not available" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   if (!preview && isOwner) {
     mode = "owner";
   }
 
-  // Owners chatting with their own agent still pay (they're the caller), but
-  // skip the abuse throttle — they're testing their own agent. Everyone else
-  // passes through the per-IP and per-owner caps.
-  if (mode !== "owner") {
+  let agentInstanceId: string | null = null;
+
+  if (mode === "owner") {
+    // Owner using AgentStudio. If they have an active `agent` widget instance,
+    // usage bills through its monthly credit allowance (then their paid
+    // credits), same as the public widget. If not (testing without a
+    // subscription), fall back to the legacy direct paid-credits charge, which
+    // still requires a minimum balance.
+    agentInstanceId = await resolveAgentInstanceId(admin, profile.id);
+    if (!agentInstanceId && (caller?.paid_credits ?? 0) < MIN_CREDITS_FOR_CHAT) {
+      return new Response(
+        JSON.stringify({ error: "INSUFFICIENT_CREDITS", buy_url: "/dashboard/credits" }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  } else {
+    // HARD GATE: the agent only exists for visitors while the owner has an
+    // active `agent` widget subscription with the instance enabled.
+    agentInstanceId = await resolveAgentInstanceId(admin, profile.id);
+    if (!agentInstanceId) {
+      return new Response(
+        JSON.stringify({ error: "AGENT_UNAVAILABLE" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const { data: rlSetting } = await admin
       .from("app_settings")
       .select("value")
@@ -135,15 +177,23 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "3600" } }
       );
     }
+
   }
 
-  // Pre-check: the caller (who will be charged) must have at least one paid credit.
-  // Doing it here (not inside the edge function) lets us fail fast with 402 — no stream open.
-  if ((caller?.paid_credits ?? 0) < MIN_CREDITS_FOR_CHAT) {
-    return new Response(
-      JSON.stringify({ error: "INSUFFICIENT_CREDITS", buy_url: "/dashboard/credits" }),
-      { status: 402, headers: { "Content-Type": "application/json" } }
-    );
+  // Monthly credit allowance gate. Whenever the usage bills through an `agent`
+  // widget instance, the agent pauses once that instance's included credits AND
+  // the owner's paid credits are both exhausted for the current billing period.
+  if (agentInstanceId) {
+    const { data: canServe } = await admin.rpc("agent_can_serve", {
+      p_instance_id: agentInstanceId,
+      p_owner_user_id: profile.id,
+    });
+    if (canServe === false) {
+      return new Response(
+        JSON.stringify({ error: "AGENT_LIMIT_REACHED" }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      );
+    }
   }
 
   const requestId = crypto.randomUUID();
@@ -171,6 +221,7 @@ export async function POST(req: NextRequest) {
       mode,
       profile_id: profile.id,
       caller_user_id: user.id,
+      instance_id: agentInstanceId,
       request_id: requestId,
       role: "agent_chat",
     }),

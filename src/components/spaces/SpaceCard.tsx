@@ -17,10 +17,22 @@ import { ExternalLink, FolderPlus, Pencil, Trash2, Bookmark, Globe, Lock, Copy }
 import { LikeButton } from "./LikeButton";
 import { ShareButton } from "./ShareButton";
 import { StarButton } from "./StarButton";
+import { detectVideo } from "./VideoEmbed";
 import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Space } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+/** Only http(s) links are safe to navigate to directly — rejects javascript:,
+ * data:, vbscript:, etc. */
+function isSafeHttpUrl(u: string): boolean {
+  try {
+    const { protocol } = new URL(u);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 interface SpaceCardProps {
   space: Space;
@@ -37,6 +49,20 @@ interface SpaceCardProps {
 
 export function SpaceCard({ space, username, routeUsername, editable, liked, saved, compact, collectionId, isOwn, hashtags = [] }: SpaceCardProps) {
   const spaceUrl = routeUsername ? `/${routeUsername}/space/${space.id}` : `/space/${space.id}`;
+  // Link-type spaces jump straight to the external URL in a new tab instead of
+  // opening the in-app space page. Only http(s) is allowed — anything else
+  // (e.g. a javascript: URL from a non-builder insert path) falls back to the
+  // in-app page so a malicious scheme can't execute on click. Video links are
+  // excluded: they open the in-app page so the embedded player is reachable.
+  const isExternalLink =
+    space.content_type === "link" &&
+    !!space.url &&
+    isSafeHttpUrl(space.url) &&
+    !detectVideo(space.url);
+  const clickHref = isExternalLink ? space.url! : spaceUrl;
+  const externalLinkProps = isExternalLink
+    ? { target: "_blank" as const, rel: "noopener noreferrer" }
+    : {};
   const router = useRouter();
   const { t } = useLanguage();
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
@@ -79,23 +105,17 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
         alert(data?.error === "INSUFFICIENT_CREDITS" ? t.space.duplicateNoCredits : (data?.error || t.space.duplicateFailed));
         return;
       }
-      router.push(`/dashboard/edit-space/${data.spaceId}`);
+      router.push(`/dashboard/contents/edit-space/${data.spaceId}`);
     } finally {
       setIsDuplicating(false);
     }
   };
 
   const cardContent = compact ? (
-    <Card className="@container group overflow-hidden transition-all duration-200 hover:shadow-md hover:shadow-violet-500/10 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
-      <Link href={spaceUrl} className="block">
+    <Card className="@container group overflow-hidden rounded-xl p-0 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-white/10 border-foreground/10 hover:border-violet-500/40 dark:hover:border-violet-500/25">
+      <Link href={clickHref} {...externalLinkProps} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           <SpacePreview space={space} />
-          {/* Hover gradient overlay with title */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-1.5">
-            <span className="text-[8px] @[120px]:text-[10px] font-medium text-white leading-tight line-clamp-2">
-              {space.title}
-            </span>
-          </div>
           {/* Visibility badge — owner only */}
           {editable && (
             <div className="absolute top-1.5 right-1.5 z-10">
@@ -112,22 +132,23 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
               )}
             </div>
           )}
-        </div>
-        <div className="px-2 pt-1.5 pb-2.5 h-[52px]">
-          <p className="text-[8px] @[120px]:text-[10px] font-medium truncate text-foreground/80 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-            {space.title}
-          </p>
-          {space.description && (
-            <p className="text-[7px] @[120px]:text-[9px] text-muted-foreground line-clamp-2 mt-0.5 leading-tight">
-              {space.description}
+          {/* Title + subtitle — always-on gradient overlay, no separate footer */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-2.5 pt-10 pb-2">
+            <p className="text-[11px] @[140px]:text-[13px] font-semibold text-white truncate">
+              {space.title}
             </p>
-          )}
+            {space.description && (
+              <p className="mt-0.5 text-[9px] @[140px]:text-[11px] leading-tight text-white/75 line-clamp-2">
+                {space.description}
+              </p>
+            )}
+          </div>
         </div>
       </Link>
     </Card>
   ) : (
-    <Card className="@container group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 border-border/60 dark:border-border/80 dark:hover:border-violet-500/20 p-0">
-      <Link href={spaceUrl} className="block">
+    <Card className="@container group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 border-foreground/10 hover:border-violet-500/35 dark:hover:border-violet-500/20 p-0">
+      <Link href={clickHref} {...externalLinkProps} className="block">
         <div className="aspect-video bg-muted relative overflow-hidden">
           <SpacePreview space={space} />
           {/* Hover gradient overlay */}
@@ -202,7 +223,13 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
       <ContextMenu>
         <ContextMenuTrigger>{cardContent}</ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={() => router.push(spaceUrl)}>
+          <ContextMenuItem
+            onClick={() =>
+              isExternalLink
+                ? window.open(space.url!, "_blank", "noopener,noreferrer")
+                : router.push(spaceUrl)
+            }
+          >
             <ExternalLink className="size-4" />
             {t.space.open}
           </ContextMenuItem>
@@ -237,7 +264,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
                 <>
                   <ContextMenuSeparator />
                   <ContextMenuItem
-                    onClick={() => router.push(`/dashboard/edit-space/${space.id}`)}
+                    onClick={() => router.push(`/dashboard/contents/edit-space/${space.id}`)}
                   >
                     <Pencil className="size-4" />
                     {t.space.edit}

@@ -113,7 +113,9 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
 
     await user.click(screen.getByText("Alex"));
     expect(screen.getByText("Your details")).toBeInTheDocument();
-    expect(screen.getByText(/with Alex/)).toBeInTheDocument();
+    // The booking summary now lists the specialist as its own labeled row.
+    expect(screen.getByText("Specialist")).toBeInTheDocument();
+    expect(screen.getByText("Alex")).toBeInTheDocument();
   });
 
   it("submits 'any available' (staff_id: \"\") when that option is chosen", async () => {

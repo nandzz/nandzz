@@ -69,7 +69,7 @@ export default async function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto">
-            <Link href="/dashboard/create-space" className="shrink-0">
+            <Link href="/dashboard/contents/create-space" className="shrink-0">
               <Button>
                 <Plus className="h-4 w-4" />
                 {t.dashboard.createSpace}
@@ -138,7 +138,7 @@ export default async function DashboardPage() {
             <p className="text-muted-foreground max-w-sm mb-6">
               {t.dashboard.noSpacesDesc}
             </p>
-            <Link href="/dashboard/create-space">
+            <Link href="/dashboard/contents/create-space">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.dashboard.createFirst}

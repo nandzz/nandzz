@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      { source: "/dashboard", destination: "/dashboard/contents", permanent: true },
+      { source: "/dashboard/create-space", destination: "/dashboard/contents/create-space", permanent: true },
+      { source: "/dashboard/create-space/:path*", destination: "/dashboard/contents/create-space/:path*", permanent: true },
+      { source: "/dashboard/edit-space/:path*", destination: "/dashboard/contents/edit-space/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

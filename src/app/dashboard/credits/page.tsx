@@ -218,7 +218,7 @@ export default async function CreditsPage({
         </div>
 
         <div className="pt-8">
-          <Link href="/dashboard">
+          <Link href="/dashboard/contents">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <LayoutGrid className="h-4 w-4" />
               Back to content

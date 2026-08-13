@@ -34,7 +34,7 @@ export function DuplicateSpaceButton({ spaceId, size = "md" }: DuplicateSpaceBut
         alert(data?.error === "INSUFFICIENT_CREDITS" ? t.space.duplicateNoCredits : (data?.error || t.space.duplicateFailed));
         return;
       }
-      router.push(`/dashboard/edit-space/${data.spaceId}`);
+      router.push(`/dashboard/contents/edit-space/${data.spaceId}`);
     } finally {
       setBusy(false);
     }

@@ -185,7 +185,7 @@ describe("AuthForm", () => {
       );
     });
 
-    it("redirects to /dashboard on successful login", async () => {
+    it("redirects to /dashboard/contents on successful login", async () => {
       const user = userEvent.setup();
       render(<AuthForm />);
 
@@ -193,7 +193,7 @@ describe("AuthForm", () => {
       await user.type(screen.getByLabelText(/password/i), "mypassword");
       await user.click(screen.getByRole("button", { name: "Log in" }));
 
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/dashboard"));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/dashboard/contents"));
     });
 
     it("displays server error message on failed login", async () => {

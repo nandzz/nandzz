@@ -5,8 +5,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
-import { ProfileTabs } from "@/components/profile/ProfileTabs";
+import { ProfileContent } from "@/components/profile/ProfileContent";
+import { ProfileGallery } from "@/components/profile/ProfileGallery";
 import { ProfileBackground } from "@/components/profile/ProfileBackground";
+import { resolveGalleryLayout } from "@/lib/gallery/layouts";
 import { FEATURES } from "@/lib/flags";
 import { getProfileWidgets } from "@/lib/widgets/server";
 import type { WidgetInstanceWithCatalog } from "@/lib/types";
@@ -73,6 +75,10 @@ export async function generateMetadata({
   };
 }
 
+const PROFILE_PREVIEW_SIZE = 12;
+// Profile shows at most 6 gallery images inline; the rest open in a paginated modal.
+const GALLERY_PREVIEW_SIZE = 6;
+
 export default async function ProfilePage({
   params,
 }: {
@@ -89,40 +95,44 @@ export default async function ProfilePage({
   const supabase = await createClient();
 
   const [
-    { data: spaces },
-    { data: collections },
+    { data: spaces, count: totalSpaceCount },
+    { data: galleryImages, count: totalGalleryCount },
     { data: { user } },
     widgets,
   ] = await Promise.all([
+    // Contents carousel: every content type EXCEPT images (images live in the
+    // gallery grid below). content_type is reliably backfilled, so .neq is safe.
     supabase
       .from("spaces")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("user_id", profile.id)
       .eq("is_public", true)
-      .order("created_at", { ascending: false }),
+      .neq("content_type", "image")
+      .order("created_at", { ascending: false })
+      .range(0, PROFILE_PREVIEW_SIZE - 1),
+    // Gallery: image-type spaces only.
     supabase
-      .from("collections")
-      .select("*, collection_spaces(space_id, spaces(*))")
+      .from("spaces")
+      .select("*", { count: "exact" })
       .eq("user_id", profile.id)
       .eq("is_public", true)
-      .order("is_default", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .eq("content_type", "image")
+      .order("created_at", { ascending: false })
+      .range(0, GALLERY_PREVIEW_SIZE - 1),
     supabase.auth.getUser(),
     FEATURES.widgets
       ? getProfileWidgets(profile.id)
       : Promise.resolve([] as WidgetInstanceWithCatalog[]),
   ]);
 
+  const t = await getServerTranslations();
+
   let likedSpaceIds: string[] = [];
   let savedSpaceIds: string[] = [];
   let isFollowing = false;
 
   if (user) {
-    // Collect all space IDs visible on this profile: owner's spaces + collection spaces
-    const ownerSpaceIds = (spaces ?? []).map(s => s.id);
-    const collectionSpaceIds = (collections ?? [])
-      .flatMap(c => c.collection_spaces.map((cs: { space_id: string }) => cs.space_id));
-    const allSpaceIds = [...new Set([...ownerSpaceIds, ...collectionSpaceIds])];
+    const allSpaceIds = [...(spaces ?? []), ...(galleryImages ?? [])].map(s => s.id);
 
     if (user.id !== profile.id) {
       const { data: followRow } = await supabase
@@ -153,6 +163,8 @@ export default async function ProfilePage({
   }
 
   const isOwner = user?.id === profile.id;
+  const hasContents = (spaces?.length ?? 0) > 0;
+  const hasGallery = (galleryImages?.length ?? 0) > 0;
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
@@ -173,16 +185,35 @@ export default async function ProfilePage({
           isFollowing={isFollowing}
           widgets={widgets}
         />
-        <div className="mt-12">
-          <ProfileTabs
-            spaces={spaces || []}
-            collections={collections || []}
-            profile={profile}
-            likedSpaceIds={likedSpaceIds}
-            savedSpaceIds={savedSpaceIds}
-            currentUserId={user?.id}
-          />
-        </div>
+        {hasGallery && (
+          <div className="mt-12">
+            <ProfileGallery
+              images={galleryImages || []}
+              totalCount={totalGalleryCount ?? galleryImages?.length ?? 0}
+              profile={profile}
+              isOwner={isOwner}
+              initialLayout={resolveGalleryLayout(profile)}
+              enableModal
+            />
+          </div>
+        )}
+        {hasContents && (
+          <div className="mt-12">
+            <ProfileContent
+              spaces={spaces || []}
+              totalCount={totalSpaceCount ?? spaces?.length ?? 0}
+              profile={profile}
+              likedSpaceIds={likedSpaceIds}
+              savedSpaceIds={savedSpaceIds}
+              currentUserId={user?.id}
+            />
+          </div>
+        )}
+        {!hasGallery && !hasContents && (
+          <p className="mt-12 py-12 text-center text-muted-foreground">
+            {t.profile.noPublicSpaces}
+          </p>
+        )}
       </PageShell>
     </div>
   );

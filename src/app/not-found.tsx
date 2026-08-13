@@ -15,7 +15,7 @@ export default function NotFound() {
       </div>
       <h2 className="text-xl font-semibold mb-2">{t.notFound.title}</h2>
       <p className="text-muted-foreground max-w-sm mb-6">{t.notFound.desc}</p>
-      <Link href="/explore">
+      <Link href="/">
         <Button>{t.notFound.cta}</Button>
       </Link>
     </div>

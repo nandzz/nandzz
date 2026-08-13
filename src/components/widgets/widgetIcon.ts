@@ -1,6 +1,7 @@
 import { createElement, type ReactElement } from "react";
 import {
   Blocks,
+  Bot,
   Calendar,
   CalendarClock,
   CalendarDays,
@@ -28,6 +29,7 @@ import {
 // lowercase key before lookup.
 const WIDGET_ICONS: Record<string, LucideIcon> = {
   blocks: Blocks,
+  bot: Bot,
   calendar: Calendar,
   calendarclock: CalendarClock,
   calendardays: CalendarDays,

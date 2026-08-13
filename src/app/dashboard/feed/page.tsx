@@ -94,7 +94,7 @@ export default async function FeedPage({
             <p className="text-muted-foreground max-w-sm mb-6">
               {t.feed.emptyDesc}
             </p>
-            <Link href="/explore">
+            <Link href="/">
               <Button>
                 <Compass className="h-4 w-4 mr-2" />
                 {t.feed.exploreCreators}

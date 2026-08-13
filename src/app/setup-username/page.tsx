@@ -66,7 +66,7 @@ export default function SetupUsernamePage() {
           setError(rpcError.message);
         }
       } else {
-        router.push("/dashboard");
+        router.push("/dashboard/contents");
         router.refresh();
       }
     } catch {

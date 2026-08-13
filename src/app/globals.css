@@ -144,12 +144,6 @@
   .text-balance {
     text-wrap: balance;
   }
-  .scrollbar-hide {
-    scrollbar-width: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
 }
 
 /* Custom scrollbar — matches design system */
@@ -190,6 +184,20 @@
 
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Kept UNLAYERED on purpose: the global `*::-webkit-scrollbar` rules above are
+   also unlayered, so an `@layer utilities` version of this would always lose the
+   cascade and the scrollbar would stay visible. Do not move this into a layer. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 @keyframes hero-gradient {

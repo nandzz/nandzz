@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { AgentStudio } from "@/components/agent/AgentStudio";
+import { getProfileWidgets } from "@/lib/widgets/server";
 import { AgentPublic } from "@/components/agent/AgentPublic";
 import { FEATURES } from "@/lib/flags";
 
@@ -28,14 +28,15 @@ export default async function AgentPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isOwner = user?.id === profile.id;
-
-  if (isOwner) {
-    return <AgentStudio profile={profile} />;
-  }
-
-  // Disabled agents are hidden from everyone but the owner.
-  if (!profile.agent_enabled) notFound();
+  // Public client agent shown on the profile page. The owner-facing studio
+  // lives separately at /dashboard/agent.
+  //
+  // HARD GATE: the agent is a subscription-gated widget now — it only exists
+  // for visitors while the owner has a live (enabled + entitled) `agent`
+  // widget instance. getProfileWidgets already applies that exact filter.
+  const widgets = await getProfileWidgets(profile.id);
+  const agentWidget = widgets.find((w) => w.catalog.slug === "agent");
+  if (!agentWidget) notFound();
 
   const { count } = await admin
     .from("agent_documents")

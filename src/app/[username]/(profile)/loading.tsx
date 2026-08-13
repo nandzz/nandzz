@@ -11,36 +11,36 @@ export default function ProfileLoading() {
       <PageShell width="wide">
         {/* Profile header skeleton — centered, matching ProfileHeader layout */}
         <div className="flex flex-col items-center text-center">
-          <div className="h-28 w-28 rounded-full bg-muted animate-pulse border-4 border-background shadow-xl" />
-          <div className="mt-5 h-7 w-44 max-w-[80vw] rounded bg-muted animate-pulse" />
-          <div className="mt-1.5 h-4 w-28 max-w-[60vw] rounded bg-muted animate-pulse" />
-          <div className="mt-2 h-4 w-52 max-w-[75vw] rounded bg-muted animate-pulse" />
+          <div className="h-28 w-28 rounded-full bg-muted motion-safe:animate-pulse border-4 border-background shadow-xl" />
+          <div className="mt-5 h-7 w-44 max-w-[80vw] rounded bg-muted motion-safe:animate-pulse" />
+          <div className="mt-1.5 h-4 w-28 max-w-[60vw] rounded bg-muted motion-safe:animate-pulse" />
+          <div className="mt-2 h-4 w-52 max-w-[75vw] rounded bg-muted motion-safe:animate-pulse" />
           <div className="mt-3 space-y-2 flex flex-col items-center w-full px-4">
-            <div className="h-4 w-72 max-w-full rounded bg-muted animate-pulse" />
-            <div className="h-4 w-56 max-w-[90%] rounded bg-muted animate-pulse" />
+            <div className="h-4 w-72 max-w-full rounded bg-muted motion-safe:animate-pulse" />
+            <div className="h-4 w-56 max-w-[90%] rounded bg-muted motion-safe:animate-pulse" />
           </div>
           <div className="mt-5 flex items-center gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-9 w-9 rounded-lg bg-muted animate-pulse" />
+              <div key={i} className="h-9 w-9 rounded-lg bg-muted motion-safe:animate-pulse" />
             ))}
           </div>
         </div>
 
-        {/* Tabs skeleton */}
+        {/* Content section skeleton */}
         <div className="mt-12">
-          <div className="flex gap-4 border-b border-border/60 mb-8">
-            <div className="h-8 w-20 rounded bg-muted animate-pulse" />
-            <div className="h-8 w-24 rounded bg-muted animate-pulse" />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="h-6 w-20 rounded bg-muted motion-safe:animate-pulse" />
+            <div className="h-5 w-16 rounded bg-muted motion-safe:animate-pulse" />
           </div>
 
-          {/* Space grid skeleton */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-border/60 overflow-hidden">
-                <div className="aspect-[16/10] bg-muted animate-pulse" />
+          {/* Horizontal-scroll carousel skeleton */}
+          <div className="flex gap-4 overflow-hidden pb-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="w-[260px] shrink-0 rounded-xl border border-border/60 overflow-hidden">
+                <div className="aspect-video bg-muted motion-safe:animate-pulse" />
                 <div className="p-4 space-y-2">
-                  <div className="h-5 w-3/4 rounded bg-muted animate-pulse" />
-                  <div className="h-4 w-1/2 rounded bg-muted animate-pulse" />
+                  <div className="h-5 w-3/4 rounded bg-muted motion-safe:animate-pulse" />
+                  <div className="h-4 w-1/2 rounded bg-muted motion-safe:animate-pulse" />
                 </div>
               </div>
             ))}

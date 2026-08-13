@@ -313,14 +313,30 @@ export function AgentChat({ username, displayName, preview, onDocumentCreated, d
         body: JSON.stringify({ messages: historyForApi, username, preview }),
       });
 
-      // The proxy returns 402 when the caller is out of paid credits.
-      // Surface a tailored message instead of the generic stream-error fallback.
-      if (res.status === 402) {
-        const outOfCredits = `You're out of credits. [Top up](/dashboard/credits) to keep chatting.`;
+      // The proxy returns a structured error code on these statuses:
+      //   402 INSUFFICIENT_CREDITS — owner mode (AgentStudio), unchanged.
+      //   403 AGENT_UNAVAILABLE    — visitor mode, no active agent subscription (hard gate).
+      //   429 AGENT_LIMIT_REACHED  — visitor mode, monthly token cap hit; agent paused.
+      //   429 RATE_LIMITED         — abuse throttle.
+      // Surface a tailored message for each instead of the generic stream-error fallback.
+      if (res.status === 402 || res.status === 403 || res.status === 429) {
+        let code = "";
+        try {
+          const data = await res.json();
+          code = data?.error ?? "";
+        } catch {}
+
+        const message =
+          code === "AGENT_UNAVAILABLE"
+            ? t.agent.unavailableMessage
+            : code === "AGENT_LIMIT_REACHED"
+              ? t.agent.limitReachedMessage
+              : code === "RATE_LIMITED"
+                ? t.agent.rateLimitedMessage
+                : t.agent.outOfCreditsMessage;
+
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: outOfCredits } : m
-          )
+          prev.map((m) => (m.id === assistantId ? { ...m, content: message } : m))
         );
         setIsStreaming(false);
         return;

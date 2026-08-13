@@ -164,6 +164,16 @@ type ChargeContext = {
   role: "agent_chat" | "page_editor";
   requestId: string;
   rid: string;
+  // Billed via charge_agent_usage in both modes: tokens→credits drawn from the
+  // owner's `agent` widget allowance first, overflow to their paid credits.
+  // instanceId is null when the caller didn't forward one; owner mode then
+  // falls back to charging the caller directly (charge_llm_usage), visitor mode
+  // skips billing gracefully.
+  mode: "visitor" | "owner";
+  instanceId: string | null;
+  // The widget owner (profile) — allowance is drawn from their agent widget
+  // instance and overflow is billed to their paid credits, in both modes.
+  ownerId: string;
 };
 
 async function streamOpenAI(
@@ -354,29 +364,57 @@ async function streamOpenAI(
         controller.close();
         console.log(`[agent-chat][${charge.rid}] stream done: total_ms=${Date.now() - streamStart} content_deltas=${contentDeltas} tool_call=${toolCallName ?? "none"} usage=${usage ? `${usage.input}/${usage.output}` : "none"} sent_done=${sentDone}`);
 
-        // Charge credits AFTER the stream completes. Best-effort —
-        // a failure here must not affect the user-visible response.
+        // Bill/meter usage AFTER the stream completes. Best-effort — a
+        // failure here must not affect the user-visible response.
         if (usage && usage.input + usage.output > 0) {
-          try {
-            const { error: chargeErr } = await charge.admin.rpc("charge_llm_usage", {
-              p_user_id: charge.userId,
-              p_model_id: charge.modelId,
-              p_role: charge.role,
-              p_input_tokens: usage.input,
-              p_output_tokens: usage.output,
-              p_message_id: null,
-              p_request_id: charge.requestId,
-            });
-            if (chargeErr) {
-              console.error(`[agent-chat][${charge.rid}] charge_llm_usage rpc error:`, chargeErr);
-            } else {
-              console.log(`[agent-chat][${charge.rid}] charge ok: in=${usage.input} out=${usage.output}`);
+          if (charge.instanceId) {
+            // Both owner (AgentStudio) and visitor mode bill through
+            // charge_agent_usage: tokens→credits, drawing the widget instance's
+            // monthly allowance first and spilling any remainder to the owner's
+            // paid credits.
+            try {
+              const { data: split, error: usageErr } = await charge.admin.rpc("charge_agent_usage", {
+                p_instance_id: charge.instanceId,
+                p_owner_user_id: charge.ownerId,
+                p_model_id: charge.modelId,
+                p_input_tokens: usage.input,
+                p_output_tokens: usage.output,
+                p_request_id: charge.requestId,
+              });
+              if (usageErr) {
+                console.error(`[agent-chat][${charge.rid}] charge_agent_usage rpc error:`, usageErr);
+              } else {
+                console.log(`[agent-chat][${charge.rid}] charged: in=${usage.input} out=${usage.output} split=${JSON.stringify(split)}`);
+              }
+            } catch (err) {
+              console.error(`[agent-chat][${charge.rid}] charge_agent_usage threw:`, err);
             }
-          } catch (err) {
-            console.error(`[agent-chat][${charge.rid}] charge_llm_usage threw:`, err);
+          } else if (charge.mode === "owner" && charge.userId) {
+            // Legacy fallback: owner using AgentStudio with no agent widget
+            // instance forwarded — charge their credits directly, as before.
+            try {
+              const { error: chargeErr } = await charge.admin.rpc("charge_llm_usage", {
+                p_user_id: charge.userId,
+                p_model_id: charge.modelId,
+                p_role: charge.role,
+                p_input_tokens: usage.input,
+                p_output_tokens: usage.output,
+                p_message_id: null,
+                p_request_id: charge.requestId,
+              });
+              if (chargeErr) {
+                console.error(`[agent-chat][${charge.rid}] charge_llm_usage rpc error:`, chargeErr);
+              } else {
+                console.log(`[agent-chat][${charge.rid}] charge ok (legacy): in=${usage.input} out=${usage.output}`);
+              }
+            } catch (err) {
+              console.error(`[agent-chat][${charge.rid}] charge_llm_usage threw:`, err);
+            }
+          } else {
+            console.warn(`[agent-chat][${charge.rid}] usage with no instance_id — skipping billing`);
           }
         } else {
-          console.warn(`[agent-chat][${charge.rid}] no usage reported — skipping charge`);
+          console.warn(`[agent-chat][${charge.rid}] no usage reported — skipping charge/metering`);
         }
       }
     },
@@ -460,6 +498,7 @@ serve(async (req: Request) => {
   let profileIdFromCaller: string | null = null;
   let callerUserId: string | null = null;
   let requestIdFromCaller: string | null = null;
+  let instanceIdFromCaller: string | null = null;
 
   try {
     const body = await req.json();
@@ -469,6 +508,9 @@ serve(async (req: Request) => {
     profileIdFromCaller = body.profile_id ?? null;
     callerUserId = body.caller_user_id ?? null;
     requestIdFromCaller = body.request_id ?? null;
+    // The `agent` widget instance the proxy resolved (visitor mode only —
+    // null for owner mode / legacy callers). Drives post-stream metering.
+    instanceIdFromCaller = body.instance_id ?? null;
   } catch (err) {
     console.error(`[agent-chat][${rid}] JSON parse failed:`, err);
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
@@ -477,7 +519,7 @@ serve(async (req: Request) => {
     });
   }
 
-  console.log(`[agent-chat][${rid}] body: username=${username ?? "MISSING"} mode=${mode} messages=${Array.isArray(messages) ? messages.length : `NOT_ARRAY(${typeof messages})`} profile_id_from_caller=${profileIdFromCaller ?? "null"} caller_user_id=${callerUserId ?? "null"} request_id=${requestIdFromCaller ?? "null"}`);
+  console.log(`[agent-chat][${rid}] body: username=${username ?? "MISSING"} mode=${mode} messages=${Array.isArray(messages) ? messages.length : `NOT_ARRAY(${typeof messages})`} profile_id_from_caller=${profileIdFromCaller ?? "null"} caller_user_id=${callerUserId ?? "null"} request_id=${requestIdFromCaller ?? "null"} instance_id_from_caller=${instanceIdFromCaller ?? "null"}`);
 
   // The proxy is the only legitimate caller, and it always sets caller_user_id
   // (the authenticated user chatting with the agent). Refuse if it's missing —
@@ -656,10 +698,11 @@ serve(async (req: Request) => {
     } catch (err) { console.error(`[agent-chat][${rid}] Failed to log request:`, err); }
   }
 
-  // 5. Stream response — credits are debited from the caller (whoever is
-  //    chatting) after the stream completes and OpenAI has reported real token
-  //    counts. In owner mode, caller == profile owner, so the owner pays for
-  //    their own testing; in visitor mode, the visitor pays.
+  // 5. Stream response. After the stream completes and OpenAI has reported
+  //    real token counts, usage is billed via charge_agent_usage in BOTH
+  //    modes: tokens→credits drawn from the owner's `agent` widget allowance
+  //    first, then their paid credits (see the ChargeContext branch in
+  //    streamOpenAI).
   return streamOpenAI(systemPrompt, messages, openAIKey, mode === "owner", bookingContext, {
     admin,
     userId: callerUserId,
@@ -668,5 +711,8 @@ serve(async (req: Request) => {
     role: "agent_chat",
     requestId: requestIdFromCaller ?? crypto.randomUUID(),
     rid,
+    mode,
+    instanceId: instanceIdFromCaller,
+    ownerId: profile.id,
   });
 });

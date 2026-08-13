@@ -57,7 +57,7 @@ export function ResetPasswordForm() {
       if (error) {
         setError(error.message);
       } else {
-        router.replace("/dashboard");
+        router.replace("/dashboard/contents");
         router.refresh();
       }
     } catch {

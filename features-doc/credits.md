@@ -113,7 +113,7 @@ AgentChat (client)
 ### Stripe purchase
 
 ```
-/dashboard/credits page
+/contents/credits page
   └─ BuyCreditsButton (client)
        └─ POST /api/stripe/create-checkout-session  { credit_pack_id }
             ├─ resolves credit_packs row
@@ -226,7 +226,7 @@ supabase/
 ## Verification checklist
 
 1. Apply the schema changes to the cloud DEV project (paste into Supabase Studio's SQL editor, or `npm run db:push` from `Portal/`). Sign up a new user → assert `free_space_credits = 100` + signup_grant ledger row.
-2. Publish 10 spaces → balance drops by 100. 11th attempt: `INSUFFICIENT_CREDITS` banner with link to /dashboard/credits.
+2. Publish 10 spaces → balance drops by 100. 11th attempt: `INSUFFICIENT_CREDITS` banner with link to /contents/credits.
 3. Double-click Publish → only one space inserted, only one debit (idempotency via `client_request_id`).
 4. Stripe test mode $5 checkout → webhook fires → `paid_credits` +500 + `stripe_purchase` ledger row.
 5. Replay the webhook event (`stripe events resend …`) → no duplicate row (idempotency via `stripe_event_id`).
@@ -240,5 +240,5 @@ supabase/
 
 - **Page-editor LLM call site** (claude-sonnet) — the model row is seeded `active = false`. Activating it requires adding the Anthropic SDK and a `charge_llm_usage` call with `role = 'page_editor'`.
 - **i18n** — credits UI strings are currently English-only. The `translations.ts` namespace `credits.*` should be added once translations are available.
-- **BalanceBadge** — a header chip showing live balance is mocked in plan but not shipped; users can see balance via `/dashboard/credits` or the low-balance banner.
+- **BalanceBadge** — a header chip showing live balance is mocked in plan but not shipped; users can see balance via `/contents/credits` or the low-balance banner.
 - **Auto-refill subscriptions** — out of scope for the MVP credits launch.

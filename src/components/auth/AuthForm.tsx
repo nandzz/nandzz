@@ -48,7 +48,7 @@ export function AuthForm() {
   // Restrict to a same-origin path — this value is echoed back through
   // Supabase's OAuth redirectTo and could otherwise be used for an open
   // redirect (see safeNextPath).
-  const next = safeNextPath(searchParams.get("next"), "/dashboard");
+  const next = safeNextPath(searchParams.get("next"), "/dashboard/contents");
 
   const [mode, setMode] = useState<"login" | "signup">(defaultTab);
   const { t } = useLanguage();

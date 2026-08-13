@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Home, Compass, Plus, LayoutGrid, User, LogIn, Rss } from "lucide-react";
+import { Home, Plus, LayoutGrid, User, LogIn, Rss } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -20,16 +20,14 @@ type TabDef = {
 
 const UNAUTH_TAB_DEFS: TabDef[] = [
   { href: "/", labelKey: "home", icon: Home, isActive: (p) => p === "/" },
-  { href: "/explore", labelKey: "explore", icon: Compass, isActive: (p) => p.startsWith("/explore") },
   { href: "/login", labelKey: "signIn", icon: LogIn, isActive: (p) => p.startsWith("/login") },
 ];
 
 function getAuthTabDefs(username: string | null): TabDef[] {
   return [
     { href: "/dashboard/feed", labelKey: "feed", icon: Rss, isActive: (p) => p.startsWith("/dashboard/feed") },
-    { href: "/explore", labelKey: "explore", icon: Compass, isActive: (p) => p.startsWith("/explore") },
-    { href: "/dashboard/create-space", labelKey: "create", icon: Plus, isActive: (p) => p.startsWith("/dashboard/create-space"), highlight: true },
-    { href: "/dashboard", labelKey: "spaces", icon: LayoutGrid, isActive: (p) => p === "/dashboard" || (p.startsWith("/dashboard") && !p.startsWith("/dashboard/create-space")) },
+    { href: "/dashboard/contents/create-space", labelKey: "create", icon: Plus, isActive: (p) => p.startsWith("/dashboard/contents/create-space"), highlight: true },
+    { href: "/dashboard/contents", labelKey: "spaces", icon: LayoutGrid, isActive: (p) => p === "/dashboard/contents" || (p.startsWith("/dashboard/contents") && !p.startsWith("/dashboard/contents/create-space")) },
     { href: username ? `/${username}` : "/dashboard/settings", labelKey: "profile", icon: User, isActive: (p) => username ? p === `/${username}` : false },
   ];
 }

@@ -10,11 +10,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Rss,
-  Compass,
   LayoutGrid,
-  Bot,
   Blocks,
   CreditCard,
+  Palette,
   Settings,
   Plug,
   Moon,
@@ -50,6 +49,9 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<ProfileLite | null>(initialProfile);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -112,12 +114,6 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
         icon: Rss,
         isActive: (p) => p.startsWith("/dashboard/feed"),
       },
-      {
-        href: "/explore",
-        label: t.nav.explore,
-        icon: Compass,
-        isActive: (p) => p.startsWith("/explore"),
-      },
     ];
 
     if (FEATURES.widgets) {
@@ -129,28 +125,21 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
       });
     }
 
-    if (FEATURES.agent && username) {
+    if (FEATURES.brand) {
       items.push({
-        href: `/${username}/agent`,
-        label: t.nav.myAgent,
-        icon: Bot,
-        isActive: (p) => p.startsWith(`/${username}/agent`),
+        href: "/dashboard/brand",
+        label: "Brand",
+        icon: Palette,
+        isActive: (p) => p.startsWith("/dashboard/brand"),
       });
     }
 
     items.push({
-      href: "/dashboard",
+      href: "/dashboard/contents",
       label: t.nav.mySpaces,
       icon: LayoutGrid,
       isActive: (p) =>
-        p === "/dashboard" ||
-        (p.startsWith("/dashboard/") &&
-          !p.startsWith("/dashboard/feed") &&
-          !p.startsWith("/dashboard/create-space") &&
-          !p.startsWith("/dashboard/collections") &&
-          !p.startsWith("/dashboard/widgets") &&
-          !p.startsWith("/dashboard/credits") &&
-          !p.startsWith("/dashboard/settings")),
+        p === "/dashboard/contents" || p.startsWith("/dashboard/contents/"),
     });
 
     if (FEATURES.monetization) {
@@ -297,14 +286,14 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title={theme === "dark" ? t.nav.switchLight : t.nav.switchDark}
+          title={mounted && theme === "dark" ? t.nav.switchLight : t.nav.switchDark}
           className={cn(
             "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
             collapsed && "justify-center"
           )}
         >
-          {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-          {!collapsed && <span className="truncate">{theme === "dark" ? t.nav.switchLight : t.nav.switchDark}</span>}
+          {mounted && theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+          {!collapsed && <span className="truncate">{mounted && theme === "dark" ? t.nav.switchLight : t.nav.switchDark}</span>}
         </button>
 
         <button

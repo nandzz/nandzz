@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicWidgetById } from "@/lib/widgets/server";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
@@ -12,7 +11,6 @@ import { renderWidgetIcon } from "@/components/widgets/widgetIcon";
 import { CalendarBookingFlow } from "@/components/widgets/calendar/CalendarBookingFlow";
 import { ShareMenu } from "@/components/spaces/ShareMenu";
 import { BackButton } from "@/components/ui/BackButton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Profile } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
 import type { Translations } from "@/lib/i18n/translations";
@@ -90,76 +88,75 @@ export default async function WidgetPage({
   // Not found unless the profile exists and the widget is live (enabled + entitled).
   if (!profile || !widget) notFound();
 
-  // Sharing (link + QR) is an owner-only affordance — it's how the owner
-  // distributes the widget; visitors just book.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const isOwner = user?.id === profile.id;
-
   const displayName = profile.display_name || profile.username;
   const heading = widgetHeading(t, widget.catalog.slug, widget.catalog.name, displayName);
   const config = normalizeCalendarConfig(widget.config);
 
+  const initial = displayName[0]?.toUpperCase() ?? "?";
+
   return (
-    <div className="min-h-[calc(100vh-4rem)]">
-      {/* Top bar — back, widget identity, share (link + QR), owner avatar. */}
-      <div className="sticky top-16 z-10 border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="relative">
-          {/* Back — pinned to the far left on desktop, inline on mobile. */}
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 md:left-4">
-            <BackButton />
-          </div>
-          <div className="mx-auto flex max-w-lg items-center justify-between gap-4 px-4 py-2.5 pl-14 md:pl-4">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
-              {renderWidgetIcon(widget.catalog.icon, "h-4 w-4 text-emerald-600 dark:text-emerald-400")}
-            </div>
-            <div className="min-w-0 text-left">
-              <p className="truncate text-sm font-semibold leading-none">{heading}</p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">{widget.catalog.name}</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {isOwner && (
-              <ShareMenu url={`/${username}/widget/${instanceId}`} title={heading} size="md" />
-            )}
-            <Link
-              href={`/${username}`}
-              className="flex items-center text-muted-foreground transition-colors hover:text-foreground"
-              aria-label={`View ${displayName}'s profile`}
-            >
-              <Avatar className="h-7 w-7 border border-border/50">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="bg-violet-100 text-xs text-violet-700 dark:bg-violet-900 dark:text-violet-300">
-                  {displayName[0]?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          </div>
-          </div>
-        </div>
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      {/* Ambient brand glow behind the hero — soft, slow, purely decorative. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 overflow-hidden">
+        <div className="animate-hero-gradient absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-300/30 blur-3xl dark:bg-emerald-600/20" />
+        <div className="animate-hero-gradient-2 absolute left-1/2 top-8 h-60 w-60 -translate-x-1/4 rounded-full bg-violet-300/25 blur-3xl dark:bg-violet-700/20" />
       </div>
 
-      {/* Widget body */}
-      <div className="mx-auto w-full max-w-lg px-4 py-6">
-        {widget.catalog.slug === "calendar" ? (
-          <CalendarBookingFlow
-            instanceId={widget.id}
-            locations={config.locations}
-            services={config.services}
-            timezone={config.timezone}
-            businessName={displayName}
-            staff={config.staff}
-            showPrices={config.show_prices}
-          />
-        ) : (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            {t.booking.widgetUnavailable}
-          </p>
-        )}
+      {/* Floating controls — back (left) and share (right), no app chrome. */}
+      <div className="mx-auto flex max-w-lg items-center justify-between px-4 pt-5">
+        <BackButton />
+        {/* Share (link + QR) is public — any visitor can pass the widget along. */}
+        <ShareMenu url={`/${username}/widget/${instanceId}`} title={heading} size="md" />
       </div>
+
+      {/* Branded hero — business avatar + name lead; the widget it hosts follows
+          as a subtle pill. */}
+      <header className="mx-auto flex max-w-lg flex-col items-center px-4 pt-6 text-center animate-in fade-in slide-in-from-bottom-3 duration-500 motion-reduce:animate-none">
+        <Link
+          href={`/${username}`}
+          aria-label={`View ${displayName}'s profile`}
+          className="group relative inline-block"
+        >
+          <span
+            aria-hidden
+            className="absolute -inset-1 rounded-full bg-gradient-to-tr from-emerald-400/50 to-violet-400/50 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100 motion-reduce:transition-none"
+          />
+          <span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-violet-100 text-2xl font-semibold text-violet-700 shadow-lg ring-2 ring-background transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none dark:bg-violet-900 dark:text-violet-300">
+            {profile.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+            ) : (
+              initial
+            )}
+          </span>
+        </Link>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">{displayName}</h1>
+        <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+          {renderWidgetIcon(widget.catalog.icon, "h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400")}
+          {widget.catalog.name}
+        </span>
+      </header>
+
+      {/* Widget body — the booking flow, lifted onto a card. */}
+      <main className="mx-auto w-full max-w-lg px-4 pb-16 pt-8">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both motion-reduce:animate-none">
+          {widget.catalog.slug === "calendar" ? (
+            <CalendarBookingFlow
+              instanceId={widget.id}
+              locations={config.locations}
+              services={config.services}
+              timezone={config.timezone}
+              businessName={displayName}
+              staff={config.staff}
+              showPrices={config.show_prices}
+            />
+          ) : (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              {t.booking.widgetUnavailable}
+            </p>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

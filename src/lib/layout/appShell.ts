@@ -7,20 +7,23 @@
 // gets no sidebar. Matches "/<username>/space/<id>" and "/space/<id>".
 const IMMERSIVE_ROUTE_RE = /^\/(?:[^/]+\/)?space\/[^/]+/;
 
-// Public booking widget viewer — has its own sticky header (assumes the
-// Navbar's 64px reserves the space above it), so it needs the same
-// always-show-Navbar/never-swap-in-Sidebar treatment as the space viewer.
-// Matches "/<username>/widget/<instanceId>".
+// Public booking widget viewer — a fully branded, chromeless page: it renders
+// its own hero (business avatar + name) and needs no app Navbar, Sidebar,
+// footer, or mobile tab bar. Matches "/<username>/widget/<instanceId>".
 const WIDGET_ROUTE_RE = /^\/[^/]+\/widget\/[^/]+/;
 
 export function isImmersiveRoute(pathname: string): boolean {
   return IMMERSIVE_ROUTE_RE.test(pathname) || WIDGET_ROUTE_RE.test(pathname);
 }
 
+// The public booking widget page owns its whole viewport — no app chrome.
+export function isWidgetRoute(pathname: string): boolean {
+  return WIDGET_ROUTE_RE.test(pathname);
+}
+
 // Reserved single-segment routes that are NOT a user profile page.
 const RESERVED_TOP_SEGMENTS = new Set([
   "dashboard",
-  "explore",
   "pricing",
   "login",
   "forgot-password",

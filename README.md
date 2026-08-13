@@ -1,31 +1,27 @@
 # nandzz
 
-**The home for AI-generated web apps.**
+**Your business, on one page. Get found — and get booked.**
 
-nandzz is a platform where you can save, host, and share the web apps you build with AI tools like Claude or ChatGPT. Drop in raw HTML or link a URL — your creation gets its own Space, a public page where the world can discover and like it.
+nandzz gives businesses, solo pros, and institutions a branded page (`nandzz.com/yourbrand`) plus the widgets to run it — take bookings, publish content, and build pools. Whether you run a hair salon, clean homes, coach clients, or manage an institution, you get found on social and booked in a tap. Booking is just one widget in a growing library.
 
 ---
 
-## What is a Space?
+## Core concepts
 
-A **Space** is a shared web app. It has:
-
-- A title and description
-- A URL or uploaded HTML file
-- A preview image
-- A like count
-- A public profile page for its author
+- **Branded page** — a public profile at `nandzz.com/yourbrand` that acts as your home on the web.
+- **Widgets** — building blocks you drop into your page. Live today: **Booking** (24/7 scheduling with staff & availability), **Content** (Spaces), and **Pools** (collections).
+- **Space** — a piece of content: an HTML page, PDF, tool, or AI creation, with a title, description, preview image, and its own public page.
 
 ---
 
 ## Features
 
-- **Upload HTML or link a URL** — paste your AI-generated code or point to any live URL
-- **Public feed** — browse what the community is building on the Explore page
-- **User profiles** — public pages with all Spaces from a given creator
-- **Likes** — upvote the Spaces you find useful or cool
-- **Dark mode** — full light/dark theme support
-- **Auth** — email/password sign up and login via Supabase
+- **Booking widget** — clients book you 24/7; staff, providers, and availability built in, with per-instance Stripe subscriptions.
+- **Content (Spaces)** — upload HTML or link a URL; publish pages, PDFs, tools, and AI creations.
+- **Pools** — bundle links, offers, and resources into a shared collection.
+- **User profiles** — public branded pages gathering everything for a given account.
+- **Dark mode** — full light/dark theme support.
+- **Auth** — email/password and Google sign-in via Supabase.
 
 ---
 
@@ -118,14 +114,13 @@ This loads `.env.production.local` (real Supabase URL, real service-role key, re
 ```
 src/
   app/                  # Next.js App Router pages
-    dashboard/          # Authenticated user area (create, edit spaces)
-    explore/            # Public feed of all spaces
-    profile/[username]/ # Public user profiles
-    space/[id]/         # Individual space viewer
+    dashboard/          # Authenticated user area (create/edit content, widgets)
+    [username]/         # Public branded profile pages
+    space/[id]/         # Individual space (content) viewer
     login/              # Auth page
   components/
     spaces/             # SpaceCard, SpaceForm, SpaceGrid, LikeButton
-    layout/             # Navbar, Footer
+    layout/             # Navbar, Sidebar, Footer, MobileTabBar
     profile/            # ProfileHeader, ProfileTabs
     ui/                 # shadcn/ui primitives
   lib/

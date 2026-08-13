@@ -173,7 +173,7 @@ export default async function HashtagPage({
             <p className="text-muted-foreground max-w-sm mb-6">
               {t.hashtag.noDesc.replace("{tag}", tag)}
             </p>
-            <Link href="/explore">
+            <Link href="/">
               <Button variant="outline">{t.hashtag.browse}</Button>
             </Link>
           </div>

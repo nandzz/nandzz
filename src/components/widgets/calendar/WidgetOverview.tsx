@@ -1,14 +1,7 @@
 "use client";
 
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip as ChartTooltip,
-  type ChartOptions,
-} from "chart.js";
+import type { ChartOptions } from "chart.js";
+import { BarChart } from "@/components/charts/BarChart";
 import {
   CalendarClock,
   CalendarCheck,
@@ -21,8 +14,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useThemeColors } from "@/lib/charts/useThemeColors";
 import { PeriodSelector } from "@/components/ui/PeriodSelector";
 import type { StatsPeriod } from "@/lib/period";
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, ChartTooltip);
 
 export type OverviewBooking = BookingRowData;
 
@@ -199,7 +190,7 @@ export function WidgetOverview({
             </div>
           </div>
           <div style={{ height: 200 }}>
-            <Bar data={chartData} options={chartOptions} />
+            <BarChart data={chartData} options={chartOptions} />
           </div>
         </div>
 

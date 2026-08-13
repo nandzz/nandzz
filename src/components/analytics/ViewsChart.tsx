@@ -1,18 +1,9 @@
 "use client";
 
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  type ChartOptions,
-} from "chart.js";
+import type { ChartOptions } from "chart.js";
+import { BarChart } from "@/components/charts/BarChart";
 import type { ViewsSeriesPoint } from "@/lib/types";
 import { useThemeColors } from "@/lib/charts/useThemeColors";
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip);
 
 interface ViewsChartProps {
   data: ViewsSeriesPoint[];
@@ -72,7 +63,7 @@ export function ViewsChart({ data }: ViewsChartProps) {
 
   return (
     <div style={{ height: 200 }}>
-      <Bar data={chartData} options={options} />
+      <BarChart data={chartData} options={options} />
     </div>
   );
 }
