@@ -1,9 +1,10 @@
 # Nandzz — SEO Strategy
 
-**Business type:** SaaS + Community (Creative gallery platform)  
-**Target:** Creators, developers, and AI enthusiasts who build and share web apps, HTML pages, and interactive tools.  
-**Domain:** nandzz.com  
-**Plan created:** 2026-05-27
+**Business type:** SaaS — a branded business page + a suite of widgets.
+**Target:** Solo pros (hair salon, cleaner, coach), small businesses, and institutions who want to be **found on social and booked in a tap** — with content and collections/pools alongside booking.
+**Positioning:** "Your business, on one page. Get found — and get booked." Booking is only ONE widget; content and pools are equal parts of the story.
+**Domain:** nandzz.com
+**Plan created:** 2026-05-27 · **Rebranded:** 2026-08-15
 
 ---
 
@@ -12,27 +13,27 @@
 ### Primary (high-intent)
 | Keyword | Intent | Target Page |
 |---|---|---|
-| share web apps online | Transactional | `/` |
-| AI app gallery | Informational | `/explore` |
-| share interactive web pages | Transactional | `/` |
-| HTML app hosting free | Transactional | `/pricing` |
-| web app showcase community | Informational | `/explore` |
-| share AI generated websites | Transactional | `/` |
+| online booking page | Transactional | `/` |
+| book appointments online | Transactional | `/` |
+| branded business page | Transactional | `/` |
+| link in bio with booking | Transactional | `/` |
+| free scheduling page | Transactional | `/pricing` |
+| get found and booked | Informational | `/` |
 
 ### Secondary (growth)
 | Keyword | Intent | Target Page |
 |---|---|---|
-| online portfolio for web apps | Informational | `/[username]` |
-| share PDF files online | Transactional | `/` |
-| interactive HTML page hosting | Transactional | `/pricing` |
-| web creation community | Informational | `/explore` |
-| AI tools gallery | Informational | `/explore` |
+| booking page for small business | Informational | `/[username]` |
+| appointment scheduling for solo pros | Informational | `/` |
+| one page website with booking | Transactional | `/pricing` |
+| calendar booking widget | Informational | `/` |
+| business page for social bio | Informational | `/[username]` |
 
 ### Long-tail (content opportunities)
-- "how to share an AI generated website"
-- "best way to host interactive web pages"
-- "where to showcase AI apps"
-- "free web app portfolio hosting"
+- "how to take bookings from Instagram bio"
+- "best booking page for a solo hairdresser / cleaner / coach"
+- "link in bio that also takes appointments"
+- "free one-page site to get found and booked"
 
 ---
 
@@ -40,19 +41,23 @@
 
 ```
 nandzz.com/
-├── /                     ← Homepage (hero, recent spaces, CTA)
-├── /explore              ← Community gallery (paginated)
-├── /pricing              ← Plans (Free vs Pro)
-├── /[username]           ← User profile pages
-│   └── /space/[id]       ← Individual space pages
-├── /login                ← Auth (noindex)
-├── /contents/*          ← Private (noindex via robots.ts)
-├── /privacy              ← Legal
-└── /terms                ← Legal
+├── /                       ← Homepage (hero, widget suite, "any business", how-it-works, CTA)
+├── /pricing                ← Plans
+├── /[username]             ← Branded public business page
+│   ├── /space/[id]         ← Individual content (Space) pages
+│   ├── /gallery            ← Per-profile image gallery (see-more)
+│   ├── /contents           ← Per-profile publications (see-more)
+│   └── /links              ← Per-profile links (see-more)
+├── /login                  ← Auth (noindex)
+├── /dashboard/*            ← Private app (noindex via robots.ts)
+├── /privacy                ← Legal
+└── /terms                  ← Legal
 ```
 
-**Indexable:** `/`, `/explore`, `/pricing`, `/[username]`, `/[username]/space/[id]`, `/privacy`, `/terms`  
-**Noindex:** `/contents/*`, `/api/*`, `/auth/*`, `/login`, `/forgot-password`
+**Indexable:** `/`, `/pricing`, `/[username]`, `/[username]/space/[id]`, `/[username]/gallery`, `/[username]/contents`, `/[username]/links`, `/privacy`, `/terms`
+**Noindex:** `/dashboard/*`, `/api/*`, `/auth/*`, `/login`, `/forgot-password`
+
+> Note: there is **no** site-wide `/explore` / cross-user discovery page — it was removed during the brand pivot. Discovery happens via each owner's social bio linking to their `/[username]` page, not via an on-site gallery.
 
 ---
 
@@ -60,49 +65,49 @@ nandzz.com/
 
 | Item | Status | Details |
 |---|---|---|
-| `robots.ts` | ✅ Done | Blocks `/contents/`, `/api/`, `/auth/` |
+| `robots.ts` | ✅ Done | Blocks `/dashboard/`, `/api/`, `/auth/` |
 | `sitemap.ts` | ✅ Done | Dynamic — pulls public profiles + spaces from Supabase |
 | `metadataBase` | ✅ Done | Set to `https://nandzz.com` in root layout |
-| Title templates | ✅ Done | `%s — nandzz` template on all pages |
-| OG tags (root) | ✅ Done | type, locale, siteName, title, description |
+| Title templates | ✅ Done | `%s | Nandzz` template on all pages |
+| OG tags (root) | ✅ Done | type, locale, siteName, title, description (rebranded) |
 | Twitter cards | ✅ Done | `summary_large_image` on root + space pages |
-| Page-level metadata | ✅ Done | `/explore`, `/pricing`, `/`, `/[username]`, `/[username]/space/[id]` |
+| Page-level metadata | ✅ Done | `/`, `/pricing`, `/[username]`, `/[username]/space/[id]` |
 | JSON-LD schema | ✅ Done | WebSite, Organization, SoftwareApplication (with Offer) on homepage |
 | Canonical URLs | ✅ Done | Explicit canonical on home, profile, and space pages |
 | Profile OG metadata | ✅ Done | `type: "profile"`, avatar image, tagline |
 | Space OG metadata | ✅ Done | Preview image, `summary_large_image` when image present |
 | Googlebot directives | ✅ Done | max-image-preview: large, max-snippet: -1 |
+| i18n metadata | ✅ Done | root title/description/OG rebranded across all 7 locales |
 
 ---
 
 ## 4. Content Strategy
 
 ### Phase 1 (Now — Month 2): Foundation
-**Goal:** Get indexed; establish topical authority.
+**Goal:** Get indexed; establish the "get found & booked" positioning.
 
-- [ ] Add `og:image` default — create `/public/og-default.png` (1200×630) with nandzz branding. Reference it in root layout.
+- [ ] Add `og:image` default — create `/public/og-default.png` (1200×630) with nandzz branding + the "Get found. Get booked." line. Reference it in root layout.
 - [ ] Add `noindex` to `/login`, `/forgot-password`, `/auth/*` pages via their page metadata.
-- [ ] Write descriptive `tagline` fields for the first 10 user profiles (seed SEO content for profile pages).
-- [ ] Ensure all public Spaces have titles and descriptions (they contribute to indexed pages).
+- [ ] Write descriptive `tagline` fields for the first 10 public profiles (seed SEO content for profile pages).
+- [ ] Ensure public Spaces have titles and descriptions (they contribute to indexed pages).
 
-### Phase 2 (Month 2–4): Community Content
-**Goal:** Earn long-tail traffic through UGC (user-generated content).
+### Phase 2 (Month 2–4): Owner-page content
+**Goal:** Earn long-tail traffic through owners' branded pages.
 
-- [ ] Add a `category` or `type` field to Spaces (e.g. "AI App", "Game", "Tool", "Portfolio") — enables `/explore?category=game` pages.
-- [ ] Add tag-based explore pages: `/explore/tag/[slug]` — each tag page is a rankable URL.
-- [ ] Encourage descriptive Space descriptions with a character minimum in the UI.
-- [ ] Add a "Featured Spaces" curation on the homepage for editorial SEO value.
+- [ ] Encourage descriptive profile bios + service descriptions (they're the indexed copy).
+- [ ] Ensure booking-widget pages expose readable service/availability metadata where public.
+- [ ] Add a "Featured businesses" or category landing pages if/when volume justifies it.
 
 ### Phase 3 (Month 4–8): Authority Building
-**Goal:** Rank for primary keywords; establish brand presence.
+**Goal:** Rank for primary booking/branded-page keywords; establish brand presence.
 
 - [ ] Launch a `/blog` or `/guides` section with content on:
-  - "How to share an AI-generated website for free"
-  - "Best tools for sharing interactive web apps in 2026"
-  - "Building an AI app portfolio: a beginner's guide"
+  - "How to take bookings straight from your Instagram bio"
+  - "Best one-page booking site for solo pros in 2026"
+  - "Link-in-bio vs a real booking page: what actually gets you booked"
 - [ ] Add an `/about` page — Organization E-E-A-T signal.
-- [ ] Explore `/compare` pages (e.g. `/vs-codepen`, `/vs-glitch`) for comparison traffic.
-- [ ] Build backlinks through: ProductHunt launch, maker communities (Indie Hackers, Hacker News), AI tool directories.
+- [ ] Explore `/compare` pages (e.g. `/vs-linktree`, `/vs-calendly`, `/vs-fresha`) for comparison traffic.
+- [ ] Build backlinks through: ProductHunt launch, small-business / creator communities, booking-tool directories.
 
 ---
 
@@ -110,13 +115,12 @@ nandzz.com/
 
 | Competitor | Strength | Our Angle |
 |---|---|---|
-| CodePen | Code editor focus | We're for sharing finished apps/pages |
-| Glitch | Full app hosting | We focus on sharing + discovery, not hosting |
-| Product Hunt | Product launches | We're for ongoing sharing, not one-time launches |
-| Linktree | Profile pages | We're interactive — actual web apps, not just links |
-| itch.io | Game focus | We're broader: AI apps, tools, PDFs, HTML pages |
+| Linktree / Beacons / Stan | Own "be found from social" | We add real booking + content, not just links |
+| Calendly / Acuity | Own scheduling | We're a branded page, not a bare calendar link |
+| Fresha / Booksy / Vagaro | Own "get booked" | We're not vertical-locked to beauty; composable widgets |
+| Squarespace / Wix | Full website builders | We're the fast presence + action layer, not heavy DIY |
 
-**Differentiation to emphasize in SEO copy:** "Share interactive AI-generated creations instantly — no hosting required."
+**Differentiation to emphasize in SEO copy:** the presence layer (branded page) **and** the action layer (booking + more widgets) in one, composable and not vertical-locked — "Get found on social, booked in a tap."
 
 ---
 
@@ -149,14 +153,11 @@ export const metadata: Metadata = {
 };
 ```
 
-### C. Category/Tag explore pages
-New route: `src/app/explore/tag/[slug]/page.tsx` — boosts long-tail indexation significantly.
-
-### D. `<link rel="me">` for social verification
+### C. `<link rel="me">` for social verification
 Add social profile links for authority signals.
 
-### E. Web App Manifest
-Create `src/app/manifest.ts` for PWA/app install signals.
+### D. Web App Manifest
+Confirm `src/app/manifest.ts` (or `site.webmanifest`) is complete for PWA/app-install signals.
 
 ---
 
