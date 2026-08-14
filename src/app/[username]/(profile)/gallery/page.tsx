@@ -58,6 +58,10 @@ export default async function ProfileGalleryPage({
   if (!profile) {
     notFound();
   }
+  // Respect the owner's public visibility flag for the gallery.
+  if ((profile.show_gallery ?? true) === false) {
+    notFound();
+  }
 
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
   const from = (currentPage - 1) * PAGE_SIZE;

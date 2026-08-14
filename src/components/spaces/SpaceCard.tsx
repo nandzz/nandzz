@@ -17,7 +17,6 @@ import { ExternalLink, FolderPlus, Pencil, Trash2, Bookmark, Globe, Lock, Copy }
 import { LikeButton } from "./LikeButton";
 import { ShareButton } from "./ShareButton";
 import { StarButton } from "./StarButton";
-import { detectVideo } from "./VideoEmbed";
 import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Space } from "@/lib/types";
@@ -45,21 +44,25 @@ interface SpaceCardProps {
   collectionId?: string;
   isOwn?: boolean;
   hashtags?: string[];
+  /** Eager-load this card's preview image (first above-the-fold card only). */
+  priority?: boolean;
 }
 
-export function SpaceCard({ space, username, routeUsername, editable, liked, saved, compact, collectionId, isOwn, hashtags = [] }: SpaceCardProps) {
+export function SpaceCard({ space, username, routeUsername, editable, liked, saved, compact, collectionId, isOwn, hashtags = [], priority = false }: SpaceCardProps) {
   const spaceUrl = routeUsername ? `/${routeUsername}/space/${space.id}` : `/space/${space.id}`;
-  // Link-type spaces jump straight to the external URL in a new tab instead of
-  // opening the in-app space page. Only http(s) is allowed — anything else
-  // (e.g. a javascript: URL from a non-builder insert path) falls back to the
-  // in-app page so a malicious scheme can't execute on click. Video links are
-  // excluded: they open the in-app page so the embedded player is reachable.
+  // Link- and video-type spaces jump straight to their external URL in a new
+  // tab instead of opening the in-app space page — a link points off-site, so
+  // there is nothing of ours to show. Video rows carry their URL in `url` (new
+  // rows, stored as `content_type: "link"`) or `video_url` (legacy `"video"`
+  // rows). Only http(s) is allowed — anything else (e.g. a javascript: URL from
+  // a non-builder insert path) falls back to the in-app page so a malicious
+  // scheme can't execute on click.
+  const externalUrl = space.url ?? space.video_url ?? null;
   const isExternalLink =
-    space.content_type === "link" &&
-    !!space.url &&
-    isSafeHttpUrl(space.url) &&
-    !detectVideo(space.url);
-  const clickHref = isExternalLink ? space.url! : spaceUrl;
+    (space.content_type === "link" || space.content_type === "video") &&
+    !!externalUrl &&
+    isSafeHttpUrl(externalUrl);
+  const clickHref = isExternalLink ? externalUrl! : spaceUrl;
   const externalLinkProps = isExternalLink
     ? { target: "_blank" as const, rel: "noopener noreferrer" }
     : {};
@@ -115,7 +118,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
     <Card className="@container group overflow-hidden rounded-xl p-0 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-white/10 border-foreground/10 hover:border-violet-500/40 dark:hover:border-violet-500/25">
       <Link href={clickHref} {...externalLinkProps} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
-          <SpacePreview space={space} />
+          <SpacePreview space={space} priority={priority} />
           {/* Visibility badge — owner only */}
           {editable && (
             <div className="absolute top-1.5 right-1.5 z-10">
@@ -150,7 +153,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
     <Card className="@container group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 border-foreground/10 hover:border-violet-500/35 dark:hover:border-violet-500/20 p-0">
       <Link href={clickHref} {...externalLinkProps} className="block">
         <div className="aspect-video bg-muted relative overflow-hidden">
-          <SpacePreview space={space} />
+          <SpacePreview space={space} priority={priority} />
           {/* Hover gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           {/* Visibility badge — owner only */}
@@ -226,7 +229,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
           <ContextMenuItem
             onClick={() =>
               isExternalLink
-                ? window.open(space.url!, "_blank", "noopener,noreferrer")
+                ? window.open(externalUrl!, "_blank", "noopener,noreferrer")
                 : router.push(spaceUrl)
             }
           >

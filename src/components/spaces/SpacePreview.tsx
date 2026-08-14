@@ -6,9 +6,12 @@ import { resolveContentType } from "@/lib/spaces/content-types";
 
 interface SpacePreviewProps {
   space: Space;
+  /** Set on the first above-the-fold card so its image (the likely LCP element)
+   * loads immediately instead of lazily. */
+  priority?: boolean;
 }
 
-export function SpacePreview({ space }: SpacePreviewProps) {
+export function SpacePreview({ space, priority = false }: SpacePreviewProps) {
   const previewSrc = space.preview_image_url ?? space.image_url;
 
   if (previewSrc) {
@@ -19,6 +22,8 @@ export function SpacePreview({ space }: SpacePreviewProps) {
         fill
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         className="object-cover transition-transform group-hover:scale-105"
+        loading={priority ? "eager" : undefined}
+        fetchPriority={priority ? "high" : undefined}
       />
     );
   }

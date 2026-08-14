@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   const [{ data: profile }, { data: rawSpaces }, creditsConfig] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name, username, free_space_credits, paid_credits")
+      .select("display_name, username, free_space_credits, paid_credits, show_contents, show_gallery, show_links")
       .eq("id", user.id)
       .single(),
     supabase
@@ -128,7 +128,26 @@ export default async function DashboardPage() {
         )}
 
         {spaces && spaces.length > 0 ? (
-          <SpaceGrid spaces={spaces} showCreateCard editable currentUserId={user.id} ownerUsername={profile?.username || undefined} />
+          <SpaceGrid
+            spaces={spaces}
+            showCreateCard
+            editable
+            currentUserId={user.id}
+            ownerUsername={profile?.username || undefined}
+            sectionSettings={
+              profile?.username
+                ? {
+                    profileId: user.id,
+                    username: profile.username,
+                    visibility: {
+                      informative: profile.show_contents ?? true,
+                      gallery: profile.show_gallery ?? true,
+                      links: profile.show_links ?? true,
+                    },
+                  }
+                : undefined
+            }
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800">

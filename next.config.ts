@@ -80,7 +80,7 @@ const nextConfig: NextConfig = {
               `default-src 'self'`,
               `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
               `style-src 'self' 'unsafe-inline'`,
-              `img-src 'self' data: blob: https://${supabaseHost} https://api.producthunt.com https://cdn.buymeacoffee.com https://img.youtube.com https://i.vimeocdn.com`,
+              `img-src 'self' data: blob: https://${supabaseHost} https://api.producthunt.com https://cdn.buymeacoffee.com https://img.youtube.com https://i.vimeocdn.com https://icons.duckduckgo.com`,
               `font-src 'self'`,
               `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.web3forms.com https://vimeo.com`,
               `worker-src 'self'`,

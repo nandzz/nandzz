@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Camera, X, Move, Check, Share2, Pencil, Trash2 } from "lucide-react";
+import { Camera, X, Move, Check, Share2, Pencil, Trash2, UserPen } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EditProfileDialog } from "./EditProfileDialog";
+import type { Profile } from "@/lib/types";
 
 const MAX_BG_SIZE = 1.5 * 1024 * 1024;
 
@@ -27,6 +29,7 @@ interface ProfileBackgroundProps {
   profileId: string;
   username: string;
   displayName: string;
+  profile: Profile;
 }
 
 export function ProfileBackground({
@@ -36,6 +39,7 @@ export function ProfileBackground({
   profileId,
   username,
   displayName,
+  profile,
 }: ProfileBackgroundProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -53,6 +57,7 @@ export function ProfileBackground({
   const [savedPosition, setSavedPosition] = useState(initPos); // last saved state
 
   const [copied, setCopied] = useState(false);
+  const [editInfoOpen, setEditInfoOpen] = useState(false);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined"
@@ -334,6 +339,11 @@ export function ProfileBackground({
                   {uploading ? "Uploading…" : "Edit"}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => setEditInfoOpen(true)}>
+                    <UserPen className="h-3.5 w-3.5 mr-2" />
+                    Edit info
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                     <Camera className="h-3.5 w-3.5 mr-2" />
                     {localUrl ? "Change cover" : "Add cover"}
@@ -376,6 +386,13 @@ export function ProfileBackground({
             </p>
           )}
         </div>
+      )}
+
+      {isOwner && editInfoOpen && (
+        <EditProfileDialog
+          onClose={() => setEditInfoOpen(false)}
+          profile={profile}
+        />
       )}
     </>
   );

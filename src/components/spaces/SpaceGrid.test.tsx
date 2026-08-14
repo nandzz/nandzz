@@ -12,6 +12,10 @@ vi.mock("./SpaceCard", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}));
+
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
@@ -94,21 +98,21 @@ describe("SpaceGrid", () => {
 
       render(<SpaceGrid spaces={[notesSpace, imageSpace, linkSpace]} />);
 
-      expect(screen.getByRole("heading", { name: /Informative/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Content/ })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Gallery/ })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Links/ })).toBeInTheDocument();
 
       // Each section shows a count of its spaces.
-      expect(screen.getByRole("heading", { name: /Informative \(1\)/ })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: /Gallery \(1\)/ })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: /Links \(1\)/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Content 1/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Gallery 1/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Links 1/ })).toBeInTheDocument();
     });
 
     it("skips empty sections", () => {
       render(<SpaceGrid spaces={allSpaces} />);
 
       // allSpaces all resolve to "html" -> Informative only.
-      expect(screen.getByRole("heading", { name: /Informative/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Content/ })).toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: /Gallery/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: /Links/ })).not.toBeInTheDocument();
     });
@@ -120,11 +124,11 @@ describe("SpaceGrid", () => {
       render(<SpaceGrid spaces={[imageSpace, notesSpace]} />);
 
       const headings = screen.getAllByRole("heading").map((h) => h.textContent);
-      const informativeIdx = headings.findIndex((h) => h?.includes("Informative"));
+      const contentIdx = headings.findIndex((h) => h?.includes("Content"));
       const galleryIdx = headings.findIndex((h) => h?.includes("Gallery"));
-      expect(informativeIdx).toBeGreaterThanOrEqual(0);
+      expect(contentIdx).toBeGreaterThanOrEqual(0);
       expect(galleryIdx).toBeGreaterThanOrEqual(0);
-      expect(informativeIdx).toBeLessThan(galleryIdx);
+      expect(contentIdx).toBeLessThan(galleryIdx);
     });
 
     it("places all spaces from every section into the DOM", () => {

@@ -6,12 +6,19 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileContent } from "@/components/profile/ProfileContent";
+import { ProfileLinks } from "@/components/profile/ProfileLinks";
 import { ProfileGallery } from "@/components/profile/ProfileGallery";
 import { ProfileBackground } from "@/components/profile/ProfileBackground";
-import { resolveGalleryLayout } from "@/lib/gallery/layouts";
+import { ProfileSections } from "@/components/profile/ProfileSections";
+import {
+  resolveGalleryLayout,
+  resolveContentsLayout,
+  resolveLinksLayout,
+  resolveSectionOrder,
+} from "@/lib/gallery/layouts";
 import { FEATURES } from "@/lib/flags";
 import { getProfileWidgets } from "@/lib/widgets/server";
-import type { WidgetInstanceWithCatalog } from "@/lib/types";
+import type { WidgetInstanceWithCatalog, Space } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
 
@@ -75,9 +82,10 @@ export async function generateMetadata({
   };
 }
 
+// Every profile section shows at most 12 items inline; the rest are reached via
+// each section's "see more" (a route for Publications/Links, a modal for the
+// gallery).
 const PROFILE_PREVIEW_SIZE = 12;
-// Profile shows at most 6 gallery images inline; the rest open in a paginated modal.
-const GALLERY_PREVIEW_SIZE = 6;
 
 export default async function ProfilePage({
   params,
@@ -94,31 +102,57 @@ export default async function ProfilePage({
 
   const supabase = await createClient();
 
+  // Owner-controlled public visibility (managed from the contents dashboard).
+  // Each section is now its own carousel: `show_contents` gates Publications
+  // (informative content), `show_links` gates Links, `show_gallery` the gallery.
+  const showContents = profile.show_contents ?? true;
+  const showLinks = profile.show_links ?? true;
+  const showGallery = profile.show_gallery ?? true;
+
+  const emptyResult = { data: [] as Space[], count: 0 };
+
   const [
     { data: spaces, count: totalSpaceCount },
+    { data: linkSpaces, count: totalLinkCount },
     { data: galleryImages, count: totalGalleryCount },
     { data: { user } },
     widgets,
   ] = await Promise.all([
-    // Contents carousel: every content type EXCEPT images (images live in the
-    // gallery grid below). content_type is reliably backfilled, so .neq is safe.
-    supabase
-      .from("spaces")
-      .select("*", { count: "exact" })
-      .eq("user_id", profile.id)
-      .eq("is_public", true)
-      .neq("content_type", "image")
-      .order("created_at", { ascending: false })
-      .range(0, PROFILE_PREVIEW_SIZE - 1),
+    // Publications: informative content only (everything non-image, non-link).
+    showContents
+      ? supabase
+          .from("spaces")
+          .select("*", { count: "exact" })
+          .eq("user_id", profile.id)
+          .eq("is_public", true)
+          .neq("content_type", "image")
+          .neq("content_type", "link")
+          .neq("content_type", "video")
+          .order("created_at", { ascending: false })
+          .range(0, PROFILE_PREVIEW_SIZE - 1)
+      : Promise.resolve(emptyResult),
+    // Links: link/video-type spaces, rendered as favicon chips.
+    showLinks
+      ? supabase
+          .from("spaces")
+          .select("*", { count: "exact" })
+          .eq("user_id", profile.id)
+          .eq("is_public", true)
+          .in("content_type", ["link", "video"])
+          .order("created_at", { ascending: false })
+          .range(0, PROFILE_PREVIEW_SIZE - 1)
+      : Promise.resolve(emptyResult),
     // Gallery: image-type spaces only.
-    supabase
-      .from("spaces")
-      .select("*", { count: "exact" })
-      .eq("user_id", profile.id)
-      .eq("is_public", true)
-      .eq("content_type", "image")
-      .order("created_at", { ascending: false })
-      .range(0, GALLERY_PREVIEW_SIZE - 1),
+    showGallery
+      ? supabase
+          .from("spaces")
+          .select("*", { count: "exact" })
+          .eq("user_id", profile.id)
+          .eq("is_public", true)
+          .eq("content_type", "image")
+          .order("created_at", { ascending: false })
+          .range(0, PROFILE_PREVIEW_SIZE - 1)
+      : Promise.resolve(emptyResult),
     supabase.auth.getUser(),
     FEATURES.widgets
       ? getProfileWidgets(profile.id)
@@ -164,6 +198,7 @@ export default async function ProfilePage({
 
   const isOwner = user?.id === profile.id;
   const hasContents = (spaces?.length ?? 0) > 0;
+  const hasLinks = (linkSpaces?.length ?? 0) > 0;
   const hasGallery = (galleryImages?.length ?? 0) > 0;
 
   return (
@@ -175,6 +210,7 @@ export default async function ProfilePage({
         profileId={profile.id}
         username={profile.username}
         displayName={profile.display_name || profile.username}
+        profile={profile}
       />
 
       <PageShell width="wide">
@@ -185,31 +221,46 @@ export default async function ProfilePage({
           isFollowing={isFollowing}
           widgets={widgets}
         />
-        {hasGallery && (
-          <div className="mt-12">
-            <ProfileGallery
-              images={galleryImages || []}
-              totalCount={totalGalleryCount ?? galleryImages?.length ?? 0}
-              profile={profile}
-              isOwner={isOwner}
-              initialLayout={resolveGalleryLayout(profile)}
-              enableModal
-            />
-          </div>
-        )}
-        {hasContents && (
-          <div className="mt-12">
-            <ProfileContent
-              spaces={spaces || []}
-              totalCount={totalSpaceCount ?? spaces?.length ?? 0}
-              profile={profile}
-              likedSpaceIds={likedSpaceIds}
-              savedSpaceIds={savedSpaceIds}
-              currentUserId={user?.id}
-            />
-          </div>
-        )}
-        {!hasGallery && !hasContents && (
+        <ProfileSections
+          order={resolveSectionOrder(profile)}
+          isOwner={isOwner}
+          profileId={profile.id}
+          username={profile.username}
+          sections={{
+            gallery: hasGallery ? (
+              <ProfileGallery
+                images={galleryImages || []}
+                totalCount={totalGalleryCount ?? galleryImages?.length ?? 0}
+                profile={profile}
+                isOwner={isOwner}
+                initialLayout={resolveGalleryLayout(profile)}
+                enableModal
+              />
+            ) : null,
+            publications: hasContents ? (
+              <ProfileContent
+                spaces={spaces || []}
+                totalCount={totalSpaceCount ?? spaces?.length ?? 0}
+                profile={profile}
+                isOwner={isOwner}
+                initialLayout={resolveContentsLayout(profile)}
+                likedSpaceIds={likedSpaceIds}
+                savedSpaceIds={savedSpaceIds}
+                currentUserId={user?.id}
+              />
+            ) : null,
+            links: hasLinks ? (
+              <ProfileLinks
+                links={linkSpaces || []}
+                totalCount={totalLinkCount ?? linkSpaces?.length ?? 0}
+                profile={profile}
+                isOwner={isOwner}
+                initialLayout={resolveLinksLayout(profile)}
+              />
+            ) : null,
+          }}
+        />
+        {!hasGallery && !hasContents && !hasLinks && (
           <p className="mt-12 py-12 text-center text-muted-foreground">
             {t.profile.noPublicSpaces}
           </p>

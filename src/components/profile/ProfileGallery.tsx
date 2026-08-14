@@ -4,24 +4,13 @@ import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Settings2, Check } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { Space, Profile } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GalleryModal } from "./GalleryModal";
-import {
-  GALLERY_LAYOUTS,
-  GALLERY_LAYOUT_ICONS,
-  getGalleryLayoutLabel,
-  type GalleryLayout,
-} from "@/lib/gallery/layouts";
+import { SectionOwnerMenu } from "./SectionOwnerMenu";
+import { SeeMoreLink } from "./SeeMoreLink";
+import { persistProfileUpdate } from "@/lib/profile/update";
+import { GALLERY_LAYOUTS, type GalleryLayout } from "@/lib/gallery/layouts";
 
 interface ProfileGalleryProps {
   images: Space[];
@@ -63,23 +52,10 @@ export function ProfileGallery({
   const withImage = useMemo(() => images.filter((s) => imageSrc(s)), [images]);
 
   const handleLayoutChange = useCallback(
-    async (next: string) => {
-      const value = next as GalleryLayout;
+    async (value: GalleryLayout) => {
       setLayout(value); // optimistic
       try {
-        const supabase = createClient();
-        const { error } = await supabase
-          .from("profiles")
-          .update({ gallery_layout: value })
-          .eq("id", profile.id);
-        if (error) throw error;
-        // Invalidate the cached profile page before refreshing (same sequence
-        // as ProfileBackground) so the server re-render returns the new layout.
-        await fetch("/api/profile/revalidate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: profile.username }),
-        });
+        await persistProfileUpdate(profile.id, profile.username, { gallery_layout: value });
         router.refresh();
       } catch {
         setLayout(initialLayout); // revert on failure
@@ -89,6 +65,8 @@ export function ProfileGallery({
   );
 
   if (withImage.length === 0) return null;
+
+  const showSeeMore = totalCount > withImage.length;
 
   return (
     <div className="w-full">
@@ -100,61 +78,25 @@ export function ProfileGallery({
           </span>
         </h2>
 
-        <div className="flex items-center gap-2">
-          {totalCount > withImage.length &&
-            (enableModal ? (
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                className="flex items-center gap-0.5 rounded-sm text-sm font-medium text-violet-600 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:text-violet-400 dark:hover:text-violet-300"
-              >
-                {t.profile.seeMore}
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            ) : seeMoreHref ? (
-              <Link
-                href={seeMoreHref}
-                className="flex items-center gap-0.5 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
-              >
-                {t.profile.seeMore}
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            ) : null)}
-
-          {isOwner && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label={t.profile.galleryLayoutSettings}
-                title={t.profile.galleryLayoutSettings}
-                className="flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-violet-500/50 transition-colors shadow-sm"
-              >
-                <Settings2 className="h-3.5 w-3.5" />
-                {t.profile.galleryLayoutSettings}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuRadioGroup value={layout} onValueChange={handleLayoutChange}>
-                  {GALLERY_LAYOUTS.map((id) => {
-                    const Icon = GALLERY_LAYOUT_ICONS[id];
-                    return (
-                      <DropdownMenuRadioItem
-                        key={id}
-                        value={id}
-                        className="pl-2 [&>span:first-child]:hidden"
-                      >
-                        <Icon className="h-3.5 w-3.5 mr-2" />
-                        <span className="flex-1">{getGalleryLayoutLabel(t, id)}</span>
-                        {layout === id && <Check className="h-3.5 w-3.5 text-violet-500" />}
-                      </DropdownMenuRadioItem>
-                    );
-                  })}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+        {isOwner && (
+          <SectionOwnerMenu
+            sectionId="gallery"
+            sectionName={t.profile.galleryTitle}
+            layouts={GALLERY_LAYOUTS}
+            layout={layout}
+            onLayoutChange={handleLayoutChange}
+          />
+        )}
       </div>
 
       <GalleryLayoutView layout={layout} images={withImage} username={profile.username} />
+
+      {showSeeMore &&
+        (enableModal ? (
+          <SeeMoreLink label={t.profile.seeMore} onClick={() => setModalOpen(true)} />
+        ) : seeMoreHref ? (
+          <SeeMoreLink label={t.profile.seeMore} href={seeMoreHref} />
+        ) : null)}
 
       {enableModal && modalOpen && (
         <GalleryModal
@@ -179,6 +121,7 @@ function GalleryLayoutView({
   images: Space[];
   username: string;
 }) {
+  if (layout === "carousel") return <CarouselLayout images={images} username={username} />;
   if (layout === "masonry") return <MasonryLayout images={images} username={username} />;
   if (layout === "justified") return <JustifiedLayout images={images} username={username} />;
   if (layout === "featured") return <FeaturedLayout images={images} username={username} />;
@@ -187,6 +130,30 @@ function GalleryLayoutView({
 
 function tileHref(username: string, space: Space) {
   return `/${username}/space/${space.id}`;
+}
+
+/** Single horizontal row that scrolls sideways (portrait tiles). */
+function CarouselLayout({ images, username }: { images: Space[]; username: string }) {
+  return (
+    <div className="-mx-1 flex gap-2 overflow-x-auto scroll-smooth px-1 pb-6 snap-x snap-mandatory scrollbar-hide">
+      {images.map((space, i) => (
+        <Link
+          key={space.id}
+          href={tileHref(username, space)}
+          className="group relative block aspect-[3/4] w-[160px] shrink-0 snap-start overflow-hidden rounded-lg bg-muted sm:w-[200px]"
+        >
+          <Image
+            src={imageSrc(space)!}
+            alt={space.title}
+            fill
+            sizes="200px"
+            className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
+            priority={i === 0}
+          />
+        </Link>
+      ))}
+    </div>
+  );
 }
 
 /** Uniform square thumbnails (Instagram-style). */

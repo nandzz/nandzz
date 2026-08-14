@@ -102,6 +102,19 @@ export const SECTIONS: Record<
   },
 };
 
+/** Section ids in display order (Content, Gallery, Links). */
+export const SECTION_ORDER: SectionId[] = ["informative", "gallery", "links"];
+
+/** The `profiles` boolean column that gates each section's public visibility. */
+export const SECTION_VISIBILITY_COLUMN: Record<
+  SectionId,
+  "show_contents" | "show_gallery" | "show_links"
+> = {
+  informative: "show_contents",
+  gallery: "show_gallery",
+  links: "show_links",
+};
+
 /** Resolves a content type's display label from the current locale's translations. */
 export function getContentTypeLabel(t: Translations, id: ContentTypeId): string {
   const labels: Record<ContentTypeId, string> = {

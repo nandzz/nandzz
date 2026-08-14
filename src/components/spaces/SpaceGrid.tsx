@@ -1,13 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SpaceCard } from "./SpaceCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, LayoutGrid, Grid3X3 } from "lucide-react";
+import { Plus, LayoutGrid, Grid3X3, EyeOff, SlidersHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client";
 import type { SpaceWithProfile, Space } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SECTIONS, resolveContentType, sectionForType, getSectionLabel, getSectionDescription, type SectionId } from "@/lib/spaces/content-types";
+import {
+  SECTION_ORDER,
+  SECTION_VISIBILITY_COLUMN,
+  resolveContentType,
+  sectionForType,
+  getSectionLabel,
+  getSectionDescription,
+  type SectionId,
+} from "@/lib/spaces/content-types";
+
+/** Owner-only settings that back the profile-visibility gear. */
+interface SectionSettings {
+  profileId: string;
+  username: string;
+  visibility: Record<SectionId, boolean>;
+}
 
 interface SpaceGridProps {
   spaces: SpaceWithProfile[] | Space[];
@@ -19,7 +45,15 @@ interface SpaceGridProps {
   collectionId?: string;
   currentUserId?: string;
   ownerUsername?: string;
+  /** When provided (owner's own dashboard), renders the profile-visibility gear. */
+  sectionSettings?: SectionSettings;
 }
+
+type Tab = "all" | SectionId;
+
+// One grid row per column count, so a section preview never sprawls vertically.
+const PAGE_COMFORTABLE = 9; // 3 cols × 3 rows
+const PAGE_COMPACT = 18; // 6 cols × 3 rows
 
 export function SpaceGrid({
   spaces,
@@ -31,9 +65,23 @@ export function SpaceGrid({
   collectionId,
   currentUserId,
   ownerUsername,
+  sectionSettings,
 }: SpaceGridProps) {
   const { t } = useLanguage();
+  const router = useRouter();
   const [compact, setCompact] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("all");
+  // Per-section "load more" ceiling, only consumed in single-section view.
+  const [limits, setLimits] = useState<Record<SectionId, number>>({
+    informative: PAGE_COMFORTABLE,
+    gallery: PAGE_COMFORTABLE,
+    links: PAGE_COMFORTABLE,
+  });
+  const [visibility, setVisibility] = useState<Record<SectionId, boolean> | null>(
+    sectionSettings?.visibility ?? null
+  );
+
+  const pageSize = compact ? PAGE_COMPACT : PAGE_COMFORTABLE;
 
   const gridClassName = compact
     ? "grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6"
@@ -41,29 +89,33 @@ export function SpaceGrid({
 
   // Stable partition of spaces into their display sections, preserving the
   // incoming (already created_at desc) order within each group.
-  const grouped: Record<SectionId, (SpaceWithProfile | Space)[]> = {
-    informative: [],
-    gallery: [],
-    links: [],
-  };
-  for (const space of spaces) {
-    const sectionId = sectionForType(resolveContentType(space as Space));
-    grouped[sectionId].push(space);
-  }
-  const nonEmptySections = Object.values(SECTIONS).filter(
-    (section) => grouped[section.id].length > 0
-  );
+  const grouped = useMemo(() => {
+    const g: Record<SectionId, (SpaceWithProfile | Space)[]> = {
+      informative: [],
+      gallery: [],
+      links: [],
+    };
+    for (const space of spaces) {
+      g[sectionForType(resolveContentType(space as Space))].push(space);
+    }
+    return g;
+  }, [spaces]);
 
-  const renderCard = (space: SpaceWithProfile | Space) => {
-    const profileUsername = "profiles" in space
-      ? (space as SpaceWithProfile).profiles?.username
-      : undefined;
+  const nonEmptySections = SECTION_ORDER.filter((id) => grouped[id].length > 0);
+  const showTabs = nonEmptySections.length > 1;
+  // Keep the active tab valid if content changes underneath it.
+  const effectiveTab: Tab =
+    activeTab !== "all" && grouped[activeTab].length === 0 ? "all" : activeTab;
+  const sectionsToRender: SectionId[] =
+    effectiveTab === "all" ? nonEmptySections : [effectiveTab];
+
+  const renderCard = (space: SpaceWithProfile | Space, priority = false) => {
+    const profileUsername =
+      "profiles" in space ? (space as SpaceWithProfile).profiles?.username : undefined;
     const displayUsername = showAuthor
-      ? (
-          "profiles" in space
-            ? (space as SpaceWithProfile).profiles?.display_name || profileUsername
-            : undefined
-        )
+      ? "profiles" in space
+        ? (space as SpaceWithProfile).profiles?.display_name || profileUsername
+        : undefined
       : undefined;
     const routeUsername = profileUsername || ownerUsername;
     return (
@@ -79,6 +131,7 @@ export function SpaceGrid({
         collectionId={collectionId}
         isOwn={!!currentUserId && space.user_id === currentUserId}
         hashtags={space.hashtags ?? []}
+        priority={priority}
       />
     );
   };
@@ -86,7 +139,11 @@ export function SpaceGrid({
   const createTile = (
     <Link
       key="create-tile"
-      href={collectionId ? `/dashboard/contents/create-space?collectionId=${collectionId}` : "/dashboard/contents/create-space"}
+      href={
+        collectionId
+          ? `/dashboard/contents/create-space?collectionId=${collectionId}`
+          : "/dashboard/contents/create-space"
+      }
     >
       <Card
         className={
@@ -119,48 +176,174 @@ export function SpaceGrid({
     </Link>
   );
 
+  const toggleVisibility = async (section: SectionId, next: boolean) => {
+    if (!sectionSettings || !visibility) return;
+    const previous = visibility;
+    setVisibility({ ...visibility, [section]: next }); // optimistic
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("profiles")
+        .update({ [SECTION_VISIBILITY_COLUMN[section]]: next })
+        .eq("id", sectionSettings.profileId);
+      if (error) throw error;
+      await fetch("/api/profile/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: sectionSettings.username }),
+      });
+      router.refresh();
+    } catch {
+      setVisibility(previous); // revert on failure
+    }
+  };
+
+  const tabButton = (tab: Tab, label: string) => {
+    const active = effectiveTab === tab;
+    return (
+      <button
+        key={tab}
+        onClick={() => setActiveTab(tab)}
+        className={
+          "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+          (active
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground")
+        }
+        aria-pressed={active}
+      >
+        {label}
+        {tab !== "all" && (
+          <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
+            {grouped[tab].length}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  const hasAnyContent = nonEmptySections.length > 0;
+
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex items-center justify-end gap-2">
-        <button
-          onClick={() => setCompact((v) => !v)}
-          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          title={compact ? t.spaceGrid.comfortableView : t.spaceGrid.compactView}
-        >
-          {compact ? (
-            <>
-              <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.spaceGrid.comfortable}</span>
-            </>
-          ) : (
-            <>
-              <Grid3X3 className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.spaceGrid.compact}</span>
-            </>
+    <div className="space-y-6">
+      {/* Toolbar: filter tabs (left) + visibility gear & density toggle (right) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {showTabs ? (
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 p-1">
+            {tabButton("all", t.spaceGrid.all)}
+            {nonEmptySections.map((id) => tabButton(id, getSectionLabel(t, id)))}
+          </div>
+        ) : (
+          <span />
+        )}
+
+        <div className="flex items-center gap-1">
+          {sectionSettings && visibility && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                title={t.spaceGrid.profileVisibility}
+                aria-label={t.spaceGrid.profileVisibility}
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden sm:inline">{t.spaceGrid.profileVisibility}</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
+                    {t.spaceGrid.visibilityHint}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {SECTION_ORDER.map((id) => (
+                    <DropdownMenuCheckboxItem
+                      key={id}
+                      checked={visibility[id]}
+                      onCheckedChange={(checked) => toggleVisibility(id, checked === true)}
+                      closeOnClick={false}
+                    >
+                      {getSectionLabel(t, id)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-        </button>
+
+          <button
+            onClick={() => setCompact((v) => !v)}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            title={compact ? t.spaceGrid.comfortableView : t.spaceGrid.compactView}
+          >
+            {compact ? (
+              <>
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">{t.spaceGrid.comfortable}</span>
+              </>
+            ) : (
+              <>
+                <Grid3X3 className="h-4 w-4" />
+                <span className="hidden sm:inline">{t.spaceGrid.compact}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {nonEmptySections.length > 0 ? (
-        <div className="space-y-8">
-          {nonEmptySections.map((section, index) => (
-            <section key={section.id}>
-              <div className="mb-3">
-                <h2 className="text-lg font-semibold">
-                  {getSectionLabel(t, section.id)}{" "}
-                  <span className="font-normal text-muted-foreground">
-                    ({grouped[section.id].length})
-                  </span>
-                </h2>
-                <p className="text-sm text-muted-foreground">{getSectionDescription(t, section.id)}</p>
-              </div>
-              <div className={gridClassName}>
-                {grouped[section.id].map(renderCard)}
-                {showCreateCard && index === 0 && createTile}
-              </div>
-            </section>
-          ))}
+      {hasAnyContent ? (
+        <div className="space-y-10">
+          {sectionsToRender.map((id, index) => {
+            const items = grouped[id];
+            const singleSection = effectiveTab !== "all";
+            // "All" view: preview one row-set per section, link to the full tab.
+            // Single-section view: honor the per-section "load more" ceiling.
+            const limit = singleSection ? limits[id] : pageSize;
+            const shown = items.slice(0, limit);
+            const hasMore = items.length > shown.length;
+            const hiddenOnProfile = visibility ? visibility[id] === false : false;
+
+            return (
+              <section key={id}>
+                <div className="mb-3 flex items-end justify-between gap-3">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-lg font-semibold">
+                      {getSectionLabel(t, id)}{" "}
+                      <span className="font-normal text-muted-foreground tabular-nums">
+                        {items.length}
+                      </span>
+                      {hiddenOnProfile && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          <EyeOff className="h-3 w-3" />
+                          {t.spaceGrid.hiddenOnProfile}
+                        </span>
+                      )}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {getSectionDescription(t, id)}
+                    </p>
+                  </div>
+                </div>
+                <div className={gridClassName}>
+                  {shown.map((space, i) => renderCard(space, index === 0 && i === 0))}
+                  {showCreateCard && effectiveTab === "all" && index === 0 && createTile}
+                </div>
+                {singleSection && hasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      onClick={() =>
+                        setLimits((prev) => ({ ...prev, [id]: prev[id] + pageSize }))
+                      }
+                      className="rounded-lg border border-border/60 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      {t.spaceGrid.loadMore}
+                      <span className="ml-1.5 tabular-nums">
+                        {shown.length} / {items.length}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       ) : showCreateCard ? (
         <div className={gridClassName}>{createTile}</div>

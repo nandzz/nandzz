@@ -406,8 +406,12 @@ export type Translations = {
     noPublicSpaces: string;
     seeMore: string;
     contentsTitle: string;
+    linksTitle: string;
     galleryTitle: string;
-    galleryLayoutSettings: string;
+    sectionSettings: string;
+    moveUp: string;
+    moveDown: string;
+    layoutCarousel: string;
     layoutGrid: string;
     layoutMasonry: string;
     layoutJustified: string;
@@ -550,6 +554,12 @@ export type Translations = {
     createNewDesc: string;
     addNew: string;
     noFilter: string;
+    all: string;
+    loadMore: string;
+    seeAll: string;
+    profileVisibility: string;
+    visibilityHint: string;
+    hiddenOnProfile: string;
   };
   contentTypes: {
     aiLabel: string;
@@ -1508,9 +1518,13 @@ const en: Translations = {
     loadMore: "Load more",
     noPublicSpaces: "No public content yet.",
     seeMore: "See more",
-    contentsTitle: "Content",
+    contentsTitle: "Publications",
+    linksTitle: "Links",
     galleryTitle: "Gallery",
-    galleryLayoutSettings: "Gallery layout",
+    sectionSettings: "Layout & order",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    layoutCarousel: "Carousel",
     layoutGrid: "Grid",
     layoutMasonry: "Masonry",
     layoutJustified: "Justified",
@@ -1653,6 +1667,12 @@ const en: Translations = {
     createNewDesc: "Add new content to your collection",
     addNew: "New",
     noFilter: "No content matches this filter.",
+    all: "All",
+    loadMore: "Load more",
+    seeAll: "See all",
+    profileVisibility: "Profile visibility",
+    visibilityHint: "Choose which sections appear on your public profile.",
+    hiddenOnProfile: "Hidden on profile",
   },
   contentTypes: {
     aiLabel: "AI Generated",
@@ -1671,7 +1691,7 @@ const en: Translations = {
     htmlDescription: "Legacy HTML page, edited in-place",
   },
   contentSections: {
-    informativeLabel: "Informative",
+    informativeLabel: "Publication",
     informativeDescription: "Documents, notes, and AI-generated pages",
     galleryLabel: "Gallery",
     galleryDescription: "Your images",
@@ -2611,9 +2631,13 @@ const pt: Translations = {
     loadMore: "Carregar mais",
     noPublicSpaces: "Nenhum conteúdo público ainda.",
     seeMore: "Ver mais",
-    contentsTitle: "Conteúdo",
+    contentsTitle: "Publicações",
+    linksTitle: "Links",
     galleryTitle: "Galeria",
-    galleryLayoutSettings: "Layout da galeria",
+    sectionSettings: "Layout e ordem",
+    moveUp: "Mover para cima",
+    moveDown: "Mover para baixo",
+    layoutCarousel: "Carrossel",
     layoutGrid: "Grade",
     layoutMasonry: "Mosaico",
     layoutJustified: "Justificado",
@@ -2756,6 +2780,12 @@ const pt: Translations = {
     createNewDesc: "Adicione um novo conteúdo à sua coleção",
     addNew: "Novo",
     noFilter: "Nenhum conteúdo corresponde a este filtro.",
+    all: "Todos",
+    loadMore: "Carregar mais",
+    seeAll: "Ver tudo",
+    profileVisibility: "Visibilidade do perfil",
+    visibilityHint: "Escolha quais seções aparecem no seu perfil público.",
+    hiddenOnProfile: "Oculto no perfil",
   },
   contentTypes: {
     aiLabel: "Gerado por IA",
@@ -2774,7 +2804,7 @@ const pt: Translations = {
     htmlDescription: "Página HTML legada, editada no local",
   },
   contentSections: {
-    informativeLabel: "Informativo",
+    informativeLabel: "Conteúdo",
     informativeDescription: "Documentos, notas e páginas geradas por IA",
     galleryLabel: "Galeria",
     galleryDescription: "Suas imagens",
@@ -3714,9 +3744,13 @@ const fr: Translations = {
     loadMore: "Charger plus",
     noPublicSpaces: "Pas encore de Contenus publics.",
     seeMore: "Voir plus",
-    contentsTitle: "Contenu",
+    contentsTitle: "Publications",
+    linksTitle: "Liens",
     galleryTitle: "Galerie",
-    galleryLayoutSettings: "Disposition de la galerie",
+    sectionSettings: "Disposition et ordre",
+    moveUp: "Monter",
+    moveDown: "Descendre",
+    layoutCarousel: "Carrousel",
     layoutGrid: "Grille",
     layoutMasonry: "Mosaïque",
     layoutJustified: "Justifié",
@@ -3859,6 +3893,12 @@ const fr: Translations = {
     createNewDesc: "Ajoutez un nouveau contenu à votre collection",
     addNew: "Nouveau",
     noFilter: "Aucun Contenu ne correspond à ce filtre.",
+    all: "Tous",
+    loadMore: "Charger plus",
+    seeAll: "Voir tout",
+    profileVisibility: "Visibilité du profil",
+    visibilityHint: "Choisissez les sections affichées sur votre profil public.",
+    hiddenOnProfile: "Masqué sur le profil",
   },
   contentTypes: {
     aiLabel: "Généré par IA",
@@ -3877,7 +3917,7 @@ const fr: Translations = {
     htmlDescription: "Page HTML héritée, modifiée sur place",
   },
   contentSections: {
-    informativeLabel: "Informatif",
+    informativeLabel: "Contenu",
     informativeDescription: "Documents, notes et pages générées par IA",
     galleryLabel: "Galerie",
     galleryDescription: "Vos images",
@@ -4817,9 +4857,13 @@ const es: Translations = {
     loadMore: "Cargar más",
     noPublicSpaces: "Todavía no hay Contenidos públicos.",
     seeMore: "Ver más",
-    contentsTitle: "Contenido",
+    contentsTitle: "Publicaciones",
+    linksTitle: "Enlaces",
     galleryTitle: "Galería",
-    galleryLayoutSettings: "Diseño de la galería",
+    sectionSettings: "Diseño y orden",
+    moveUp: "Subir",
+    moveDown: "Bajar",
+    layoutCarousel: "Carrusel",
     layoutGrid: "Cuadrícula",
     layoutMasonry: "Mosaico",
     layoutJustified: "Justificado",
@@ -4962,6 +5006,12 @@ const es: Translations = {
     createNewDesc: "Añade un nuevo contenido a tu colección",
     addNew: "Nuevo",
     noFilter: "Ningún Contenido coincide con este filtro.",
+    all: "Todos",
+    loadMore: "Cargar más",
+    seeAll: "Ver todo",
+    profileVisibility: "Visibilidad del perfil",
+    visibilityHint: "Elige qué secciones aparecen en tu perfil público.",
+    hiddenOnProfile: "Oculto en el perfil",
   },
   contentTypes: {
     aiLabel: "Generado por IA",
@@ -4980,7 +5030,7 @@ const es: Translations = {
     htmlDescription: "Página HTML antigua, editada en el sitio",
   },
   contentSections: {
-    informativeLabel: "Informativo",
+    informativeLabel: "Contenido",
     informativeDescription: "Documentos, notas y páginas generadas por IA",
     galleryLabel: "Galería",
     galleryDescription: "Tus imágenes",
@@ -5920,9 +5970,13 @@ const ja: Translations = {
     loadMore: "もっと見る",
     noPublicSpaces: "まだ公開コンテンツはありません。",
     seeMore: "もっと見る",
-    contentsTitle: "コンテンツ",
+    contentsTitle: "投稿",
+    linksTitle: "リンク",
     galleryTitle: "ギャラリー",
-    galleryLayoutSettings: "ギャラリーのレイアウト",
+    sectionSettings: "レイアウトと順序",
+    moveUp: "上へ移動",
+    moveDown: "下へ移動",
+    layoutCarousel: "カルーセル",
     layoutGrid: "グリッド",
     layoutMasonry: "モザイク",
     layoutJustified: "均等配置",
@@ -6065,6 +6119,12 @@ const ja: Translations = {
     createNewDesc: "コレクションに新しいコンテンツを追加する",
     addNew: "新規",
     noFilter: "このフィルターに一致するコンテンツはありません。",
+    all: "すべて",
+    loadMore: "もっと見る",
+    seeAll: "すべて表示",
+    profileVisibility: "プロフィールの表示",
+    visibilityHint: "公開プロフィールに表示するセクションを選択します。",
+    hiddenOnProfile: "プロフィールで非表示",
   },
   contentTypes: {
     aiLabel: "AI生成",
@@ -6083,7 +6143,7 @@ const ja: Translations = {
     htmlDescription: "レガシーなHTMLページ（その場で編集）",
   },
   contentSections: {
-    informativeLabel: "インフォメーション",
+    informativeLabel: "コンテンツ",
     informativeDescription: "ドキュメント、ノート、AI生成ページ",
     galleryLabel: "ギャラリー",
     galleryDescription: "あなたの画像",
@@ -7023,9 +7083,13 @@ const de: Translations = {
     loadMore: "Mehr laden",
     noPublicSpaces: "Noch keine öffentlichen Inhalte.",
     seeMore: "Mehr anzeigen",
-    contentsTitle: "Inhalt",
+    contentsTitle: "Veröffentlichungen",
+    linksTitle: "Links",
     galleryTitle: "Galerie",
-    galleryLayoutSettings: "Galerie-Layout",
+    sectionSettings: "Layout & Reihenfolge",
+    moveUp: "Nach oben",
+    moveDown: "Nach unten",
+    layoutCarousel: "Karussell",
     layoutGrid: "Raster",
     layoutMasonry: "Mosaik",
     layoutJustified: "Bündig",
@@ -7168,6 +7232,12 @@ const de: Translations = {
     createNewDesc: "Neuen Inhalt zu deiner Sammlung hinzufügen",
     addNew: "Neu",
     noFilter: "Keine Inhalte entsprechen diesem Filter.",
+    all: "Alle",
+    loadMore: "Mehr laden",
+    seeAll: "Alle ansehen",
+    profileVisibility: "Profil-Sichtbarkeit",
+    visibilityHint: "Wähle, welche Abschnitte auf deinem öffentlichen Profil erscheinen.",
+    hiddenOnProfile: "Im Profil ausgeblendet",
   },
   contentTypes: {
     aiLabel: "KI-generiert",
@@ -7186,7 +7256,7 @@ const de: Translations = {
     htmlDescription: "Alte HTML-Seite, direkt bearbeitet",
   },
   contentSections: {
-    informativeLabel: "Informativ",
+    informativeLabel: "Inhalt",
     informativeDescription: "Dokumente, Notizen und KI-generierte Seiten",
     galleryLabel: "Galerie",
     galleryDescription: "Deine Bilder",
@@ -8126,9 +8196,13 @@ const it: Translations = {
     loadMore: "Carica altri",
     noPublicSpaces: "Nessun Contenuto pubblico ancora.",
     seeMore: "Vedi altro",
-    contentsTitle: "Contenuti",
+    contentsTitle: "Pubblicazioni",
+    linksTitle: "Link",
     galleryTitle: "Galleria",
-    galleryLayoutSettings: "Layout della galleria",
+    sectionSettings: "Layout e ordine",
+    moveUp: "Sposta su",
+    moveDown: "Sposta giù",
+    layoutCarousel: "Carosello",
     layoutGrid: "Griglia",
     layoutMasonry: "Mosaico",
     layoutJustified: "Giustificato",
@@ -8271,6 +8345,12 @@ const it: Translations = {
     createNewDesc: "Aggiungi un nuovo contenuto alla tua raccolta",
     addNew: "Nuovo",
     noFilter: "Nessun Contenuto corrisponde a questo filtro.",
+    all: "Tutti",
+    loadMore: "Carica altro",
+    seeAll: "Vedi tutto",
+    profileVisibility: "Visibilità del profilo",
+    visibilityHint: "Scegli quali sezioni appaiono sul tuo profilo pubblico.",
+    hiddenOnProfile: "Nascosto nel profilo",
   },
   contentTypes: {
     aiLabel: "Generato con IA",
@@ -8289,7 +8369,7 @@ const it: Translations = {
     htmlDescription: "Pagina HTML legacy, modificata sul posto",
   },
   contentSections: {
-    informativeLabel: "Informativo",
+    informativeLabel: "Publication",
     informativeDescription: "Documenti, note e pagine generate con IA",
     galleryLabel: "Galleria",
     galleryDescription: "Le tue immagini",

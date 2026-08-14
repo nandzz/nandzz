@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SpaceGrid } from "@/components/spaces/SpaceGrid";
+import { LinkChip } from "@/components/profile/LinkChip";
 import { Button } from "@/components/ui/button";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
@@ -38,12 +38,12 @@ export async function generateMetadata({
   return {
     title: `${name} (@${profile.username})`,
     alternates: {
-      canonical: `https://nandzz.com/${profile.username}/contents`,
+      canonical: `https://nandzz.com/${profile.username}/links`,
     },
   };
 }
 
-export default async function ProfileContentsPage({
+export default async function ProfileLinksPage({
   params,
   searchParams,
 }: {
@@ -58,10 +58,9 @@ export default async function ProfileContentsPage({
     notFound();
   }
 
-  // Publications = informative content only (the Links section has its own
-  // /links route). Gated by the owner's `show_contents` flag.
-  const showContents = profile.show_contents ?? true;
-  if (!showContents) {
+  // Gated by the owner's `show_links` visibility flag.
+  const showLinks = profile.show_links ?? true;
+  if (!showLinks) {
     notFound();
   }
 
@@ -71,42 +70,16 @@ export default async function ProfileContentsPage({
 
   const [supabase, t] = await Promise.all([createClient(), getServerTranslations()]);
 
-  const { data: spaces, count } = await supabase
+  const { data: links, count } = await supabase
     .from("spaces")
     .select("*", { count: "exact" })
     .eq("user_id", profile.id)
     .eq("is_public", true)
-    .neq("content_type", "image") // images live in the gallery
-    .neq("content_type", "link") // links live in the /links section
-    .neq("content_type", "video")
+    .in("content_type", ["link", "video"])
     .order("created_at", { ascending: false })
     .range(from, to);
 
   const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
-
-  const { data: { user } } = await supabase.auth.getUser();
-  let likedSpaceIds: string[] = [];
-  let savedSpaceIds: string[] = [];
-
-  if (user && spaces && spaces.length > 0) {
-    const spaceIds = spaces.map((s) => s.id);
-
-    const [{ data: likes }, { data: savedEntries }] = await Promise.all([
-      supabase
-        .from("space_likes")
-        .select("space_id")
-        .eq("user_id", user.id)
-        .in("space_id", spaceIds),
-      supabase
-        .from("collection_spaces")
-        .select("space_id, collections!inner(user_id)")
-        .eq("collections.user_id", user.id)
-        .in("space_id", spaceIds),
-    ]);
-
-    likedSpaceIds = likes?.map((l) => l.space_id) || [];
-    savedSpaceIds = [...new Set((savedEntries ?? []).map((e: { space_id: string }) => e.space_id))];
-  }
 
   const displayName = profile.display_name || profile.username;
 
@@ -122,25 +95,23 @@ export default async function ProfileContentsPage({
             {displayName}
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">
-            {t.profile.contentsTitle}
+            {t.profile.linksTitle}
             <span className="ml-2 text-base font-normal text-muted-foreground tabular-nums">
               {count ?? 0}
             </span>
           </h1>
         </div>
 
-        <SpaceGrid
-          spaces={spaces || []}
-          likedSpaceIds={likedSpaceIds}
-          savedSpaceIds={savedSpaceIds}
-          currentUserId={user?.id}
-          ownerUsername={profile.username}
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {(links || []).map((space, i) => (
+            <LinkChip key={space.id} space={space} priority={i < 4} />
+          ))}
+        </div>
 
         {totalPages > 1 && (
           <div className="mt-10 flex items-center justify-center gap-2">
             {currentPage > 1 && (
-              <Link href={`/${profile.username}/contents?page=${currentPage - 1}`}>
+              <Link href={`/${profile.username}/links?page=${currentPage - 1}`}>
                 <Button variant="outline" size="sm" className="border-border/60">
                   {t.explore.previous}
                 </Button>
@@ -150,7 +121,7 @@ export default async function ProfileContentsPage({
               {t.explore.pageOf.replace("{current}", String(currentPage)).replace("{total}", String(totalPages))}
             </span>
             {currentPage < totalPages && (
-              <Link href={`/${profile.username}/contents?page=${currentPage + 1}`}>
+              <Link href={`/${profile.username}/links?page=${currentPage + 1}`}>
                 <Button variant="outline" size="sm" className="border-border/60">
                   {t.explore.next}
                 </Button>

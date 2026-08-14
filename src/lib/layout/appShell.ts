@@ -42,11 +42,18 @@ const RESERVED_TOP_SEGMENTS = new Set([
   "api",
 ]);
 
-// The public user profile page: a single path segment that isn't reserved,
-// e.g. "/felipe". On this page we auto-collapse the sidebar to give the
-// profile full width.
+// Profile sub-sections that live in the same "(profile)" route group as the
+// bare profile page and share its chromeless, full-width treatment.
+const PROFILE_SUB_SEGMENTS = new Set(["contents", "gallery", "links"]);
+
+// The public user profile page and its sub-sections: a first segment that isn't
+// reserved, either on its own ("/felipe") or followed by a profile sub-section
+// ("/felipe/contents"). On these pages we hide the top Navbar for logged-out
+// visitors and auto-collapse the sidebar to give the profile full width.
 export function isProfilePage(pathname: string): boolean {
-  const match = pathname.match(/^\/([^/]+)\/?$/);
-  if (!match) return false;
-  return !RESERVED_TOP_SEGMENTS.has(match[1]);
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0 || segments.length > 2) return false;
+  const [first, second] = segments;
+  if (RESERVED_TOP_SEGMENTS.has(first)) return false;
+  return segments.length === 1 || PROFILE_SUB_SEGMENTS.has(second);
 }

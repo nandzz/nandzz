@@ -40,6 +40,12 @@ export type Profile = {
   brand_values?: string[] | null;
   brand_description?: string | null;
   gallery_layout?: string | null;
+  contents_layout?: string | null;
+  links_layout?: string | null;
+  section_order?: string[] | null;
+  show_contents?: boolean | null;
+  show_gallery?: boolean | null;
+  show_links?: boolean | null;
 };
 
 export type CreditBucket = "free_space" | "paid";

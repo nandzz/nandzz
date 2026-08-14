@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Camera, Mail, Globe } from "lucide-react";
 import {
-  Camera,
-  Briefcase,
-  X,
-  GitBranch,
-  Mail,
-  Play,
-  Globe,
-} from "lucide-react";
+  InstagramIcon,
+  LinkedinIcon,
+  XIcon,
+  GithubIcon,
+  YoutubeIcon,
+} from "./BrandIcons";
 import type { Profile, WidgetInstanceWithCatalog } from "@/lib/types";
 import { FollowButton } from "./FollowButton";
 import { FollowersDialog } from "./FollowersDialog";
@@ -129,28 +128,28 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
     {
       key: "instagram",
       value: socialLinks.instagram,
-      icon: Camera,
+      icon: InstagramIcon,
       label: "Instagram",
       hoverClass: "hover:text-pink-500",
     },
     {
       key: "linkedin",
       value: socialLinks.linkedin,
-      icon: Briefcase,
+      icon: LinkedinIcon,
       label: "LinkedIn",
       hoverClass: "hover:text-blue-600",
     },
     {
       key: "twitter",
       value: socialLinks.twitter,
-      icon: X,
+      icon: XIcon,
       label: "X (Twitter)",
       hoverClass: "hover:text-foreground",
     },
     {
       key: "github",
       value: socialLinks.github,
-      icon: GitBranch,
+      icon: GithubIcon,
       label: "GitHub",
       hoverClass: "hover:text-foreground",
     },
@@ -164,7 +163,7 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
     {
       key: "youtube",
       value: socialLinks.youtube,
-      icon: Play,
+      icon: YoutubeIcon,
       label: "YouTube",
       hoverClass: "hover:text-red-600",
     },

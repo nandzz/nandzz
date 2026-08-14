@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SpaceCard } from "@/components/spaces/SpaceCard";
+import { LinkChip } from "./LinkChip";
 import type { Space, Profile } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SectionOwnerMenu } from "./SectionOwnerMenu";
@@ -10,33 +10,30 @@ import { SeeMoreLink } from "./SeeMoreLink";
 import { persistProfileUpdate } from "@/lib/profile/update";
 import { CARD_LAYOUTS, type SectionLayout } from "@/lib/gallery/layouts";
 
-interface ProfileContentProps {
-  spaces: Space[];
+interface ProfileLinksProps {
+  links: Space[];
   totalCount: number;
   profile: Profile;
   isOwner?: boolean;
   initialLayout: SectionLayout;
-  likedSpaceIds?: string[];
-  savedSpaceIds?: string[];
-  currentUserId?: string;
 }
 
-export function ProfileContent({
-  spaces,
+/** The profile's Links section — a set of link "chips" (favicon + title + host)
+ * the owner can arrange as a horizontal shelf, grid, justified rows, or with a
+ * featured first chip. Distinct from the Publications section, which shows
+ * space cards. Empty state is handled at the page level. */
+export function ProfileLinks({
+  links,
   totalCount,
   profile,
   isOwner = false,
   initialLayout,
-  likedSpaceIds = [],
-  savedSpaceIds = [],
-  currentUserId,
-}: ProfileContentProps) {
+}: ProfileLinksProps) {
   const { t } = useLanguage();
   const router = useRouter();
   const [layout, setLayout] = useState<SectionLayout>(initialLayout);
 
-  // Keep local layout in sync when the server re-renders with a fresh value
-  // (React's "adjust state during render" pattern — no effect).
+  // Keep local layout in sync when the server re-renders with a fresh value.
   const [prevInitial, setPrevInitial] = useState(initialLayout);
   if (initialLayout !== prevInitial) {
     setPrevInitial(initialLayout);
@@ -47,7 +44,7 @@ export function ProfileContent({
     async (value: SectionLayout) => {
       setLayout(value); // optimistic
       try {
-        await persistProfileUpdate(profile.id, profile.username, { contents_layout: value });
+        await persistProfileUpdate(profile.id, profile.username, { links_layout: value });
         router.refresh();
       } catch {
         setLayout(initialLayout); // revert on failure
@@ -56,28 +53,13 @@ export function ProfileContent({
     [profile.id, profile.username, initialLayout, router],
   );
 
-  // Empty state is handled at the page level (so it isn't shown when the
-  // gallery has images but there are no non-image contents).
-  if (spaces.length === 0) return null;
-
-  const renderCard = (space: Space, priority: boolean) => (
-    <SpaceCard
-      space={space}
-      routeUsername={profile.username}
-      liked={likedSpaceIds.includes(space.id)}
-      saved={savedSpaceIds.includes(space.id)}
-      isOwn={!!currentUserId && space.user_id === currentUserId}
-      hashtags={space.hashtags ?? []}
-      priority={priority}
-      compact
-    />
-  );
+  if (links.length === 0) return null;
 
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">
-          {t.profile.contentsTitle}
+          {t.profile.linksTitle}
           <span className="ml-1.5 text-sm font-normal text-muted-foreground tabular-nums">
             {totalCount}
           </span>
@@ -85,8 +67,8 @@ export function ProfileContent({
 
         {isOwner && (
           <SectionOwnerMenu
-            sectionId="publications"
-            sectionName={t.profile.contentsTitle}
+            sectionId="links"
+            sectionName={t.profile.linksTitle}
             layouts={CARD_LAYOUTS}
             layout={layout}
             onLayoutChange={handleLayoutChange}
@@ -94,10 +76,10 @@ export function ProfileContent({
         )}
       </div>
 
-      <ContentLayoutView layout={layout} spaces={spaces} renderCard={renderCard} />
+      <LinksLayoutView layout={layout} links={links} />
 
-      {totalCount > spaces.length && (
-        <SeeMoreLink label={t.profile.seeMore} href={`/${profile.username}/contents`} />
+      {totalCount > links.length && (
+        <SeeMoreLink label={t.profile.seeMore} href={`/${profile.username}/links`} />
       )}
     </div>
   );
@@ -105,20 +87,12 @@ export function ProfileContent({
 
 // ── Layout renderers ─────────────────────────────────────────────────────────
 
-function ContentLayoutView({
-  layout,
-  spaces,
-  renderCard,
-}: {
-  layout: SectionLayout;
-  spaces: Space[];
-  renderCard: (space: Space, priority: boolean) => React.ReactNode;
-}) {
+function LinksLayoutView({ layout, links }: { layout: SectionLayout; links: Space[] }) {
   if (layout === "grid") {
     return (
       <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3">
-        {spaces.map((space, i) => (
-          <div key={space.id}>{renderCard(space, i === 0)}</div>
+        {links.map((space, i) => (
+          <LinkChip key={space.id} space={space} priority={i === 0} />
         ))}
       </div>
     );
@@ -127,9 +101,9 @@ function ContentLayoutView({
   if (layout === "featured") {
     return (
       <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3">
-        {spaces.map((space, i) => (
+        {links.map((space, i) => (
           <div key={space.id} className={i === 0 ? "col-span-2" : ""}>
-            {renderCard(space, i === 0)}
+            <LinkChip space={space} priority={i === 0} />
           </div>
         ))}
       </div>
@@ -139,9 +113,9 @@ function ContentLayoutView({
   if (layout === "justified") {
     return (
       <div className="flex flex-wrap gap-4 pb-6">
-        {spaces.map((space, i) => (
-          <div key={space.id} className="grow basis-[220px]">
-            {renderCard(space, i === 0)}
+        {links.map((space, i) => (
+          <div key={space.id} className="grow basis-[240px]">
+            <LinkChip space={space} priority={i === 0} />
           </div>
         ))}
       </div>
@@ -151,9 +125,9 @@ function ContentLayoutView({
   // carousel (default)
   return (
     <div className="-mx-1 flex gap-4 overflow-x-auto scroll-smooth px-1 pt-1 pb-6 snap-x snap-mandatory scrollbar-hide">
-      {spaces.map((space, i) => (
+      {links.map((space, i) => (
         <div key={space.id} className="w-[240px] shrink-0 snap-start">
-          {renderCard(space, i === 0)}
+          <LinkChip space={space} priority={i === 0} />
         </div>
       ))}
     </div>

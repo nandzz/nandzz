@@ -92,20 +92,6 @@ export function Footer() {
                 style={{ height: "26px", width: "auto" }}
               />
             </a>
-            <a
-              href="https://www.buymeacoffee.com/felipenandz"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                alt="Buy Me A Coffee"
-                src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-                width={100}
-                height={28}
-                style={{ height: "26px", width: "auto" }}
-              />
-            </a>
           </div>
         </div>
       </div>
