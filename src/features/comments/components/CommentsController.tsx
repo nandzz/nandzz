@@ -9,8 +9,6 @@ import type { CommentWithLike } from "@/lib/types";
 interface CommentsControllerProps {
   spaceId: string;
   spaceOwnerId: string;
-  spaceOwnerUsername: string;
-  spaceTitle: string;
   commentsCount: number;
   userId: string | null;
   currentProfile: {
@@ -26,8 +24,6 @@ interface CommentsControllerProps {
 export function CommentsController({
   spaceId,
   spaceOwnerId,
-  spaceOwnerUsername,
-  spaceTitle,
   commentsCount,
   userId,
   currentProfile,
@@ -59,8 +55,6 @@ export function CommentsController({
         onClose={() => setOpen(false)}
         spaceId={spaceId}
         spaceOwnerId={spaceOwnerId}
-        spaceOwnerUsername={spaceOwnerUsername}
-        spaceTitle={spaceTitle}
         userId={userId}
         currentProfile={currentProfile}
         initialComments={initialComments}

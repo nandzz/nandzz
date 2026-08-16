@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Heart } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { toggleCommentLike } from "../actions/toggle-comment-like";
 
 interface CommentLikeButtonProps {
   commentId: string;
@@ -31,25 +31,14 @@ export function CommentLikeButton({
     setLiked(!wasLiked);
     setCount(wasLiked ? prevCount - 1 : prevCount + 1);
 
-    const supabase = createClient();
-    try {
-      if (wasLiked) {
-        const { error } = await supabase
-          .from("comment_likes")
-          .delete()
-          .eq("user_id", userId)
-          .eq("comment_id", commentId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("comment_likes")
-          .insert({ user_id: userId, comment_id: commentId });
-        if (error) throw error;
-      }
-    } catch {
+    const result = await toggleCommentLike({ commentId });
+    if (!result.ok) {
       setLiked(wasLiked);
       setCount(prevCount);
+      return;
     }
+    setLiked(result.liked);
+    setCount(result.likesCount);
   };
 
   return (

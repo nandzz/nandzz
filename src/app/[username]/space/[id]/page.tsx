@@ -15,7 +15,8 @@ import { getSpaceSaved } from "@/features/collections/server";
 import { DuplicateSpaceButton } from "@/components/spaces/DuplicateSpaceButton";
 import { SpaceOwnerMenu } from "@/components/spaces/SpaceOwnerMenu";
 import { ExternalLink, Lock, Smartphone } from "lucide-react";
-import { CommentsController } from "@/components/spaces/comments/CommentsController";
+import { CommentsController } from "@/features/comments";
+import { getTopLevelComments, getLikedCommentIds } from "@/features/comments/server";
 import type { CommentWithLike } from "@/lib/types";
 import { HtmlSpaceEditor } from "@/components/spaces/HtmlSpaceEditor";
 import { PdfViewerWrapper } from "@/components/spaces/PdfViewerWrapper";
@@ -165,44 +166,31 @@ export default async function SpaceViewPage({
 
   // Comments: first page + current user profile for the input avatar
   const PAGE_SIZE = 20;
-  const { data: rawComments } = await supabase
-    .from("space_comments")
-    .select("*, profiles:user_id(username, display_name, avatar_url)")
-    .eq("space_id", id)
-    .is("parent_id", null)
-    .order("created_at", { ascending: true })
-    .limit(PAGE_SIZE);
+  const rawComments = await getTopLevelComments(supabase, id, PAGE_SIZE);
 
   let likedCommentIds = new Set<string>();
   let currentProfile: { username: string; display_name: string | null; avatar_url: string | null } | null = null;
 
   if (user) {
-    const [{ data: profileData }, ..._] = await Promise.all([
+    const [{ data: profileData }, likedIds] = await Promise.all([
       supabase
         .from("profiles")
         .select("username, display_name, avatar_url")
         .eq("id", user.id)
         .single(),
-      rawComments?.length
-        ? supabase
-            .from("comment_likes")
-            .select("comment_id")
-            .eq("user_id", user.id)
-            .in("comment_id", rawComments.map((c) => c.id))
-            .then(({ data }) => {
-              likedCommentIds = new Set(data?.map((l) => l.comment_id));
-            })
-        : Promise.resolve(null),
+      rawComments.length
+        ? getLikedCommentIds(supabase, user.id, rawComments.map((c) => c.id))
+        : Promise.resolve<string[]>([]),
     ]);
+    likedCommentIds = new Set(likedIds);
     currentProfile = profileData;
   }
 
-  const initialComments: CommentWithLike[] = (rawComments ?? []).map((c) => ({
+  const initialComments: CommentWithLike[] = rawComments.map((c) => ({
     ...c,
-    profiles: c.profiles as CommentWithLike["profiles"],
     liked: likedCommentIds.has(c.id),
   }));
-  const initialHasMore = (rawComments?.length ?? 0) === PAGE_SIZE;
+  const initialHasMore = rawComments.length === PAGE_SIZE;
 
   let htmlContent: string | null = null;
   if (space.html_url) {
@@ -239,8 +227,6 @@ export default async function SpaceViewPage({
           <CommentsController
             spaceId={space.id}
             spaceOwnerId={space.user_id}
-            spaceOwnerUsername={profile?.username ?? ""}
-            spaceTitle={space.title}
             commentsCount={space.comments_count ?? 0}
             userId={user?.id ?? null}
             currentProfile={currentProfile}

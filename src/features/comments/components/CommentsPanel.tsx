@@ -13,8 +13,6 @@ interface CommentsPanelProps {
   onClose: () => void;
   spaceId: string;
   spaceOwnerId: string;
-  spaceOwnerUsername: string;
-  spaceTitle: string;
   userId: string | null;
   currentProfile: {
     username: string;
@@ -47,8 +45,6 @@ export function CommentsPanel({
   onClose,
   spaceId,
   spaceOwnerId,
-  spaceOwnerUsername,
-  spaceTitle,
   userId,
   currentProfile,
   initialComments,
@@ -62,6 +58,10 @@ export function CommentsPanel({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // Mount/unmount-with-transition pattern: sync mount + visibility to `open`
+    // across paints. The synchronous setState here is intentional and drives the
+    // enter/exit animation.
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (open) {
       setMounted(true);
       const id = requestAnimationFrame(() =>
@@ -73,6 +73,7 @@ export function CommentsPanel({
       const timer = setTimeout(() => setMounted(false), 300);
       return () => clearTimeout(timer);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open]);
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export function CommentsPanel({
 
   if (!mounted) return null;
 
-  const listProps = { spaceId, spaceOwnerId, spaceOwnerUsername, spaceTitle, userId, currentProfile, initialComments, initialHasMore, onCountChange };
+  const listProps = { spaceId, spaceOwnerId, userId, currentProfile, initialComments, initialHasMore, onCountChange };
 
   return createPortal(
     <>

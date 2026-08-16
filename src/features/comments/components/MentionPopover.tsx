@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { searchMentionProfiles, type MentionUser } from "../actions/search-mention-profiles";
 
 interface MentionPopoverProps {
   query: string;
@@ -11,25 +11,13 @@ interface MentionPopoverProps {
   className?: string;
 }
 
-type MentionUser = {
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-};
-
 export function MentionPopover({ query, onSelect, className }: MentionPopoverProps) {
   const [results, setResults] = useState<MentionUser[]>([]);
 
   useEffect(() => {
     if (query.length > 20) return;
-    const supabase = createClient();
     const timer = setTimeout(async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("username, display_name, avatar_url")
-        .ilike("username", `${query}%`)
-        .limit(5);
-      setResults(data ?? []);
+      setResults(await searchMentionProfiles(query));
     }, 150);
     return () => clearTimeout(timer);
   }, [query]);

@@ -6,10 +6,10 @@ import { Trash2, CornerDownRight, ChevronDown, ChevronUp } from "lucide-react";
 import { CommentLikeButton } from "./CommentLikeButton";
 import { CommentInput } from "./CommentInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createClient } from "@/lib/supabase/client";
-import { createNotification } from "@/lib/notifications";
 import type { CommentWithLike } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { loadReplies as loadRepliesAction } from "../actions/load-replies";
+import { postComment } from "../actions/post-comment";
 
 interface CommentItemProps {
   comment: CommentWithLike;
@@ -21,8 +21,6 @@ interface CommentItemProps {
   } | null;
   spaceId: string;
   spaceOwnerId: string;
-  spaceOwnerUsername: string;
-  spaceTitle: string;
   onDelete: (commentId: string) => void;
   isReply?: boolean;
 }
@@ -65,8 +63,6 @@ export function CommentItem({
   currentProfile,
   spaceId,
   spaceOwnerId,
-  spaceOwnerUsername,
-  spaceTitle,
   onDelete,
   isReply = false,
 }: CommentItemProps) {
@@ -91,29 +87,8 @@ export function CommentItem({
       return;
     }
     setRepliesLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("space_comments")
-      .select("*, profiles:user_id(username, display_name, avatar_url)")
-      .eq("parent_id", comment.id)
-      .order("created_at", { ascending: true });
-
-    let likedIds = new Set<string>();
-    if (userId && data?.length) {
-      const { data: likes } = await supabase
-        .from("comment_likes")
-        .select("comment_id")
-        .eq("user_id", userId)
-        .in("comment_id", data.map((r) => r.id));
-      likedIds = new Set(likes?.map((l) => l.comment_id));
-    }
-
-    const withLike = (data ?? []).map((r) => ({
-      ...r,
-      profiles: r.profiles as CommentWithLike["profiles"],
-      liked: likedIds.has(r.id),
-    }));
-    setReplies(withLike);
+    const result = await loadRepliesAction({ parentId: comment.id });
+    setReplies(result.ok ? result.replies : []);
     setRepliesLoaded(true);
     setRepliesOpen(true);
     setRepliesLoading(false);
@@ -130,66 +105,14 @@ export function CommentItem({
 
   const handleReplySubmit = async (content: string) => {
     if (!userId || !currentProfile) return;
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("space_comments")
-      .insert({
-        space_id: spaceId,
-        user_id: userId,
-        parent_id: comment.id,
-        content,
-      })
-      .select("*, profiles:user_id(username, display_name, avatar_url)")
-      .single();
-
-    if (error || !data) return;
-
-    const newReply: CommentWithLike = {
-      ...data,
-      profiles: data.profiles as CommentWithLike["profiles"],
-      liked: false,
-    };
-    setReplies((prev) => [...prev, newReply]);
+    // The action inserts the reply and handles @mentions + notifications.
+    const result = await postComment({ spaceId, content, parentId: comment.id });
+    if (!result.ok) return;
+    setReplies((prev) => [...prev, result.comment]);
     setReplyCount((c) => c + 1);
     setRepliesLoaded(true);
     setRepliesOpen(true);
     setShowReplyInput(false);
-
-    const notificationPayload = {
-      space_id: spaceId,
-      space_title: spaceTitle,
-      space_owner_username: spaceOwnerUsername,
-      commenter_username: currentProfile.username,
-      commenter_display_name: currentProfile.display_name,
-      comment_preview: content.slice(0, 100),
-    };
-
-    // notify the parent comment author (if not self)
-    const notifiedIds = new Set<string>([userId]);
-    if (comment.user_id !== userId) {
-      notifiedIds.add(comment.user_id);
-      await createNotification(supabase, comment.user_id, "new_reply", notificationPayload);
-    }
-
-    // insert mentions + notify mentioned users
-    const mentioned = [...content.matchAll(/@(\w+)/g)].map((m) => m[1]);
-    if (mentioned.length) {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("username", mentioned);
-      if (profiles?.length) {
-        await supabase.from("comment_mentions").insert(
-          profiles.map((p) => ({ comment_id: data.id, mentioned_user_id: p.id }))
-        );
-        for (const p of profiles) {
-          if (!notifiedIds.has(p.id)) {
-            notifiedIds.add(p.id);
-            await createNotification(supabase, p.id, "comment_mention", notificationPayload);
-          }
-        }
-      }
-    }
   };
 
   const handleDeleteReply = (replyId: string) => {
@@ -302,8 +225,6 @@ export function CommentItem({
               currentProfile={currentProfile}
               spaceId={spaceId}
               spaceOwnerId={spaceOwnerId}
-              spaceOwnerUsername={spaceOwnerUsername}
-              spaceTitle={spaceTitle}
               onDelete={handleDeleteReply}
               isReply
             />

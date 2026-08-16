@@ -4,7 +4,7 @@ Living roadmap for moving the Portal from a layer-based structure (`components/`
 `lib/`, `app/api/`) to **feature-based** modules under `src/features/`, where each
 feature owns its data access and **UI never touches Supabase directly**.
 
-Status: **`social` + `collections` shipped**. Rolling out feature-by-feature.
+Status: **`social` + `collections` + `comments` shipped**. Rolling out feature-by-feature.
 
 ---
 
@@ -103,7 +103,7 @@ src/features/<feature>/
 |---|---------|------------------|--------|
 | 0 | **social** (likes+follows) | LikeButton, FollowButton; reads across 5 server pages | ✅ done (pilot) |
 | 1 | **collections** | AddToCollectionDialog, StarButton, NewCollectionForm, CollectionActions; `is_public:false` invariant | ✅ done |
-| 2 | **comments** | `components/spaces/comments/*` (CommentsList/Item, CommentLikeButton) | ⬜ todo |
+| 2 | **comments** | `features/comments/*` — post/reply/like/mentions actions + reads; delete kept as `/api` route (admin-authorized); dead notification props pruned from prop chain | ✅ done |
 | 3 | **profile** | ProfileBackground (9 `.from()`), EditProfileDialog, settings/brand pages, **FollowList** (deferred client list) | ⬜ todo |
 | 4 | **spaces** | biggest: HtmlSpaceEditor (10 `.from()`), builders/, AiAssistantPanel, SpaceCard — split into sub-PRs; fold in `lib/actions/publish-space.ts` | ⬜ todo |
 | 5 | **booking / widgets** | already clustered (`components/widgets/calendar/`, `lib/widgets/`, `api/widgets/`); watch WidgetWorkspace realtime + Staff/Location storage uploads | ⬜ todo |
