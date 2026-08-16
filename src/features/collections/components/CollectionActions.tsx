@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
@@ -12,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import type { Collection } from "@/lib/types";
+import { updateCollection } from "../actions/update-collection";
+import { deleteCollection } from "../actions/delete-collection";
 
 interface CollectionActionsProps {
   collection: Collection;
@@ -19,7 +20,6 @@ interface CollectionActionsProps {
 
 export function CollectionActions({ collection }: CollectionActionsProps) {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
   const [editOpen, setEditOpen] = useState(false);
   const [name, setName] = useState(collection.name);
   const [description, setDescription] = useState(collection.description || "");
@@ -28,14 +28,12 @@ export function CollectionActions({ collection }: CollectionActionsProps) {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase
-      .from("collections")
-      .update({
-        name: name.trim(),
-        description: description.trim() || null,
-        is_public: isPublic,
-      })
-      .eq("id", collection.id);
+    await updateCollection({
+      id: collection.id,
+      name: name.trim(),
+      description: description.trim() || null,
+      isPublic,
+    });
     setSaving(false);
     setEditOpen(false);
     router.refresh();
@@ -43,7 +41,7 @@ export function CollectionActions({ collection }: CollectionActionsProps) {
 
   const handleDelete = async () => {
     if (!confirm(`Delete collection "${collection.name}"? Content won't be deleted.`)) return;
-    await supabase.from("collections").delete().eq("id", collection.id);
+    await deleteCollection({ id: collection.id });
     router.push("/dashboard/collections");
   };
 

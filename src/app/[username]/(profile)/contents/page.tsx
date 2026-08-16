@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
 import { getLikedSpaceIds } from "@/features/social/server";
+import { getSavedSpaceIds } from "@/features/collections/server";
 
 const PAGE_SIZE = 24;
 
@@ -92,17 +93,13 @@ export default async function ProfileContentsPage({
   if (user && spaces && spaces.length > 0) {
     const spaceIds = spaces.map((s) => s.id);
 
-    const [likes, { data: savedEntries }] = await Promise.all([
+    const [likes, saved] = await Promise.all([
       getLikedSpaceIds(supabase, user.id, spaceIds),
-      supabase
-        .from("collection_spaces")
-        .select("space_id, collections!inner(user_id)")
-        .eq("collections.user_id", user.id)
-        .in("space_id", spaceIds),
+      getSavedSpaceIds(supabase, user.id, spaceIds),
     ]);
 
     likedSpaceIds = likes;
-    savedSpaceIds = [...new Set((savedEntries ?? []).map((e: { space_id: string }) => e.space_id))];
+    savedSpaceIds = saved;
   }
 
   const displayName = profile.display_name || profile.username;

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useRef } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FolderOpen, Plus, Check } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { loadSpaceCollections } from "../actions/load-space-collections";
+import { setSpaceCollections } from "../actions/set-space-collections";
+import { createCollection } from "../actions/create-collection";
 
 interface Collection {
   id: string;
@@ -20,6 +22,7 @@ interface AddToCollectionDialogProps {
   spaceId: string;
   spaceTitle: string;
   onSavedChange?: (inAnyCollection: boolean) => void;
+  onUnauthenticated?: () => void;
 }
 
 export function AddToCollectionDialog({
@@ -28,9 +31,9 @@ export function AddToCollectionDialog({
   spaceId,
   spaceTitle,
   onSavedChange,
+  onUnauthenticated,
 }: AddToCollectionDialogProps) {
   const { t } = useLanguage();
-  const supabase = useMemo(() => createClient(), []);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [memberOf, setMemberOf] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState<Set<string>>(new Set());
@@ -39,37 +42,38 @@ export function AddToCollectionDialog({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Keep the latest onUnauthenticated without making it an effect dependency
+  // (parents pass an inline closure, which would otherwise re-run the effect).
+  const onUnauthenticatedRef = useRef(onUnauthenticated);
+  useEffect(() => {
+    onUnauthenticatedRef.current = onUnauthenticated;
+  }, [onUnauthenticated]);
+
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
+    let cancelled = false;
 
     const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const [{ data: cols }, { data: memberships }] = await Promise.all([
-        supabase
-          .from("collections")
-          .select("id, name")
-          .eq("user_id", user.id)
-          .order("name", { ascending: true }),
-        supabase
-          .from("collection_spaces")
-          .select("collection_id")
-          .eq("space_id", spaceId),
-      ]);
-
-      setCollections(cols || []);
-      const ids = new Set((memberships || []).map((m) => m.collection_id));
+      setLoading(true);
+      const result = await loadSpaceCollections({ spaceId });
+      if (cancelled) return;
+      if (!result.ok) {
+        if (result.error === "UNAUTHENTICATED") onUnauthenticatedRef.current?.();
+        setLoading(false);
+        return;
+      }
+      setCollections(result.collections);
+      const ids = new Set(result.memberOfIds);
       setMemberOf(ids);
       setPending(new Set(ids));
       setLoading(false);
     };
 
     load();
-  }, [open, spaceId, supabase]);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, spaceId]);
 
   const toggle = (id: string) => {
     setPending((prev) => {
@@ -82,22 +86,11 @@ export function AddToCollectionDialog({
 
   const handleSave = async () => {
     setSaving(true);
-    const toAdd = [...pending].filter((id) => !memberOf.has(id));
-    const toRemove = [...memberOf].filter((id) => !pending.has(id));
+    const add = [...pending].filter((id) => !memberOf.has(id));
+    const remove = [...memberOf].filter((id) => !pending.has(id));
 
-    if (toAdd.length > 0) {
-      await supabase.from("collection_spaces").insert(
-        toAdd.map((collection_id) => ({ collection_id, space_id: spaceId }))
-      );
-    }
+    await setSpaceCollections({ spaceId, add, remove });
 
-    for (const collection_id of toRemove) {
-      await supabase
-        .from("collection_spaces")
-        .delete()
-        .eq("collection_id", collection_id)
-        .eq("space_id", spaceId);
-    }
     setSaving(false);
     onSavedChange?.(pending.size > 0);
     onClose();
@@ -106,20 +99,13 @@ export function AddToCollectionDialog({
   const handleCreate = async () => {
     if (!newName.trim()) return;
     setCreating(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("collections")
-      .insert({ name: newName.trim(), user_id: user.id, is_public: false })
-      .select("id, name")
-      .single();
-
-    if (data) {
-      setCollections((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setPending((prev) => new Set([...prev, data.id]));
+    const result = await createCollection({ name: newName.trim() });
+    if (result.ok) {
+      const created = result.collection;
+      setCollections((prev) =>
+        [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setPending((prev) => new Set([...prev, created.id]));
     }
     setNewName("");
     setCreating(false);

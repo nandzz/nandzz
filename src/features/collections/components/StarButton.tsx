@@ -3,9 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bookmark } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
 import { cn } from "@/lib/utils";
+import { AddToCollectionDialog } from "./AddToCollectionDialog";
 
 interface StarButtonProps {
   spaceId: string;
@@ -27,16 +26,11 @@ export function StarButton({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const handleClick = async (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    // Auth is resolved server-side when the dialog loads; a logged-out user is
+    // redirected to /login via onUnauthenticated below.
     setDialogOpen(true);
   };
 
@@ -72,6 +66,10 @@ export function StarButton({
         spaceId={spaceId}
         spaceTitle={spaceTitle}
         onSavedChange={handleSavedChange}
+        onUnauthenticated={() => {
+          setDialogOpen(false);
+          router.push("/login");
+        }}
       />
     </>
   );

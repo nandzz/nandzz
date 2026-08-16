@@ -4,7 +4,7 @@ Living roadmap for moving the Portal from a layer-based structure (`components/`
 `lib/`, `app/api/`) to **feature-based** modules under `src/features/`, where each
 feature owns its data access and **UI never touches Supabase directly**.
 
-Status: **pilot shipped** (`features/social`). Rolling out feature-by-feature.
+Status: **`social` + `collections` shipped**. Rolling out feature-by-feature.
 
 ---
 
@@ -82,7 +82,8 @@ src/features/<feature>/
    no-op in `vitest.config.ts` so `data/` layers are testable.
 7. **Verify** (all must pass): `npx tsc --noEmit`, `npx eslint src/features`,
    `npx vitest run src/features/<f>`.
-8. **Update this doc's checklist**, then **commit locally to the branch** (no push).
+8. **Update this doc's checklist**, then **commit directly to `main`** (no branches,
+   no push — per project instruction). One commit per feature.
 
 ---
 
@@ -101,7 +102,7 @@ src/features/<feature>/
 | # | Feature | Scope highlights | Status |
 |---|---------|------------------|--------|
 | 0 | **social** (likes+follows) | LikeButton, FollowButton; reads across 5 server pages | ✅ done (pilot) |
-| 1 | **collections** | AddToCollectionDialog, NewCollectionForm, CollectionActions; `is_public:false` invariant | ⬜ todo |
+| 1 | **collections** | AddToCollectionDialog, StarButton, NewCollectionForm, CollectionActions; `is_public:false` invariant | ✅ done |
 | 2 | **comments** | `components/spaces/comments/*` (CommentsList/Item, CommentLikeButton) | ⬜ todo |
 | 3 | **profile** | ProfileBackground (9 `.from()`), EditProfileDialog, settings/brand pages, **FollowList** (deferred client list) | ⬜ todo |
 | 4 | **spaces** | biggest: HtmlSpaceEditor (10 `.from()`), builders/, AiAssistantPanel, SpaceCard — split into sub-PRs; fold in `lib/actions/publish-space.ts` | ⬜ todo |
@@ -138,9 +139,9 @@ When continuing this migration unattended:
 2. Execute the **§3 recipe** for exactly **one** feature per iteration. Do not batch.
 3. Verify scoped to `src/features/**` (§3.7). If anything is red, **stop the loop** and
    report — do not commit a broken feature.
-4. On green: update the checklist row to ✅, then **commit locally to the branch**
-   (`feat/feature-based-social` or a per-feature branch). **Never push, never open a PR**
-   without explicit user approval.
+4. On green: update the checklist row to ✅, then **commit directly to `main`** (no
+   branches — per project instruction). One commit per feature. **Never push, never
+   open a PR** without explicit user approval.
 5. Stop the loop and ask the user when a feature needs a product decision (e.g. a client
    list that needs a new fetch pattern, or a `/api/*` route whose fate is unclear).
 6. Keep commits small and messages descriptive; end with the Co-Authored-By trailer.

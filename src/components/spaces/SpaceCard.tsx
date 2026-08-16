@@ -16,8 +16,7 @@ import {
 import { ExternalLink, FolderPlus, Pencil, Trash2, Bookmark, Globe, Lock, Copy } from "lucide-react";
 import { LikeButton } from "@/features/social";
 import { ShareButton } from "./ShareButton";
-import { StarButton } from "./StarButton";
-import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
+import { StarButton, AddToCollectionDialog } from "@/features/collections";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Space } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";

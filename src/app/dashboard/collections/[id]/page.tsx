@@ -5,8 +5,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { ArrowLeft, FolderOpen } from "lucide-react";
-import { CollectionActions } from "./CollectionActions";
-import type { Space } from "@/lib/types";
+import { CollectionActions } from "@/features/collections";
+import { getOwnedCollection, getCollectionSpaces } from "@/features/collections/server";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
 
@@ -28,33 +28,20 @@ export default async function CollectionDetailPage({
 
   const t = await getServerTranslations();
 
-  const { data: collection } = await supabase
-    .from("collections")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  const collection = await getOwnedCollection(supabase, id, user.id);
 
   if (!collection) {
     notFound();
   }
 
-  const [{ data: collectionSpaces }, { data: profile }] = await Promise.all([
-    supabase
-      .from("collection_spaces")
-      .select("space_id, spaces(*)")
-      .eq("collection_id", id)
-      .order("created_at", { ascending: false }),
+  const [spaces, { data: profile }] = await Promise.all([
+    getCollectionSpaces(supabase, id),
     supabase
       .from("profiles")
       .select("username")
       .eq("id", user.id)
       .single(),
   ]);
-
-  const spaces: Space[] = (collectionSpaces || [])
-    .map((cs) => cs.spaces as unknown as Space)
-    .filter(Boolean);
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">

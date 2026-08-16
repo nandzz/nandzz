@@ -21,6 +21,7 @@ import { getProfileWidgets } from "@/lib/widgets/server";
 import type { WidgetInstanceWithCatalog, Space } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { getIsFollowing, getLikedSpaceIds } from "@/features/social/server";
+import { getSavedSpaceIds } from "@/features/collections/server";
 import { PageShell } from "@/components/layout/PageShell";
 
 const fetchProfileByUsername = async (username: string) => {
@@ -174,16 +175,12 @@ export default async function ProfilePage({
     }
 
     if (allSpaceIds.length > 0) {
-      const [likes, { data: savedEntries }] = await Promise.all([
+      const [likes, saved] = await Promise.all([
         getLikedSpaceIds(supabase, user.id, allSpaceIds),
-        supabase
-          .from("collection_spaces")
-          .select("space_id, collections!inner(user_id)")
-          .eq("collections.user_id", user.id)
-          .in("space_id", allSpaceIds),
+        getSavedSpaceIds(supabase, user.id, allSpaceIds),
       ]);
       likedSpaceIds = likes;
-      savedSpaceIds = [...new Set((savedEntries ?? []).map((e: { space_id: string }) => e.space_id))];
+      savedSpaceIds = saved;
     }
   }
 

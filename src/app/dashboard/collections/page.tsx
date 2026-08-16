@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FolderOpen, Layers } from "lucide-react";
-import { NewCollectionForm } from "./NewCollectionForm";
+import { NewCollectionForm } from "@/features/collections";
+import { getUserCollectionsWithCounts } from "@/features/collections/server";
 import type { CollectionWithCount } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
@@ -23,11 +24,7 @@ export default async function CollectionsPage() {
     redirect("/login");
   }
 
-  const { data: collections } = await supabase
-    .from("collections")
-    .select("*, collection_spaces(id)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const collections = await getUserCollectionsWithCounts(supabase, user.id);
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">

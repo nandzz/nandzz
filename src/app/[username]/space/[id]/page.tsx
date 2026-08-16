@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LikeButton } from "@/features/social";
 import { getSpaceLiked } from "@/features/social/server";
 import { ShareMenu } from "@/components/spaces/ShareMenu";
-import { StarButton } from "@/components/spaces/StarButton";
+import { StarButton } from "@/features/collections";
+import { getSpaceSaved } from "@/features/collections/server";
 import { DuplicateSpaceButton } from "@/components/spaces/DuplicateSpaceButton";
 import { SpaceOwnerMenu } from "@/components/spaces/SpaceOwnerMenu";
 import { ExternalLink, Lock, Smartphone } from "lucide-react";
@@ -154,17 +155,12 @@ export default async function SpaceViewPage({
   let saved = false;
 
   if (user) {
-    const [likedResult, { data: savedEntries }] = await Promise.all([
+    const [likedResult, savedResult] = await Promise.all([
       getSpaceLiked(supabase, id, user.id),
-      supabase
-        .from("collection_spaces")
-        .select("collection_id, collections!inner(user_id)")
-        .eq("space_id", id)
-        .eq("collections.user_id", user.id)
-        .limit(1),
+      getSpaceSaved(supabase, user.id, id),
     ]);
     liked = likedResult;
-    saved = (savedEntries?.length ?? 0) > 0;
+    saved = savedResult;
   }
 
   // Comments: first page + current user profile for the input avatar
