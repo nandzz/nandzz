@@ -1,101 +1,85 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUserEntitlements } from "@/lib/plan";
 import type {
   WidgetCatalogEntry,
   WidgetInstance,
   WidgetInstanceWithCatalog,
 } from "@/lib/types";
 
-type SupabaseLike = ReturnType<typeof createAdminClient>;
-
-// Which of these instance ids currently have a live subscription. One query
-// instead of N `has_widget_access` RPC round-trips.
-async function resolveEntitlements(
-  db: SupabaseLike,
-  instanceIds: string[]
-): Promise<Set<string>> {
-  if (instanceIds.length === 0) return new Set();
-  const { data } = await db
-    .from("widget_subscriptions")
-    .select("instance_id, status, current_period_end")
-    .in("instance_id", instanceIds);
-
-  const now = Date.now();
-  const entitled = new Set<string>();
-  for (const row of data ?? []) {
-    const live =
-      (row.status === "active" || row.status === "trialing") &&
-      (!row.current_period_end || new Date(row.current_period_end).getTime() > now);
-    if (live) entitled.add(row.instance_id as string);
-  }
-  return entitled;
-}
-
+// Widget access is now a plan entitlement, not a per-instance subscription.
+// Every instance an owner has shares the same access boolean = their plan's
+// hasWidgets. One plan lookup instead of N subscription rows.
 function join(
   instances: (WidgetInstance & { catalog: WidgetCatalogEntry })[],
-  entitled: Set<string>
+  hasWidgets: boolean
 ): WidgetInstanceWithCatalog[] {
-  return instances.map((i) => ({ ...i, has_access: entitled.has(i.id) }));
+  return instances.map((i) => ({ ...i, has_access: hasWidgets }));
 }
 
-// Enabled + entitled instances for a profile, used by the public profile page.
-// Only widgets that are both enabled by the owner AND have a live subscription
-// are returned — nothing else should render or accept input.
+// Enabled instances for a profile, used by the public profile page. Only widgets
+// the owner enabled AND whose owner's plan includes widgets are returned —
+// nothing else should render or accept input.
 export async function getProfileWidgets(
   ownerId: string
 ): Promise<WidgetInstanceWithCatalog[]> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("widget_instances")
-    .select("*, catalog:widget_catalog(*)")
-    .eq("user_id", ownerId)
-    .eq("enabled", true)
-    .order("sort_order", { ascending: true });
+  const [{ data }, entitlements] = await Promise.all([
+    admin
+      .from("widget_instances")
+      .select("*, catalog:widget_catalog(*)")
+      .eq("user_id", ownerId)
+      .eq("enabled", true)
+      .order("sort_order", { ascending: true }),
+    getUserEntitlements(ownerId),
+  ]);
 
+  if (!entitlements.hasWidgets) return [];
   const instances = (data ?? []) as (WidgetInstance & { catalog: WidgetCatalogEntry })[];
-  const entitled = await resolveEntitlements(admin, instances.map((i) => i.id));
-  return join(instances, entitled).filter((i) => i.has_access);
+  return join(instances, true);
 }
 
-// A single enabled + entitled instance for a profile, used by the public,
-// shareable per-widget page. Returns null unless it's live (owner-enabled AND a
-// current subscription) — the same gate as getProfileWidgets, for one id.
+// A single enabled instance for a profile, used by the public, shareable
+// per-widget page. Returns null unless it's live (owner-enabled AND the owner's
+// plan includes widgets) — the same gate as getProfileWidgets, for one id.
 export async function getPublicWidgetById(
   ownerId: string,
   instanceId: string
 ): Promise<WidgetInstanceWithCatalog | null> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("widget_instances")
-    .select("*, catalog:widget_catalog(*)")
-    .eq("user_id", ownerId)
-    .eq("id", instanceId)
-    .eq("enabled", true)
-    .maybeSingle();
+  const [{ data }, entitlements] = await Promise.all([
+    admin
+      .from("widget_instances")
+      .select("*, catalog:widget_catalog(*)")
+      .eq("user_id", ownerId)
+      .eq("id", instanceId)
+      .eq("enabled", true)
+      .maybeSingle(),
+    getUserEntitlements(ownerId),
+  ]);
 
-  if (!data) return null;
+  if (!data || !entitlements.hasWidgets) return null;
   const instance = data as WidgetInstance & { catalog: WidgetCatalogEntry };
-  const entitled = await resolveEntitlements(admin, [instance.id]);
-  if (!entitled.has(instance.id)) return null;
   return { ...instance, has_access: true };
 }
 
-// Every instance the owner has (enabled or not, entitled or not) for the
-// dashboard. Uses the service-role client; callers must have already
-// authenticated the owner.
+// Every instance the owner has (enabled or not) for the dashboard. Uses the
+// service-role client; callers must have already authenticated the owner.
 export async function getOwnerWidgets(
   ownerId: string
 ): Promise<WidgetInstanceWithCatalog[]> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("widget_instances")
-    .select("*, catalog:widget_catalog(*)")
-    .eq("user_id", ownerId)
-    .order("sort_order", { ascending: true });
+  const [{ data }, entitlements] = await Promise.all([
+    admin
+      .from("widget_instances")
+      .select("*, catalog:widget_catalog(*)")
+      .eq("user_id", ownerId)
+      .order("sort_order", { ascending: true }),
+    getUserEntitlements(ownerId),
+  ]);
 
   const instances = (data ?? []) as (WidgetInstance & { catalog: WidgetCatalogEntry })[];
-  const entitled = await resolveEntitlements(admin, instances.map((i) => i.id));
-  return join(instances, entitled);
+  return join(instances, entitlements.hasWidgets);
 }
 
 export async function getOwnerWidgetById(
@@ -103,20 +87,28 @@ export async function getOwnerWidgetById(
   instanceId: string
 ): Promise<WidgetInstanceWithCatalog | null> {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("widget_instances")
-    .select("*, catalog:widget_catalog(*)")
-    .eq("user_id", ownerId)
-    .eq("id", instanceId)
-    .maybeSingle();
+  const [{ data }, entitlements] = await Promise.all([
+    admin
+      .from("widget_instances")
+      .select("*, catalog:widget_catalog(*)")
+      .eq("user_id", ownerId)
+      .eq("id", instanceId)
+      .maybeSingle(),
+    getUserEntitlements(ownerId),
+  ]);
 
   if (!data) return null;
   const instance = data as WidgetInstance & { catalog: WidgetCatalogEntry };
-  const entitled = await resolveEntitlements(admin, [instance.id]);
-  return { ...instance, has_access: entitled.has(instance.id) };
+  return { ...instance, has_access: entitlements.hasWidgets };
 }
 
-// Active widget types available to subscribe to.
+// Owner's plan-level widget access, for surfaces that don't need instances.
+export async function ownerHasWidgetAccess(ownerId: string): Promise<boolean> {
+  const entitlements = await getUserEntitlements(ownerId);
+  return entitlements.hasWidgets;
+}
+
+// Active widget types available to add.
 export async function getWidgetCatalog(): Promise<WidgetCatalogEntry[]> {
   const admin = createAdminClient();
   const { data } = await admin

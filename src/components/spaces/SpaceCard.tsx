@@ -14,7 +14,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { ExternalLink, FolderPlus, Pencil, Trash2, Bookmark, Globe, Lock, Copy } from "lucide-react";
-import { LikeButton } from "./LikeButton";
+import { LikeButton } from "@/features/social";
 import { ShareButton } from "./ShareButton";
 import { StarButton } from "./StarButton";
 import { AddToCollectionDialog } from "@/components/collections/AddToCollectionDialog";
@@ -105,7 +105,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
       const res = await fetch(`/api/spaces/${space.id}/duplicate`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        alert(data?.error === "INSUFFICIENT_CREDITS" ? t.space.duplicateNoCredits : (data?.error || t.space.duplicateFailed));
+        alert(data?.error === "SPACE_LIMIT_REACHED" ? t.plan.spaceLimitReached : (data?.error || t.space.duplicateFailed));
         return;
       }
       router.push(`/dashboard/contents/edit-space/${data.spaceId}`);

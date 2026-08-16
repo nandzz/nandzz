@@ -5,11 +5,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Layers, Plus, Rocket, Zap, AlertTriangle, BarChart2, Coins } from "lucide-react";
+import { LayoutGrid, Layers, Plus, Rocket, Zap, AlertTriangle, BarChart2, Sparkles } from "lucide-react";
 import type { Space } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
 import { getServerTranslations } from "@/lib/i18n/server";
-import { getCreditsConfig } from "@/lib/credits-config";
+import { getUserEntitlements } from "@/lib/plan";
 import { PageShell } from "@/components/layout/PageShell";
 
 export default async function DashboardPage() {
@@ -24,10 +24,10 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [{ data: profile }, { data: rawSpaces }, creditsConfig] = await Promise.all([
+  const [{ data: profile }, { data: rawSpaces }, entitlements] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name, username, free_space_credits, paid_credits, show_contents, show_gallery, show_links")
+      .select("display_name, username, show_contents, show_gallery, show_links")
       .eq("id", user.id)
       .single(),
     supabase
@@ -35,18 +35,18 @@ export default async function DashboardPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    getCreditsConfig(),
+    getUserEntitlements(user.id),
   ]);
 
   const greeting = profile?.display_name || profile?.username || "there";
   const spaces: Space[] = (rawSpaces ?? []) as Space[];
 
-  const publishCost = creditsConfig.publishCost;
-  const freeCredits = profile?.free_space_credits ?? 0;
-  const paidCredits = profile?.paid_credits ?? 0;
-  const totalSpendable = freeCredits + paidCredits;
-  const atLimit = totalSpendable < publishCost;
-  const nearLimit = !atLimit && totalSpendable <= publishCost * 2;
+  // Publishing is free now; only Free plans have a space cap (unlimited plans
+  // pass spaceLimit === null and never see a banner).
+  const spaceLimit = entitlements.spaceLimit;
+  const usedSpaces = spaces.length;
+  const atLimit = spaceLimit !== null && usedSpaces >= spaceLimit;
+  const nearLimit = spaceLimit !== null && !atLimit && usedSpaces >= spaceLimit - 3;
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
@@ -90,24 +90,24 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Credit balance banners */}
+        {/* Space-limit banners (Free plan only) */}
         {FEATURES.monetization && atLimit && (
           <div className="mb-6 rounded-xl border border-orange-200 dark:border-orange-800/60 bg-orange-50/80 dark:bg-orange-950/20 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
-                  You&apos;re out of credits
+                  {usedSpaces} of {spaceLimit} spaces used
                 </p>
                 <p className="text-xs text-orange-700/80 dark:text-orange-400/80 mt-0.5">
-                  Publishing content costs {publishCost} credits. Top up to keep sharing.
+                  You&apos;ve reached your plan&apos;s space limit. Upgrade for unlimited spaces.
                 </p>
               </div>
             </div>
             <Link href="/dashboard/credits">
               <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm shrink-0 gap-1.5">
-                <Coins className="h-3.5 w-3.5" />
-                Buy credits
+                <Sparkles className="h-3.5 w-3.5" />
+                Upgrade
               </Button>
             </Link>
           </div>
@@ -117,11 +117,11 @@ export default async function DashboardPage() {
             <div className="flex items-center gap-3">
               <Zap className="h-4 w-4 text-yellow-600 shrink-0" />
               <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                <span className="font-medium">{totalSpendable} credits left.</span>{" "}
+                <span className="font-medium">{usedSpaces} of {spaceLimit} spaces used.</span>{" "}
                 <Link href="/dashboard/credits" className="underline underline-offset-2 hover:text-yellow-900 dark:hover:text-yellow-200">
-                  Top up
+                  Upgrade
                 </Link>{" "}
-                to keep publishing.
+                for unlimited spaces.
               </p>
             </div>
           </div>

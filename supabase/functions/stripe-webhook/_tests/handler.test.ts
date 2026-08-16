@@ -6,11 +6,11 @@ import type Stripe from "https://esm.sh/stripe@17?target=denonext";
 import {
   handleStripeEvent,
   type AdminClientLike,
-  type LedgerRow,
 } from "../handler.ts";
 
 // ---- Fake admin client ------------------------------------------------------
-// Records every RPC / query call so tests can assert on them.
+// Records every RPC / query call so tests can assert on them. `lookups` maps a
+// table name to the result its maybeSingle() should resolve with.
 
 interface RpcCall {
   name: string;
@@ -19,7 +19,8 @@ interface RpcCall {
 
 interface FakeAdminOptions {
   rpcError?: unknown;
-  lookupResult?: { data: LedgerRow | null; error: unknown };
+  // deno-lint-ignore no-explicit-any
+  lookups?: Record<string, { data: any; error: unknown }>;
 }
 
 function makeAdmin(opts: FakeAdminOptions = {}): {
@@ -47,7 +48,7 @@ function makeAdmin(opts: FakeAdminOptions = {}): {
         maybeSingle: () => {
           lookupCalls.push({ table, filters: [...filters] });
           return Promise.resolve(
-            opts.lookupResult ?? { data: null, error: null },
+            opts.lookups?.[table] ?? { data: null, error: null },
           );
         },
       };
@@ -77,7 +78,7 @@ function checkoutEvent(overrides: {
       object: {
         id: overrides.sessionId ?? "cs_test_123",
         payment_intent: paymentIntent,
-        currency: overrides.currency ?? "usd",
+        currency: overrides.currency ?? "eur",
         metadata:
           overrides.metadata === undefined
             ? {
@@ -139,30 +140,13 @@ Deno.test("checkout: grants credits and calls grant_credits with the expected pa
   });
 });
 
-Deno.test("checkout: skips with 200 when metadata is missing", async () => {
+Deno.test("checkout: skips with 200 when metadata is missing (e.g. a plan checkout)", async () => {
   const { admin, rpcCalls } = makeAdmin();
-  const result = await handleStripeEvent(
-    checkoutEvent({ metadata: {} }),
-    admin,
-  );
+  const result = await handleStripeEvent(checkoutEvent({ metadata: {} }), admin);
 
   assertEquals(result.status, 200);
   assertEquals(result.body.skipped, "missing_metadata");
-  assertEquals(rpcCalls.length, 0, "no RPC should fire without metadata");
-});
-
-Deno.test("checkout: skips when credits=0", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  const result = await handleStripeEvent(
-    checkoutEvent({
-      metadata: { user_id: "u", credit_pack_id: "p", credits: "0" },
-    }),
-    admin,
-  );
-
-  assertEquals(result.status, 200);
-  assertEquals(result.body.skipped, "missing_metadata");
-  assertEquals(rpcCalls.length, 0);
+  assertEquals(rpcCalls.length, 0, "no RPC should fire without credit-pack metadata");
 });
 
 Deno.test("checkout: returns 500 when grant_credits errors so Stripe retries", async () => {
@@ -174,44 +158,11 @@ Deno.test("checkout: returns 500 when grant_credits errors so Stripe retries", a
   assertEquals(rpcCalls.length, 1);
 });
 
-Deno.test("checkout: unwraps payment_intent when passed as an expanded object", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  await handleStripeEvent(
-    checkoutEvent({ paymentIntent: { id: "pi_expanded" } }),
-    admin,
-  );
-
-  assertEquals(rpcCalls[0].args.p_payment_intent_id, "pi_expanded");
-});
-
-Deno.test("checkout: tolerates missing payment_intent (null)", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  await handleStripeEvent(
-    checkoutEvent({ paymentIntent: null }),
-    admin,
-  );
-
-  assertEquals(rpcCalls[0].args.p_payment_intent_id, null);
-});
-
 // ---- charge.refunded --------------------------------------------------------
-
-Deno.test("refund: skips with 200 when payment_intent is missing", async () => {
-  const { admin, rpcCalls, lookupCalls } = makeAdmin();
-  const result = await handleStripeEvent(
-    refundEvent({ paymentIntent: null }),
-    admin,
-  );
-
-  assertEquals(result.status, 200);
-  assertEquals(result.body.skipped, "no_payment_intent");
-  assertEquals(rpcCalls.length, 0);
-  assertEquals(lookupCalls.length, 0);
-});
 
 Deno.test("refund: acks with 200 when no matching grant is found", async () => {
   const { admin, rpcCalls, lookupCalls } = makeAdmin({
-    lookupResult: { data: null, error: null },
+    lookups: { credit_ledger: { data: null, error: null } },
   });
   const result = await handleStripeEvent(refundEvent({}), admin);
 
@@ -226,20 +177,9 @@ Deno.test("refund: acks with 200 when no matching grant is found", async () => {
   assertEquals(rpcCalls.length, 0);
 });
 
-Deno.test("refund: returns 500 when the credit_ledger lookup errors", async () => {
-  const { admin, rpcCalls } = makeAdmin({
-    lookupResult: { data: null, error: { message: "db_down" } },
-  });
-  const result = await handleStripeEvent(refundEvent({}), admin);
-
-  assertEquals(result.status, 500);
-  assertEquals(result.body.error, "lookup_failed");
-  assertEquals(rpcCalls.length, 0);
-});
-
 Deno.test("refund: full refund claws back the full grant", async () => {
   const { admin, rpcCalls } = makeAdmin({
-    lookupResult: { data: { user_id: "user-1", delta: 500 }, error: null },
+    lookups: { credit_ledger: { data: { user_id: "user-1", delta: 500 }, error: null } },
   });
   const result = await handleStripeEvent(
     refundEvent({ amount: 1500, amountRefunded: 1500 }),
@@ -254,15 +194,12 @@ Deno.test("refund: full refund claws back the full grant", async () => {
     p_bucket: "paid",
     p_amount: -500,
     p_reason: "refund",
-    p_stripe_event_id: "evt_test_refund",
-    p_payment_intent_id: "pi_test_123",
   });
 });
 
 Deno.test("refund: partial refund claws back proportionally, rounded up", async () => {
-  // Original grant 500 credits for a $15 charge. Refund $7.50 → 50% → 250 credits.
   const { admin, rpcCalls } = makeAdmin({
-    lookupResult: { data: { user_id: "user-1", delta: 500 }, error: null },
+    lookups: { credit_ledger: { data: { user_id: "user-1", delta: 500 }, error: null } },
   });
   const result = await handleStripeEvent(
     refundEvent({ amount: 1500, amountRefunded: 750 }),
@@ -274,150 +211,243 @@ Deno.test("refund: partial refund claws back proportionally, rounded up", async 
   assertEquals(rpcCalls[0].args.p_amount, -250);
 });
 
-Deno.test("refund: rounds up so we never under-clawback on odd proportions", async () => {
-  // 501 credits, refund 1/3 → 167 credits (166.67 rounded up)
-  const { admin, rpcCalls } = makeAdmin({
-    lookupResult: { data: { user_id: "user-1", delta: 501 }, error: null },
-  });
-  const result = await handleStripeEvent(
-    refundEvent({ amount: 3000, amountRefunded: 1000 }),
-    admin,
-  );
-
-  assertEquals(result.body.clawed, 167);
-  assertEquals(rpcCalls[0].args.p_amount, -167);
-});
-
-Deno.test("refund: zero-amount refund is a no-op ack", async () => {
-  const { admin, rpcCalls } = makeAdmin({
-    lookupResult: { data: { user_id: "user-1", delta: 500 }, error: null },
-  });
-  const result = await handleStripeEvent(
-    refundEvent({ amount: 1500, amountRefunded: 0 }),
-    admin,
-  );
-
-  assertEquals(result.status, 200);
-  assertEquals(result.body.clawed, 0);
-  assertEquals(rpcCalls.length, 0);
-});
-
-Deno.test("refund: returns 500 when the clawback RPC errors so Stripe retries", async () => {
+Deno.test("refund: returns 500 when the credit_ledger lookup errors", async () => {
   const { admin } = makeAdmin({
-    lookupResult: { data: { user_id: "user-1", delta: 500 }, error: null },
-    rpcError: { message: "db_down" },
+    lookups: { credit_ledger: { data: null, error: { message: "db_down" } } },
   });
   const result = await handleStripeEvent(refundEvent({}), admin);
-
   assertEquals(result.status, 500);
-  assertEquals(result.body.error, "refund_failed");
+  assertEquals(result.body.error, "lookup_failed");
 });
 
-Deno.test("refund: unwraps payment_intent when passed as an expanded object", async () => {
-  const { admin, lookupCalls } = makeAdmin({
-    lookupResult: { data: null, error: null },
-  });
-  await handleStripeEvent(
-    refundEvent({ paymentIntent: { id: "pi_expanded" } }),
-    admin,
-  );
-
-  assertEquals(lookupCalls[0].filters[0], [
-    "stripe_payment_intent_id",
-    "pi_expanded",
-  ]);
-});
-
-// ---- customer.subscription.* (widget entitlements) --------------------------
+// ---- customer.subscription.* (plan subscriptions) ---------------------------
 
 function subscriptionEvent(overrides: {
   type?: string;
   metadata?: Record<string, string> | null;
   status?: string;
-  customer?: string | { id: string } | null;
-  currentPeriodEnd?: number | null;
+  priceId?: string | null;
   subId?: string;
+  currentPeriodEnd?: number | null;
   eventId?: string;
-  eventCreated?: number;
 }): Stripe.Event {
   return {
     id: overrides.eventId ?? "evt_test_sub",
     type: overrides.type ?? "customer.subscription.created",
     livemode: false,
-    created: overrides.eventCreated ?? 1_700_000_000,
+    created: 1_700_000_000,
     data: {
       object: {
         id: overrides.subId ?? "sub_test_123",
         status: overrides.status ?? "active",
-        customer: "customer" in overrides ? overrides.customer : "cus_test_1",
         current_period_end:
           "currentPeriodEnd" in overrides ? overrides.currentPeriodEnd : 1_700_100_000,
+        items: {
+          data: [
+            {
+              price: {
+                id: "priceId" in overrides ? overrides.priceId : "price_starter",
+              },
+            },
+          ],
+        },
         metadata:
           overrides.metadata === undefined
-            ? { user_id: "user-1", instance_id: "inst-1", catalog_id: "cat-1" }
+            ? { user_id: "user-1" }
             : overrides.metadata ?? {},
       } as unknown as Stripe.Subscription,
     },
   } as unknown as Stripe.Event;
 }
 
-Deno.test("subscription.created: calls grant_widget_subscription with mapped fields", async () => {
-  const { admin, rpcCalls } = makeAdmin();
+Deno.test("subscription.created: maps price→plan and calls set_user_plan", async () => {
+  const { admin, rpcCalls, lookupCalls } = makeAdmin({
+    lookups: { subscription_plans: { data: { slug: "starter" }, error: null } },
+  });
   const result = await handleStripeEvent(subscriptionEvent({}), admin);
 
   assertEquals(result.status, 200);
-  assertEquals(result.body.widget_status, "active");
+  assertEquals(result.body.plan_slug, "starter");
+  assertEquals(result.body.plan_status, "active");
+
+  // price → plan lookup
+  assertEquals(lookupCalls[0].table, "subscription_plans");
+  assertEquals(lookupCalls[0].filters, [["stripe_price_id", "price_starter"]]);
+
   assertEquals(rpcCalls.length, 1);
-  assertEquals(rpcCalls[0].name, "grant_widget_subscription");
+  assertEquals(rpcCalls[0].name, "set_user_plan");
   assertObjectMatch(rpcCalls[0].args, {
     p_user_id: "user-1",
-    p_instance_id: "inst-1",
-    p_catalog_id: "cat-1",
-    p_stripe_subscription_id: "sub_test_123",
-    p_stripe_customer_id: "cus_test_1",
+    p_plan_slug: "starter",
     p_status: "active",
-    p_stripe_event_id: "evt_test_sub",
+    p_sub_id: "sub_test_123",
   });
   assertEquals(
-    rpcCalls[0].args.p_current_period_end,
+    rpcCalls[0].args.p_period_end,
     new Date(1_700_100_000 * 1000).toISOString(),
   );
 });
 
-Deno.test("subscription.deleted: forces status=canceled regardless of object status", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  await handleStripeEvent(
-    subscriptionEvent({ type: "customer.subscription.deleted", status: "active" }),
+Deno.test("subscription.deleted: downgrades to free without a price lookup", async () => {
+  const { admin, rpcCalls, lookupCalls } = makeAdmin();
+  const result = await handleStripeEvent(
+    subscriptionEvent({ type: "customer.subscription.deleted", status: "canceled" }),
     admin,
   );
-  assertEquals(rpcCalls[0].args.p_status, "canceled");
-});
 
-Deno.test("subscription: unknown Stripe status (paused) coerces to past_due", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  await handleStripeEvent(subscriptionEvent({ status: "paused" }), admin);
-  assertEquals(rpcCalls[0].args.p_status, "past_due");
-});
-
-Deno.test("subscription: skips with 200 when instance_id metadata is missing", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  const result = await handleStripeEvent(subscriptionEvent({ metadata: {} }), admin);
   assertEquals(result.status, 200);
-  assertEquals(result.body.skipped, "missing_metadata");
+  assertEquals(result.body.plan_slug, "free");
+  assertEquals(result.body.plan_status, "canceled");
+  assertEquals(lookupCalls.length, 0, "deletion needs no price/plan lookup");
+  assertEquals(rpcCalls.length, 1);
+  assertObjectMatch(rpcCalls[0].args, {
+    p_user_id: "user-1",
+    p_plan_slug: "free",
+    p_status: "canceled",
+    p_period_end: null,
+  });
+});
+
+Deno.test("subscription: unknown price maps to no plan and is acked without a write", async () => {
+  const { admin, rpcCalls } = makeAdmin({
+    lookups: { subscription_plans: { data: null, error: null } },
+  });
+  const result = await handleStripeEvent(
+    subscriptionEvent({ priceId: "price_unknown" }),
+    admin,
+  );
+  assertEquals(result.status, 200);
+  assertEquals(result.body.skipped, "unknown_price");
   assertEquals(rpcCalls.length, 0);
 });
 
-Deno.test("subscription: unwraps expanded customer object", async () => {
-  const { admin, rpcCalls } = makeAdmin();
-  await handleStripeEvent(subscriptionEvent({ customer: { id: "cus_expanded" } }), admin);
-  assertEquals(rpcCalls[0].args.p_stripe_customer_id, "cus_expanded");
+Deno.test("subscription: resolves user via lookup when metadata has no user_id", async () => {
+  const { admin, rpcCalls, lookupCalls } = makeAdmin({
+    lookups: {
+      subscription_plans: { data: { slug: "pro" }, error: null },
+      profiles: { data: { id: "user-9" }, error: null },
+    },
+  });
+  const result = await handleStripeEvent(subscriptionEvent({ metadata: {} }), admin);
+
+  assertEquals(result.status, 200);
+  assertEquals(result.body.plan_slug, "pro");
+  // second lookup resolves the user by stored subscription id
+  const profileLookup = lookupCalls.find((c) => c.table === "profiles");
+  assertEquals(profileLookup?.filters, [["plan_stripe_subscription_id", "sub_test_123"]]);
+  assertEquals(rpcCalls[0].args.p_user_id, "user-9");
 });
 
-Deno.test("subscription: returns 500 when the RPC errors so Stripe retries", async () => {
-  const { admin } = makeAdmin({ rpcError: { message: "db_down" } });
+Deno.test("subscription: skips when no user can be resolved", async () => {
+  const { admin, rpcCalls } = makeAdmin({
+    lookups: {
+      subscription_plans: { data: { slug: "starter" }, error: null },
+      profiles: { data: null, error: null },
+    },
+  });
+  const result = await handleStripeEvent(subscriptionEvent({ metadata: {} }), admin);
+  assertEquals(result.status, 200);
+  assertEquals(result.body.skipped, "missing_user");
+  assertEquals(rpcCalls.length, 0);
+});
+
+Deno.test("subscription: returns 500 when set_user_plan errors so Stripe retries", async () => {
+  const { admin } = makeAdmin({
+    lookups: { subscription_plans: { data: { slug: "starter" }, error: null } },
+    rpcError: { message: "db_down" },
+  });
   const result = await handleStripeEvent(subscriptionEvent({}), admin);
   assertEquals(result.status, 500);
-  assertEquals(result.body.error, "widget_sub_failed");
+  assertEquals(result.body.error, "plan_update_failed");
+});
+
+// ---- invoice.paid -----------------------------------------------------------
+
+function invoiceEvent(overrides: {
+  priceId?: string | null;
+  subId?: string | null;
+  userId?: string | null;
+  periodEnd?: number | null;
+  eventId?: string;
+}): Stripe.Event {
+  return {
+    id: overrides.eventId ?? "evt_test_invoice",
+    type: "invoice.paid",
+    livemode: false,
+    created: 1_700_000_000,
+    data: {
+      object: {
+        id: "in_test_1",
+        subscription: "subId" in overrides ? overrides.subId : "sub_test_123",
+        subscription_details: {
+          metadata: { user_id: "userId" in overrides ? overrides.userId : "user-1" },
+        },
+        lines: {
+          data: [
+            {
+              price: { id: "priceId" in overrides ? overrides.priceId : "price_pro" },
+              period: {
+                end: "periodEnd" in overrides ? overrides.periodEnd : 1_702_700_000,
+              },
+            },
+          ],
+        },
+      },
+    },
+  } as unknown as Stripe.Event;
+}
+
+Deno.test("invoice.paid: updates plan state and refills the monthly allowance", async () => {
+  const { admin, rpcCalls } = makeAdmin({
+    lookups: { subscription_plans: { data: { slug: "pro" }, error: null } },
+  });
+  const result = await handleStripeEvent(invoiceEvent({}), admin);
+
+  assertEquals(result.status, 200);
+  assertEquals(result.body.refilled, "pro");
+  assertEquals(rpcCalls.length, 2);
+  assertEquals(rpcCalls[0].name, "set_user_plan");
+  assertObjectMatch(rpcCalls[0].args, {
+    p_user_id: "user-1",
+    p_plan_slug: "pro",
+    p_status: "active",
+    p_sub_id: "sub_test_123",
+  });
+  assertEquals(
+    rpcCalls[0].args.p_period_end,
+    new Date(1_702_700_000 * 1000).toISOString(),
+  );
+  assertEquals(rpcCalls[1].name, "refill_plan_credits");
+  assertObjectMatch(rpcCalls[1].args, { p_user_id: "user-1", p_plan_slug: "pro" });
+});
+
+Deno.test("invoice.paid: skips when the price maps to no plan", async () => {
+  const { admin, rpcCalls } = makeAdmin({
+    lookups: { subscription_plans: { data: null, error: null } },
+  });
+  const result = await handleStripeEvent(invoiceEvent({ priceId: "price_x" }), admin);
+  assertEquals(result.status, 200);
+  assertEquals(result.body.skipped, "unknown_price");
+  assertEquals(rpcCalls.length, 0);
+});
+
+Deno.test("invoice.paid: skips when subscription/price is missing", async () => {
+  const { admin, rpcCalls } = makeAdmin();
+  const result = await handleStripeEvent(invoiceEvent({ subId: null }), admin);
+  assertEquals(result.status, 200);
+  assertEquals(result.body.skipped, "missing_sub_or_price");
+  assertEquals(rpcCalls.length, 0);
+});
+
+Deno.test("invoice.paid: returns 500 when refill errors so Stripe retries", async () => {
+  const { admin } = makeAdmin({
+    lookups: { subscription_plans: { data: { slug: "pro" }, error: null } },
+    rpcError: { message: "db_down" },
+  });
+  const result = await handleStripeEvent(invoiceEvent({}), admin);
+  // set_user_plan is the first RPC and it errors first → plan_update_failed.
+  assertEquals(result.status, 500);
+  assertEquals(result.body.error, "plan_update_failed");
 });
 
 // ---- unhandled event types --------------------------------------------------

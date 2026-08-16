@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUserEntitlements } from "@/lib/plan";
 import {
   computeAvailableSlots,
   normalizeCalendarConfig,
@@ -29,7 +30,7 @@ export async function GET(
 
   const { data: instance } = await admin
     .from("widget_instances")
-    .select("id, enabled, config")
+    .select("id, enabled, config, user_id")
     .eq("id", instanceId)
     .maybeSingle();
 
@@ -37,11 +38,9 @@ export async function GET(
     return NextResponse.json({ error: "Widget unavailable" }, { status: 404 });
   }
 
-  // Entitlement gate — no live subscription ⇒ nothing bookable.
-  const { data: hasAccess } = await admin.rpc("has_widget_access", {
-    p_instance_id: instanceId,
-  });
-  if (!hasAccess) return NextResponse.json({ slots: [] });
+  // Entitlement gate — the owner's plan must include widgets, else nothing bookable.
+  const entitlements = await getUserEntitlements(instance.user_id as string);
+  if (!entitlements.hasWidgets) return NextResponse.json({ slots: [] });
 
   const config = normalizeCalendarConfig(instance.config);
 

@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { toggleLike } from "../actions/toggle-like";
 
 interface LikeButtonProps {
   spaceId: string;
@@ -28,44 +28,27 @@ export function LikeButton({
     e.preventDefault();
     e.stopPropagation();
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
     // Optimistic update
     const wasLiked = liked;
     const prevCount = likesCount;
     setLiked(!wasLiked);
     setLikesCount(wasLiked ? prevCount - 1 : prevCount + 1);
 
-    try {
-      if (wasLiked) {
-        const { error } = await supabase
-          .from("space_likes")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("space_id", spaceId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("space_likes")
-          .insert({ user_id: user.id, space_id: spaceId });
-        if (error) throw error;
-      }
-      startTransition(() => {
-        router.refresh();
-      });
-    } catch {
-      // Revert optimistic update on error
+    const result = await toggleLike({ spaceId });
+
+    if (!result.ok) {
+      // Revert optimistic update on any failure.
       setLiked(wasLiked);
       setLikesCount(prevCount);
+      if (result.error === "UNAUTHENTICATED") router.push("/login");
+      return;
     }
+
+    // Reconcile with the server's authoritative state, then refresh other
+    // server-rendered views of the same space.
+    setLiked(result.liked);
+    setLikesCount(result.likesCount);
+    startTransition(() => router.refresh());
   };
 
   const iconSize = size === "sm" ? "size-3.5" : "size-5";
@@ -81,9 +64,7 @@ export function LikeButton({
         liked ? "text-red-500" : "text-muted-foreground"
       )}
     >
-      <Heart
-        className={cn(iconSize, liked && "fill-red-500")}
-      />
+      <Heart className={cn(iconSize, liked && "fill-red-500")} />
       <span>{likesCount}</span>
     </button>
   );

@@ -82,10 +82,12 @@ async function loadBookingContext(
   });
   if (!calendar) return null;
 
-  const { data: hasAccess } = await admin.rpc("has_widget_access", {
-    p_instance_id: calendar.id,
+  // Widget access is now a plan feature keyed on the profile owner's plan.
+  const { data: hasWidgets } = await admin.rpc("user_has_entitlement", {
+    p_user_id: ownerId,
+    p_entitlement: "widgets",
   });
-  if (!hasAccess) return null;
+  if (!hasWidgets) return null;
 
   const config = calendar.config ?? {};
   const services = Array.isArray(config.services) ? config.services : [];
@@ -165,7 +167,7 @@ type ChargeContext = {
   requestId: string;
   rid: string;
   // Billed via charge_agent_usage in both modes: tokens→credits drawn from the
-  // owner's `agent` widget allowance first, overflow to their paid credits.
+  // owner's plan_credits first, overflow to their paid_credits.
   // instanceId is null when the caller didn't forward one; owner mode then
   // falls back to charging the caller directly (charge_llm_usage), visitor mode
   // skips billing gracefully.
@@ -369,9 +371,8 @@ async function streamOpenAI(
         if (usage && usage.input + usage.output > 0) {
           if (charge.instanceId) {
             // Both owner (AgentStudio) and visitor mode bill through
-            // charge_agent_usage: tokens→credits, drawing the widget instance's
-            // monthly allowance first and spilling any remainder to the owner's
-            // paid credits.
+            // charge_agent_usage: tokens→credits, drawing the owner's plan_credits
+            // first and spilling any remainder to their paid credits.
             try {
               const { data: split, error: usageErr } = await charge.admin.rpc("charge_agent_usage", {
                 p_instance_id: charge.instanceId,
@@ -700,9 +701,8 @@ serve(async (req: Request) => {
 
   // 5. Stream response. After the stream completes and OpenAI has reported
   //    real token counts, usage is billed via charge_agent_usage in BOTH
-  //    modes: tokens→credits drawn from the owner's `agent` widget allowance
-  //    first, then their paid credits (see the ChargeContext branch in
-  //    streamOpenAI).
+  //    modes: tokens→credits drawn from the owner's plan_credits first, then
+  //    their paid credits (see the ChargeContext branch in streamOpenAI).
   return streamOpenAI(systemPrompt, messages, openAIKey, mode === "owner", bookingContext, {
     admin,
     userId: callerUserId,

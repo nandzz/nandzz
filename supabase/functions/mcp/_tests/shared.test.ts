@@ -55,11 +55,9 @@ Deno.test("decodeBase64: tolerates whitespace/newlines", () => {
   assertEquals(new TextDecoder().decode(decodeBase64(wrapped)), "hello");
 });
 
-// ─── The regression that motivated this whole test file ────────────────────
-// Never pass `p_cost: null` to publish_space_tx — the DB does
-// `int - NULL = NULL` and then the UPDATE trips profiles.paid_credits NOT NULL.
-// Omit the key so the SQL DEFAULT (or app_settings lookup) applies.
-Deno.test("publishSpace: does NOT pass p_cost in the RPC args", async () => {
+// publish_space_tx no longer takes p_cost (publishing is free). The RPC is now
+// called with exactly p_user_id / p_space_payload / p_client_request_id.
+Deno.test("publishSpace: calls publish_space_tx with only the 3 expected args", async () => {
   const { ctx, rpcCalls } = makeCtx({
     rpc: { publish_space_tx: publishOk("space-xyz", 100, 5) },
   });
@@ -71,25 +69,25 @@ Deno.test("publishSpace: does NOT pass p_cost in the RPC args", async () => {
   const args = rpcCalls[0].args!;
   assert(
     !("p_cost" in args),
-    `p_cost must be omitted so DB default applies, got: ${JSON.stringify(args)}`,
+    `p_cost must not be passed — publishing is free, got: ${JSON.stringify(args)}`,
   );
   assertEquals(args.p_user_id, "user-1");
   assertEquals(args.p_space_payload, { title: "t", is_public: true });
   assert(typeof args.p_client_request_id === "string");
 
   assertEquals(res.spaceId, "space-xyz");
-  assertEquals(res.freeCredits, 100);
+  assertEquals(res.planCredits, 100);
   assertEquals(res.paidCredits, 5);
 });
 
-Deno.test("publishSpace: surfaces INSUFFICIENT_CREDITS as a friendly message", async () => {
+Deno.test("publishSpace: surfaces SPACE_LIMIT_REACHED as a friendly message", async () => {
   const { ctx } = makeCtx({
-    rpc: { publish_space_tx: { error: { message: "INSUFFICIENT_CREDITS" } } },
+    rpc: { publish_space_tx: { error: { message: "SPACE_LIMIT_REACHED" } } },
   });
   await assertRejects(
     () => publishSpace(ctx, {}),
     Error,
-    "Not enough credits",
+    "space limit",
   );
 });
 
@@ -98,7 +96,7 @@ Deno.test("publishSpace: unwraps single-row array from RPC", async () => {
     rpc: { publish_space_tx: publishOk("sp-1", 42, 7) },
   });
   const r = await publishSpace(ctx, {});
-  assertEquals(r, { spaceId: "sp-1", freeCredits: 42, paidCredits: 7 });
+  assertEquals(r, { spaceId: "sp-1", planCredits: 42, paidCredits: 7 });
 });
 
 // ─── attachToCollection ────────────────────────────────────────────────────

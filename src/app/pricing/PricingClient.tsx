@@ -1,36 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Zap, HelpCircle, ArrowRight, Sparkles, Coins } from "lucide-react";
+import { Check, Minus, HelpCircle, ArrowRight, Sparkles, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CreditPack } from "@/lib/types";
+import type { CreditPack, SubscriptionPlan } from "@/lib/types";
+
+function formatPrice(cents: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: (currency || "eur").toUpperCase(),
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
 
 export function PricingClient({
+  plans,
   packs,
-  publishCost,
-  signupGrant,
 }: {
+  plans: SubscriptionPlan[];
   packs: CreditPack[];
-  publishCost: number;
-  signupGrant: number;
 }) {
-  const signupPublishes = publishCost > 0 ? Math.floor(signupGrant / publishCost) : signupGrant;
   const faqs: { q: string; a: string }[] = [
     {
-      q: "How do credits work?",
-      a: `Every new account gets ${signupGrant} free credits, enough to publish ${signupPublishes} pieces of content. Publishing content costs ${publishCost} credits. Chatting with the AI agent on your profile bills per token from your paid balance.`,
+      q: "What do the plans include?",
+      a: "Free lets you build a branded page with up to 25 spaces and content sections. Starter unlocks widgets (booking + AI agent), MCP access and 500 AI credits a month. Pro adds analytics and 1,500 AI credits a month, with unlimited spaces on both paid plans.",
     },
     {
-      q: "Do credits expire?",
-      a: "Paid credits never expire. Free signup credits are content-only and stay on your account indefinitely too.",
+      q: "How do AI credits work?",
+      a: "Paid plans include a monthly AI credit allowance that resets each billing period. Credits are spent on AI features — chatting with your agent and editing pages with AI. Need more? Buy top-up packs that never expire; they're only used after your monthly allowance runs out.",
     },
     {
-      q: "What's the difference between free and paid credits?",
-      a: "Free credits can only be spent on publishing content. Paid credits can be spent on anything — content or AI chat. When you publish, free credits are used first.",
+      q: "Can I change or cancel my plan?",
+      a: "Yes — upgrade, downgrade or cancel anytime from your subscription page. Cancelling drops you back to the Free plan at the end of the billing period.",
     },
     {
-      q: "Can I get a refund?",
-      a: "Yes — within 14 days of purchase, contact support and we'll refund unused credits.",
+      q: "Do purchased credits expire?",
+      a: "No. Top-up credits you buy never expire. Only the monthly plan allowance resets each period.",
     },
     {
       q: "Is my payment information secure?",
@@ -47,78 +52,75 @@ export function PricingClient({
       {/* Hero */}
       <section className="mx-auto max-w-4xl px-4 py-20 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200/60 bg-violet-50/80 px-4 py-1.5 dark:border-violet-800/60 dark:bg-violet-950/40">
-          <Coins className="h-3.5 w-3.5 text-violet-500" />
+          <Sparkles className="h-3.5 w-3.5 text-violet-500" />
           <span className="text-xs font-medium text-violet-700 dark:text-violet-300">
-            Pay as you go
+            Simple plans
           </span>
         </div>
 
         <h1 className="text-[clamp(2.5rem,6vw,4rem)] font-bold tracking-tight leading-[1.1]">
-          Credits.{" "}
-          <span className="text-violet-600">No subscriptions.</span>
+          One page.{" "}
+          <span className="text-violet-600">Every tool.</span>
         </h1>
         <p className="mt-5 text-lg text-muted-foreground max-w-md mx-auto">
-          Get {signupGrant} free credits when you sign up. Top up whenever you need more. Credits never expire.
+          Start free. Upgrade when you want widgets, AI and analytics on your branded page.
         </p>
       </section>
 
-      {/* Pack cards */}
+      {/* Plan cards */}
       <section className="mx-auto max-w-5xl px-4 pb-12">
-        {packs.length > 0 ? (
+        {plans.length > 0 ? (
           <div className="grid sm:grid-cols-3 gap-6">
-            {packs.map((pack, idx) => {
-              const isBestValue = idx === 1;
+            {plans.map((plan) => {
+              const isPopular = plan.slug === "starter";
               return (
                 <div
-                  key={pack.id}
+                  key={plan.id}
                   className={`relative rounded-2xl border p-8 flex flex-col bg-card ${
-                    isBestValue
+                    isPopular
                       ? "border-2 border-violet-500 shadow-2xl shadow-violet-500/10"
                       : "border-border/60"
                   }`}
                 >
-                  {isBestValue && (
+                  {isPopular && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-4 py-1 text-xs font-semibold text-white shadow-sm shadow-violet-600/40">
                         <Sparkles className="h-3 w-3" />
-                        Best value
+                        Most popular
                       </span>
                     </div>
                   )}
-                  {/* Price leads so it reads as money, not a credit count —
-                      a one-time top-up, not a plan. */}
-                  <div className="flex items-baseline gap-1.5">
+                  <p className="text-lg font-semibold">{plan.name}</p>
+                  <div className="mt-2 flex items-baseline gap-1.5">
                     <span className="text-4xl font-bold tracking-tight">
-                      ${(pack.price_cents / 100).toFixed(0)}
+                      {plan.price_cents === 0 ? "Free" : formatPrice(plan.price_cents, plan.currency)}
                     </span>
-                    <span className="text-sm font-medium text-muted-foreground">one-time</span>
+                    {plan.price_cents > 0 && (
+                      <span className="text-sm font-medium text-muted-foreground">/{plan.billing_interval}</span>
+                    )}
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {pack.credits.toLocaleString()} credits
-                  </p>
+                  {plan.description && (
+                    <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+                  )}
+
                   <ul className="space-y-2.5 mt-6 mb-8 text-sm flex-1">
-                    <li className="flex items-center gap-2.5">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/50">
-                        <Check className="h-3 w-3 text-violet-600 dark:text-violet-400" />
-                      </div>
-                      <span>{publishCost > 0 ? Math.floor(pack.credits / publishCost) : pack.credits} content publishes</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/50">
-                        <Check className="h-3 w-3 text-violet-600 dark:text-violet-400" />
-                      </div>
-                      <span>Use for AI chat too</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/50">
-                        <Check className="h-3 w-3 text-violet-600 dark:text-violet-400" />
-                      </div>
-                      <span>Never expires</span>
-                    </li>
+                    <Feature ok>
+                      {plan.space_limit === null ? "Unlimited spaces" : `Up to ${plan.space_limit} spaces`}
+                    </Feature>
+                    <Feature ok>Content, gallery &amp; links sections</Feature>
+                    <Feature ok={plan.has_widgets}>Widgets (booking + AI agent)</Feature>
+                    <Feature ok={plan.monthly_credits > 0}>
+                      {plan.monthly_credits > 0
+                        ? `${plan.monthly_credits.toLocaleString()} AI credits / month`
+                        : "No AI credits"}
+                    </Feature>
+                    <Feature ok={plan.has_mcp}>MCP access (connect Claude)</Feature>
+                    <Feature ok={plan.has_analytics}>Analytics</Feature>
                   </ul>
-                  <Link href="/dashboard/credits">
-                    <Button variant={isBestValue ? "default" : "outline"} className="w-full">
-                      Get {pack.credits.toLocaleString()} credits
+
+                  <Link href={plan.price_cents === 0 ? "/login?tab=signup" : "/dashboard/credits"}>
+                    <Button variant={isPopular ? "default" : "outline"} className="w-full">
+                      {plan.price_cents === 0 ? "Get started" : `Choose ${plan.name}`}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
@@ -128,24 +130,34 @@ export function PricingClient({
           </div>
         ) : (
           <p className="text-center text-muted-foreground">
-            No packs available yet — check back soon.
+            Plans aren&apos;t available yet — check back soon.
           </p>
         )}
 
-        <div className="mt-10 rounded-2xl border border-border/40 bg-muted/30 px-6 py-5 max-w-2xl mx-auto">
-          <div className="flex items-start gap-3">
-            <Zap className="h-5 w-5 text-violet-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold">New here? Start free.</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Every new account gets {signupGrant} free credits — enough to publish {signupPublishes} pieces of content. No credit card required.
-              </p>
-              <Link href="/login?tab=signup" className="text-xs font-semibold text-violet-600 dark:text-violet-400 mt-2 inline-flex items-center gap-1 hover:underline">
-                Create your account →
-              </Link>
+        {packs.length > 0 && (
+          <div className="mt-10 rounded-2xl border border-border/40 bg-muted/30 px-6 py-5 max-w-2xl mx-auto">
+            <div className="flex items-start gap-3">
+              <Layers className="h-5 w-5 text-violet-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">Need more AI credits?</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  On a paid plan you can buy top-up credit packs (from{" "}
+                  {formatPrice(
+                    Math.min(...packs.map((p) => p.price_cents)),
+                    packs[0].currency
+                  )}
+                  ) any time. Top-up credits never expire and are used only after your monthly allowance.
+                </p>
+                <Link
+                  href="/dashboard/credits"
+                  className="text-xs font-semibold text-violet-600 dark:text-violet-400 mt-2 inline-flex items-center gap-1 hover:underline"
+                >
+                  Manage your subscription →
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* FAQ */}
@@ -166,5 +178,24 @@ export function PricingClient({
         </div>
       </section>
     </div>
+  );
+}
+
+function Feature({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <li className={`flex items-center gap-2.5 ${ok ? "" : "text-muted-foreground/60"}`}>
+      <div
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+          ok ? "bg-violet-100 dark:bg-violet-900/50" : "bg-muted"
+        }`}
+      >
+        {ok ? (
+          <Check className="h-3 w-3 text-violet-600 dark:text-violet-400" />
+        ) : (
+          <Minus className="h-3 w-3 text-muted-foreground/50" />
+        )}
+      </div>
+      <span>{children}</span>
+    </li>
   );
 }

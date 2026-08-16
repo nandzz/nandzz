@@ -12,7 +12,7 @@ import {
   YoutubeIcon,
 } from "./BrandIcons";
 import type { Profile, WidgetInstanceWithCatalog } from "@/lib/types";
-import { FollowButton } from "./FollowButton";
+import { FollowButton } from "@/features/social";
 import { FollowersDialog } from "./FollowersDialog";
 import { WidgetStrip } from "@/components/widgets/WidgetStrip";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";

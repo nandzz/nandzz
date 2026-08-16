@@ -47,7 +47,6 @@ export default async function WidgetInstanceSettingsPage({
 
       <WidgetInstanceSettings
         instanceId={widget.id}
-        catalogId={widget.catalog_id}
         hasAccess={widget.has_access}
         initialEnabled={widget.enabled}
       />

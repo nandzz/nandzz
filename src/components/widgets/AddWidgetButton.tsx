@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-// Kicks off Stripe Checkout (subscription) for a widget type.
-export function SubscribeButton({
+// Adds a widget instance to the owner's profile (no checkout — widgets are
+// unlocked by the plan) and navigates to its studio.
+export function AddWidgetButton({
   catalogId,
   label,
   className,
@@ -16,36 +18,38 @@ export function SubscribeButton({
   className?: string;
 }) {
   const { t } = useLanguage();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function subscribe() {
+  async function add() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/widgets/checkout", {
+      const res = await fetch("/api/widgets/instances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ catalog_id: catalogId }),
       });
       const data = await res.json();
-      if (!res.ok || !data.url) {
-        setError(t.booking.errorCheckoutFailed);
+      if (!res.ok || !data.id) {
+        setError(t.booking.errorCouldNotSave);
         setLoading(false);
         return;
       }
-      window.location.href = data.url;
+      router.push(`/dashboard/widgets/${data.id}`);
+      router.refresh();
     } catch {
-      setError(t.booking.errorCheckoutFailed);
+      setError(t.booking.errorCouldNotSave);
       setLoading(false);
     }
   }
 
   return (
     <div className={className}>
-      <Button onClick={subscribe} disabled={loading} size="sm">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {label ?? t.booking.subscribeDefaultLabel}
+      <Button onClick={add} disabled={loading} size="sm">
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        {label ?? t.booking.addWidgetButton}
       </Button>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>

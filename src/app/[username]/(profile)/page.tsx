@@ -20,6 +20,7 @@ import { FEATURES } from "@/lib/flags";
 import { getProfileWidgets } from "@/lib/widgets/server";
 import type { WidgetInstanceWithCatalog, Space } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { getIsFollowing, getLikedSpaceIds } from "@/features/social/server";
 import { PageShell } from "@/components/layout/PageShell";
 
 const fetchProfileByUsername = async (username: string) => {
@@ -169,29 +170,19 @@ export default async function ProfilePage({
     const allSpaceIds = [...(spaces ?? []), ...(galleryImages ?? [])].map(s => s.id);
 
     if (user.id !== profile.id) {
-      const { data: followRow } = await supabase
-        .from("user_follows")
-        .select("id")
-        .eq("follower_id", user.id)
-        .eq("following_id", profile.id)
-        .maybeSingle();
-      isFollowing = !!followRow;
+      isFollowing = await getIsFollowing(supabase, user.id, profile.id);
     }
 
     if (allSpaceIds.length > 0) {
-      const [{ data: likes }, { data: savedEntries }] = await Promise.all([
-        supabase
-          .from("space_likes")
-          .select("space_id")
-          .eq("user_id", user.id)
-          .in("space_id", allSpaceIds),
+      const [likes, { data: savedEntries }] = await Promise.all([
+        getLikedSpaceIds(supabase, user.id, allSpaceIds),
         supabase
           .from("collection_spaces")
           .select("space_id, collections!inner(user_id)")
           .eq("collections.user_id", user.id)
           .in("space_id", allSpaceIds),
       ]);
-      likedSpaceIds = likes?.map(l => l.space_id) || [];
+      likedSpaceIds = likes;
       savedSpaceIds = [...new Set((savedEntries ?? []).map((e: { space_id: string }) => e.space_id))];
     }
   }

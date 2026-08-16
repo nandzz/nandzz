@@ -16,9 +16,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Bot, Plug, Blocks } from "lucide-react";
+import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Plug, Blocks, Calendar, Users, BarChart3, Palette } from "lucide-react";
 import type { Profile } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
+import { usePlanEntitlements } from "@/lib/plan-client";
 import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -30,6 +31,7 @@ export function Navbar() {
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const { isHidden } = useChrome();
+  const entitlements = usePlanEntitlements();
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -134,22 +136,13 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {user ? (
             <div className="hidden md:flex items-center gap-3">
-              {FEATURES.widgets && (
+              {FEATURES.widgets && entitlements.hasWidgets && (
                 <Link
                   href="/dashboard/widgets"
                   className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 >
                   <Blocks className="h-3.5 w-3.5" />
                   Widgets
-                </Link>
-              )}
-              {FEATURES.agent && profile?.username && (
-                <Link
-                  href="/dashboard/agent"
-                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                >
-                  <Bot className="h-3.5 w-3.5" />
-                  {t.nav.myAgent}
                 </Link>
               )}
               <Link
@@ -218,29 +211,25 @@ export function Navbar() {
 
                   <DropdownMenuGroup>
                     {profile?.username && (
-                      <DropdownMenuItem onClick={() => router.push(`/${profile.username}`)} className="gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
+                      <DropdownMenuItem render={<Link href={`/${profile.username}`} />} className="gap-2">
+                        <User aria-hidden className="h-4 w-4 text-muted-foreground" />
                         {t.nav.profile}
                       </DropdownMenuItem>
                     )}
-                    {FEATURES.agent && profile?.username && (
-                      <DropdownMenuItem onClick={() => router.push("/dashboard/agent")} className="gap-2">
-                        <Bot className="h-4 w-4 text-muted-foreground" />
-                        {t.nav.myAgent}
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => router.push("/dashboard/settings")} className="gap-2">
-                      <Settings className="h-4 w-4 text-muted-foreground" />
+                    <DropdownMenuItem render={<Link href="/dashboard/settings" />} className="gap-2">
+                      <Settings aria-hidden className="h-4 w-4 text-muted-foreground" />
                       {t.nav.settings}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push("/mcp")} className="gap-2">
-                      <Plug className="h-4 w-4 text-muted-foreground" />
-                      {t.nav.mcp}
-                    </DropdownMenuItem>
+                    {entitlements.hasMcp && (
+                      <DropdownMenuItem render={<Link href="/mcp" />} className="gap-2">
+                        <Plug aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        {t.nav.mcp}
+                      </DropdownMenuItem>
+                    )}
                     {FEATURES.monetization && (
-                      <DropdownMenuItem onClick={() => router.push("/dashboard/credits")} className="gap-2">
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                        Credits
+                      <DropdownMenuItem render={<Link href="/dashboard/credits" />} className="gap-2">
+                        <CreditCard aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        Subscription
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuGroup>
@@ -303,38 +292,73 @@ export function Navbar() {
 
                   <DropdownMenuSeparator />
 
-                  {/* Navigation — Feed/Explore/Spaces/Profile live in the bottom tab bar */}
+                  {/* Account — Feed/Contents/Profile live in the bottom tab bar */}
                   <DropdownMenuGroup>
-                    {FEATURES.widgets && (
-                      <DropdownMenuItem onClick={() => router.push("/dashboard/widgets")} className="gap-2">
-                        <Blocks className="h-4 w-4 text-muted-foreground" />
+                    <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t.nav.groupAccount}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem render={<Link href="/dashboard/bookings" />} className="gap-2">
+                      <Calendar aria-hidden className="h-4 w-4 text-muted-foreground" />
+                      {t.nav.bookings}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem render={<Link href="/dashboard/followers" />} className="gap-2">
+                      <Users aria-hidden className="h-4 w-4 text-muted-foreground" />
+                      {t.nav.followers}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem render={<Link href="/dashboard/following" />} className="gap-2">
+                      <UserPlus aria-hidden className="h-4 w-4 text-muted-foreground" />
+                      {t.nav.following}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Business */}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t.nav.groupBusiness}
+                    </DropdownMenuLabel>
+                    {FEATURES.widgets && entitlements.hasWidgets && (
+                      <DropdownMenuItem render={<Link href="/dashboard/widgets" />} className="gap-2">
+                        <Blocks aria-hidden className="h-4 w-4 text-muted-foreground" />
                         Widgets
                       </DropdownMenuItem>
                     )}
-                    {FEATURES.agent && profile?.username && (
-                      <DropdownMenuItem onClick={() => router.push("/dashboard/agent")} className="gap-2">
-                        <Bot className="h-4 w-4 text-muted-foreground" />
-                        {t.nav.myAgent}
+                    {FEATURES.brand && (
+                      <DropdownMenuItem render={<Link href="/dashboard/brand" />} className="gap-2">
+                        <Palette aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        Brand
+                      </DropdownMenuItem>
+                    )}
+                    {entitlements.hasAnalytics && (
+                      <DropdownMenuItem render={<Link href="/dashboard/analytics" />} className="gap-2">
+                        <BarChart3 aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        {t.nav.analytics}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuGroup>
 
                   <DropdownMenuSeparator />
 
-                  {/* Account */}
+                  {/* Settings */}
                   <DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => router.push("/dashboard/settings")} className="gap-2">
-                      <Settings className="h-4 w-4 text-muted-foreground" />
+                    <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t.nav.groupSettings}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem render={<Link href="/dashboard/settings" />} className="gap-2">
+                      <Settings aria-hidden className="h-4 w-4 text-muted-foreground" />
                       {t.nav.settings}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push("/mcp")} className="gap-2">
-                      <Plug className="h-4 w-4 text-muted-foreground" />
-                      {t.nav.mcp}
-                    </DropdownMenuItem>
                     {FEATURES.monetization && (
-                      <DropdownMenuItem onClick={() => router.push("/dashboard/credits")} className="gap-2">
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                        Credits
+                      <DropdownMenuItem render={<Link href="/dashboard/credits" />} className="gap-2">
+                        <CreditCard aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        Subscription
+                      </DropdownMenuItem>
+                    )}
+                    {entitlements.hasMcp && (
+                      <DropdownMenuItem render={<Link href="/mcp" />} className="gap-2">
+                        <Plug aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        {t.nav.mcp}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuGroup>
@@ -359,12 +383,12 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem onClick={() => router.push("/login")} className="gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                  <DropdownMenuItem render={<Link href="/login" />} className="gap-2">
+                    <User aria-hidden className="h-4 w-4 text-muted-foreground" />
                     {t.nav.login}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/login?tab=signup")} className="gap-2">
-                    <UserPlus className="h-4 w-4 text-muted-foreground" />
+                  <DropdownMenuItem render={<Link href="/login?tab=signup" />} className="gap-2">
+                    <UserPlus aria-hidden className="h-4 w-4 text-muted-foreground" />
                     {t.nav.signup}
                   </DropdownMenuItem>
                 </>

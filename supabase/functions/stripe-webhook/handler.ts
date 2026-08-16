@@ -1,20 +1,30 @@
 // Pure business logic for the Stripe webhook. Kept separate from index.ts so
 // it can be unit-tested without spinning up an HTTP server, Deno.env, or a
 // real Supabase / Stripe client.
+//
+// Two payment shapes flow through here:
+//   * credit-pack one-off purchases  → checkout.session.completed / charge.refunded
+//   * site-wide plan subscriptions   → customer.subscription.* / invoice.paid
+//
+// Plan events map the subscription's Stripe price id → subscription_plans.slug
+// (looked up in the DB) and then drive the profile's plan state via set_user_plan
+// (+ refill_plan_credits when a billing period advances / an invoice is paid).
 
 import type Stripe from "https://esm.sh/stripe@17?target=denonext";
 
+// Minimal chainable query-builder shape. The real Supabase client returns a much
+// richer builder; the handler only touches select().eq()…maybeSingle().
+export interface QueryBuilder {
+  select(cols: string): QueryBuilder;
+  eq(col: string, val: unknown): QueryBuilder;
+  // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  maybeSingle(): Promise<{ data: any; error: unknown }>;
+}
+
 export interface AdminClientLike {
   rpc(name: string, args: Record<string, unknown>): Promise<{ error: unknown }>;
-  from(table: string): {
-    select(cols: string): {
-      eq(col: string, val: unknown): {
-        eq(col: string, val: unknown): {
-          maybeSingle(): Promise<{ data: LedgerRow | null; error: unknown }>;
-        };
-      };
-    };
-  };
+  from(table: string): QueryBuilder;
 }
 
 export interface LedgerRow {
@@ -52,81 +62,190 @@ export async function handleStripeEvent(
     case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted":
-      return handleWidgetSubscription(event, admin, logger);
+      return handlePlanSubscription(event, admin, logger);
+    case "invoice.paid":
+      return handleInvoicePaid(event, admin, logger);
     default:
       logger.info(`event.type=${event.type} not handled — acking`);
       return { status: 200, body: { received: true, ignored: event.type } };
   }
 }
 
-// Widget entitlement. Fires on every subscription lifecycle change. The
-// subscription carries our metadata (set via `subscription_data.metadata` at
-// checkout), so we can map it straight to the entitlement row. Status +
-// current_period_end drive `has_widget_access`.
-const WIDGET_SUB_STATUSES = new Set([
-  "active",
-  "trialing",
-  "past_due",
-  "canceled",
-  "incomplete",
-  "incomplete_expired",
-  "unpaid",
-]);
+// ── Plan lookups ─────────────────────────────────────────────────────────────
 
-async function handleWidgetSubscription(
+// Map a Stripe recurring price id → our plan slug. Returns null when the price
+// isn't one of our known plans (e.g. a stale price, or a credit-pack price).
+async function lookupPlanSlugByPrice(
+  admin: AdminClientLike,
+  priceId: string,
+  logger: Logger,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("subscription_plans")
+    .select("slug")
+    .eq("stripe_price_id", priceId)
+    .maybeSingle();
+  if (error) {
+    logger.error(`subscription_plans lookup failed for price=${priceId}`, error);
+    return null;
+  }
+  return (data?.slug as string | undefined) ?? null;
+}
+
+// Resolve the profile that owns a subscription, when the event/metadata doesn't
+// carry user_id directly. subscription.created stores plan_stripe_subscription_id
+// via set_user_plan, so later invoices can find the user by it.
+async function lookupUserBySubId(
+  admin: AdminClientLike,
+  subId: string,
+): Promise<string | null> {
+  const { data } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("plan_stripe_subscription_id", subId)
+    .maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
+// ── customer.subscription.* → plan state ─────────────────────────────────────
+
+async function handlePlanSubscription(
   event: Stripe.Event,
   admin: AdminClientLike,
   logger: Logger,
 ): Promise<HandlerResult> {
-  const sub = event.data.object as Stripe.Subscription & {
-    current_period_end?: number;
-  };
-  const meta = sub.metadata ?? {};
-  const userId = meta.user_id || null;
-  const instanceId = meta.instance_id || null;
-  const catalogId = meta.catalog_id || null;
+  // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sub = event.data.object as any;
+  const subId: string = sub.id;
+  const meta: Record<string, string> = sub.metadata ?? {};
+  const periodEndUnix: number | null =
+    sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? null;
+  const periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
 
-  if (!instanceId) {
-    logger.warn(`subscription=${sub.id} has no instance_id metadata — skipping`);
-    return { status: 200, body: { received: true, skipped: "missing_metadata" } };
+  // Deletion always means "back to Free", regardless of the price we can read.
+  if (event.type === "customer.subscription.deleted") {
+    const userId = meta.user_id || (await lookupUserBySubId(admin, subId));
+    if (!userId) {
+      logger.warn(`subscription=${subId} deleted but no user resolvable — skipping`);
+      return { status: 200, body: { received: true, skipped: "missing_user" } };
+    }
+    const { error } = await admin.rpc("set_user_plan", {
+      p_user_id: userId,
+      p_plan_slug: "free",
+      p_status: "canceled",
+      p_sub_id: subId,
+      p_period_end: null,
+    });
+    if (error) {
+      logger.error(`set_user_plan (downgrade) failed`, error);
+      return { status: 500, body: { error: "plan_update_failed" } };
+    }
+    logger.info(`subscription ${subId} deleted → user=${userId} downgraded to free`);
+    return { status: 200, body: { received: true, plan_slug: "free", plan_status: "canceled" } };
   }
 
-  const customerId =
-    typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
+  const priceId: string | null = sub.items?.data?.[0]?.price?.id ?? null;
+  if (!priceId) {
+    logger.warn(`subscription=${subId} has no price id — skipping`);
+    return { status: 200, body: { received: true, skipped: "missing_price" } };
+  }
 
-  // subscription.deleted always means the entitlement is gone.
-  let status = event.type === "customer.subscription.deleted" ? "canceled" : sub.status;
-  if (!WIDGET_SUB_STATUSES.has(status)) status = "past_due"; // e.g. Stripe "paused"
+  const slug = await lookupPlanSlugByPrice(admin, priceId, logger);
+  if (!slug) {
+    logger.warn(`subscription=${subId} price=${priceId} maps to no plan — skipping`);
+    return { status: 200, body: { received: true, skipped: "unknown_price" } };
+  }
 
-  const periodEndUnix =
-    sub.current_period_end ??
-    (sub as unknown as { items?: { data?: Array<{ current_period_end?: number }> } })
-      .items?.data?.[0]?.current_period_end ??
-    null;
-  const currentPeriodEnd = periodEndUnix
-    ? new Date(periodEndUnix * 1000).toISOString()
-    : null;
+  const userId = meta.user_id || (await lookupUserBySubId(admin, subId));
+  if (!userId) {
+    logger.warn(`subscription=${subId} has no user_id metadata and none stored — skipping`);
+    return { status: 200, body: { received: true, skipped: "missing_user" } };
+  }
 
-  const { error } = await admin.rpc("grant_widget_subscription", {
+  const status: string = sub.status;
+  const { error } = await admin.rpc("set_user_plan", {
     p_user_id: userId,
-    p_instance_id: instanceId,
-    p_catalog_id: catalogId,
-    p_stripe_subscription_id: sub.id,
-    p_stripe_customer_id: customerId,
+    p_plan_slug: slug,
     p_status: status,
-    p_current_period_end: currentPeriodEnd,
-    p_stripe_event_id: event.id,
-    p_event_created: new Date(event.created * 1000).toISOString(),
+    p_sub_id: subId,
+    p_period_end: periodEnd,
   });
-
   if (error) {
-    logger.error(`grant_widget_subscription failed`, error);
-    return { status: 500, body: { error: "widget_sub_failed" } };
+    logger.error(`set_user_plan failed`, error);
+    return { status: 500, body: { error: "plan_update_failed" } };
   }
 
-  logger.info(`widget sub ${sub.id} → status=${status} instance=${instanceId}`);
-  return { status: 200, body: { received: true, widget_status: status } };
+  logger.info(`plan sub ${subId} → user=${userId} slug=${slug} status=${status}`);
+  return { status: 200, body: { received: true, plan_slug: slug, plan_status: status } };
 }
+
+// ── invoice.paid → refill the monthly allowance ──────────────────────────────
+
+async function handleInvoicePaid(
+  event: Stripe.Event,
+  admin: AdminClientLike,
+  logger: Logger,
+): Promise<HandlerResult> {
+  // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const inv = event.data.object as any;
+  const line = inv.lines?.data?.[0] ?? {};
+  const priceId: string | null =
+    line.price?.id ?? line.pricing?.price_details?.price ?? null;
+  const subId: string | null =
+    inv.subscription ?? line.subscription ?? inv.parent?.subscription_details?.subscription ?? null;
+
+  if (!subId || !priceId) {
+    logger.warn(`invoice=${inv.id} missing subscription/price — skipping (sub:${!!subId} price:${!!priceId})`);
+    return { status: 200, body: { received: true, skipped: "missing_sub_or_price" } };
+  }
+
+  const slug = await lookupPlanSlugByPrice(admin, priceId, logger);
+  if (!slug) {
+    logger.warn(`invoice=${inv.id} price=${priceId} maps to no plan — skipping`);
+    return { status: 200, body: { received: true, skipped: "unknown_price" } };
+  }
+
+  const userId: string | null =
+    inv.subscription_details?.metadata?.user_id ??
+    inv.metadata?.user_id ??
+    (await lookupUserBySubId(admin, subId));
+  if (!userId) {
+    logger.warn(`invoice=${inv.id} sub=${subId} has no resolvable user — skipping`);
+    return { status: 200, body: { received: true, skipped: "missing_user" } };
+  }
+
+  const periodEndUnix: number | null = line.period?.end ?? null;
+  const periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
+
+  // Keep plan state current (period end), then refill this period's allowance.
+  const { error: planErr } = await admin.rpc("set_user_plan", {
+    p_user_id: userId,
+    p_plan_slug: slug,
+    p_status: "active",
+    p_sub_id: subId,
+    p_period_end: periodEnd,
+  });
+  if (planErr) {
+    logger.error(`set_user_plan (invoice) failed`, planErr);
+    return { status: 500, body: { error: "plan_update_failed" } };
+  }
+
+  const { error: refillErr } = await admin.rpc("refill_plan_credits", {
+    p_user_id: userId,
+    p_plan_slug: slug,
+  });
+  if (refillErr) {
+    logger.error(`refill_plan_credits failed`, refillErr);
+    return { status: 500, body: { error: "refill_failed" } };
+  }
+
+  logger.info(`invoice ${inv.id} paid → user=${userId} slug=${slug} refilled`);
+  return { status: 200, body: { received: true, refilled: slug } };
+}
+
+// ── checkout.session.completed → credit-pack grant ───────────────────────────
 
 async function handleCheckoutCompleted(
   event: Stripe.Event,
@@ -142,9 +261,11 @@ async function handleCheckoutCompleted(
       ? session.payment_intent
       : session.payment_intent?.id ?? null;
 
+  // Plan-subscription checkouts also emit this event but carry no credit_pack_id;
+  // they're handled via customer.subscription.* / invoice.paid, so skip here.
   if (!userId || !packId || !credits) {
     logger.warn(
-      `session=${session.id} missing metadata — skipping (userId:${!!userId} packId:${!!packId} credits:${credits})`,
+      `session=${session.id} missing credit-pack metadata — skipping (userId:${!!userId} packId:${!!packId} credits:${credits})`,
     );
     return { status: 200, body: { received: true, skipped: "missing_metadata" } };
   }
@@ -211,7 +332,7 @@ async function handleChargeRefunded(
 
   const refundedAmount = charge.amount_refunded ?? 0;
   const proportion = charge.amount > 0 ? refundedAmount / charge.amount : 0;
-  const creditsToClaw = Math.ceil(originalLedger.delta * proportion);
+  const creditsToClaw = Math.ceil((originalLedger.delta as number) * proportion);
 
   if (creditsToClaw <= 0) {
     logger.info(`nothing to claw back (claw=${creditsToClaw})`);

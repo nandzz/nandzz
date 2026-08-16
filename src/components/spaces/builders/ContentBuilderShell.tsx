@@ -300,17 +300,17 @@ export function ContentBuilderShell({
             )}
           </div>
 
-          {form.insufficientCredits && (
+          {form.spaceLimitReached && (
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{t.contentBuilder.outOfCreditsTitle}</p>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{t.plan.spaceLimitTitle}</p>
               <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                {t.contentBuilder.outOfCreditsDesc}
+                {t.plan.spaceLimitReached}
               </p>
               <Link
                 href="/dashboard/credits"
                 className="inline-flex items-center mt-2 text-sm font-semibold text-amber-900 dark:text-amber-200 underline underline-offset-2"
               >
-                {t.contentBuilder.buyCredits}
+                {t.plan.upgradeCta}
               </Link>
             </div>
           )}

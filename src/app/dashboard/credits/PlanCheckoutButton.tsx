@@ -1,0 +1,51 @@
+"use client";
+
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+// Starts Stripe Checkout (mode: subscription) for a site-wide plan.
+export function PlanCheckoutButton({
+  planSlug,
+  label,
+  variant = "default",
+}: {
+  planSlug: string;
+  label: string;
+  variant?: "default" | "outline";
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function checkout() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/plan-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_slug: planSlug }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data?.error ?? "Checkout failed");
+        setLoading(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError("Network error — try again");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <Button type="button" className="w-full" variant={variant} onClick={checkout} disabled={loading}>
+        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        {label}
+      </Button>
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+    </>
+  );
+}

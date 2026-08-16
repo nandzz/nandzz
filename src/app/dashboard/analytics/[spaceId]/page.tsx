@@ -9,6 +9,8 @@ import { AnalyticsPeriodControl } from "@/components/analytics/AnalyticsPeriodCo
 import { BackButton } from "@/components/ui/BackButton";
 import { Eye, Heart, TrendingUp, BarChart2 } from "lucide-react";
 import { getServerTranslations, getCurrentLocale } from "@/lib/i18n/server";
+import { getUserEntitlements } from "@/lib/plan";
+import { FeatureGate } from "@/components/plan/FeatureGate";
 import { parseStatsPeriod } from "@/lib/period";
 
 export default async function SpaceAnalyticsPage({
@@ -26,6 +28,18 @@ export default async function SpaceAnalyticsPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const entitlements = await getUserEntitlements(user.id);
+  const t = await getServerTranslations();
+  if (!entitlements.hasAnalytics) {
+    return (
+      <FeatureGate
+        title={t.plan.analyticsLockedTitle}
+        description={t.plan.analyticsLocked}
+        ctaLabel={t.plan.upgradeToPro}
+      />
+    );
+  }
+
   const { data: space } = await supabase
     .from("spaces")
     .select("id, title, user_id")
@@ -36,10 +50,7 @@ export default async function SpaceAnalyticsPage({
 
   const period = parseStatsPeriod((await searchParams).period);
   const locale = await getCurrentLocale();
-  const [analytics, t] = await Promise.all([
-    getSpaceAnalytics(spaceId, locale, period),
-    getServerTranslations(),
-  ]);
+  const analytics = await getSpaceAnalytics(spaceId, locale, period);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">

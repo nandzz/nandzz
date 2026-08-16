@@ -8,6 +8,7 @@ import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
+import { getLikedSpaceIds } from "@/features/social/server";
 
 const PAGE_SIZE = 24;
 
@@ -91,12 +92,8 @@ export default async function ProfileContentsPage({
   if (user && spaces && spaces.length > 0) {
     const spaceIds = spaces.map((s) => s.id);
 
-    const [{ data: likes }, { data: savedEntries }] = await Promise.all([
-      supabase
-        .from("space_likes")
-        .select("space_id")
-        .eq("user_id", user.id)
-        .in("space_id", spaceIds),
+    const [likes, { data: savedEntries }] = await Promise.all([
+      getLikedSpaceIds(supabase, user.id, spaceIds),
       supabase
         .from("collection_spaces")
         .select("space_id, collections!inner(user_id)")
@@ -104,7 +101,7 @@ export default async function ProfileContentsPage({
         .in("space_id", spaceIds),
     ]);
 
-    likedSpaceIds = likes?.map((l) => l.space_id) || [];
+    likedSpaceIds = likes;
     savedSpaceIds = [...new Set((savedEntries ?? []).map((e: { space_id: string }) => e.space_id))];
   }
 

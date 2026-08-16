@@ -125,6 +125,31 @@ serve(async (req: Request) => {
     );
   }
 
+  // Tool access is a plan entitlement (Starter/Pro). Gate every tool method on
+  // the caller's plan.has_mcp — Free-plan users get a 403.
+  if (method === "tools/list" || method === "tools/call") {
+    const { data: hasMcp, error: entErr } = await admin.rpc("user_has_entitlement", {
+      p_user_id: userId,
+      p_entitlement: "mcp",
+    });
+    if (entErr) {
+      console.error(`[mcp][${rid}] user_has_entitlement error:`, entErr);
+      return json(
+        rpcError(id, { code: -32002, message: "Entitlement check failed" }),
+        { status: 500 }
+      );
+    }
+    if (!hasMcp) {
+      return json(
+        rpcError(id, {
+          code: -32003,
+          message: "Your Nandzz plan does not include MCP access. Upgrade to Starter or Pro to use these tools.",
+        }),
+        { status: 403 }
+      );
+    }
+  }
+
   if (method === "tools/list") {
     return json(rpcResult(id, { tools: toolDefinitions }));
   }

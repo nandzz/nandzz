@@ -58,7 +58,7 @@ export interface UseContentBuilderFormReturn {
   loading: boolean;
   error: string;
   setError: (msg: string) => void;
-  insufficientCredits: boolean;
+  spaceLimitReached: boolean;
 
   previewImage: File | null;
   previewObjectUrl: string | null;
@@ -101,7 +101,7 @@ export function useContentBuilderForm({
   const [isPublic, setIsPublic] = useState(space?.is_public ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
+  const [spaceLimitReached, setSpaceLimitReached] = useState(false);
 
   const [hashtagSuggestions, setHashtagSuggestions] = useState<string[]>([]);
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>(space?.hashtags ?? []);
@@ -235,7 +235,7 @@ export function useContentBuilderForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setInsufficientCredits(false);
+    setSpaceLimitReached(false);
     setLoading(true);
 
     try {
@@ -350,8 +350,8 @@ export function useContentBuilderForm({
         );
         // Only error results come back; success redirects server-side.
         if (result && !result.ok) {
-          if (result.error === "INSUFFICIENT_CREDITS") {
-            setInsufficientCredits(true);
+          if (result.error === "SPACE_LIMIT_REACHED") {
+            setSpaceLimitReached(true);
             setError("");
             return;
           }
@@ -391,7 +391,7 @@ export function useContentBuilderForm({
     loading,
     error,
     setError,
-    insufficientCredits,
+    spaceLimitReached,
     previewImage,
     previewObjectUrl,
     clearExistingImage,

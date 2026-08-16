@@ -10,6 +10,7 @@ import { Compass, Rss } from "lucide-react";
 import type { SpaceWithProfile } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
+import { getFollowingIds, getAllLikedSpaceIds } from "@/features/social/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerTranslations();
@@ -33,12 +34,7 @@ export default async function FeedPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: follows } = await supabase
-    .from("user_follows")
-    .select("following_id")
-    .eq("follower_id", user.id);
-
-  const followingIds = (follows ?? []).map((f) => f.following_id);
+  const followingIds = await getFollowingIds(supabase, user.id);
 
   let spaces: SpaceWithProfile[] = [];
   let likedSpaceIds: string[] = [];
@@ -49,7 +45,7 @@ export default async function FeedPage({
   const to = from + PAGE_SIZE - 1;
 
   if (followingIds.length > 0) {
-    const [{ data: rawSpaces, count }, { data: likes }] = await Promise.all([
+    const [{ data: rawSpaces, count }, likes] = await Promise.all([
       supabase
         .from("spaces")
         .select("*, profiles(username, display_name, avatar_url)", { count: "exact" })
@@ -57,14 +53,11 @@ export default async function FeedPage({
         .eq("is_public", true)
         .order("created_at", { ascending: false })
         .range(from, to),
-      supabase
-        .from("space_likes")
-        .select("space_id")
-        .eq("user_id", user.id),
+      getAllLikedSpaceIds(supabase, user.id),
     ]);
 
     spaces = (rawSpaces ?? []) as SpaceWithProfile[];
-    likedSpaceIds = (likes ?? []).map((l) => l.space_id);
+    likedSpaceIds = likes;
     totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
   }
 

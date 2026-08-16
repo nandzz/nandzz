@@ -33,7 +33,7 @@ function extFor(contentType: string): string {
 export const publishImageDef: ToolDefinition = {
   name: "publish_image",
   description:
-    "Publish an image to the caller's Nandzz space. Preferred: pass the image via `file` — the ChatGPT connector runtime auto-uploads user or AI-generated files. Alternatives: `source_url` (remote URL) or `content_base64` (with `media_type`). Requires the user's explicit visibility choice. Costs credits.",
+    "Publish an image to the caller's Nandzz space. Preferred: pass the image via `file` — the ChatGPT connector runtime auto-uploads user or AI-generated files. Alternatives: `source_url` (remote URL) or `content_base64` (with `media_type`). Requires the user's explicit visibility choice.",
   inputSchema: {
     type: "object",
     required: ["title", "visibility"],
@@ -113,7 +113,7 @@ export const publishImage: ToolHandler = async (args, ctx) => {
   }
 
   const asset = await uploadToBucket(ctx, "space-images", bytes, `image.${extFor(contentType)}`, contentType);
-  const { spaceId, freeCredits, paidCredits } = await publishSpace(ctx, {
+  const { spaceId, planCredits, paidCredits } = await publishSpace(ctx, {
     title,
     description: a.description ?? null,
     image_url: asset.publicUrl,
@@ -130,7 +130,7 @@ export const publishImage: ToolHandler = async (args, ctx) => {
     spaceUrl: buildSpaceUrl(username, spaceId),
     visibility,
     collectionAttached: a.collection_id ?? null,
-    remainingCredits: { free: freeCredits, paid: paidCredits },
+    remainingCredits: { plan: planCredits, paid: paidCredits },
     title,
   });
 };

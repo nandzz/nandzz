@@ -20,9 +20,14 @@ import {
   Sun,
   LogOut,
   User,
+  Calendar,
+  Users,
+  UserPlus,
+  BarChart3,
 } from "lucide-react";
 import type { ProfileLite } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
+import { usePlanEntitlements } from "@/lib/plan-client";
 import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -33,6 +38,11 @@ type NavItem = {
   label: string;
   icon: React.ElementType;
   isActive: (pathname: string) => boolean;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
 };
 
 interface SidebarProps {
@@ -46,6 +56,7 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
+  const entitlements = usePlanEntitlements();
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<ProfileLite | null>(initialProfile);
@@ -106,53 +117,101 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
 
   const username = profile?.username ?? null;
 
-  const navItems: NavItem[] = useMemo(() => {
-    const items: NavItem[] = [
+  const navGroups: NavGroup[] = useMemo(() => {
+    // Account
+    const account: NavItem[] = [
       {
         href: "/dashboard/feed",
         label: t.nav.feed,
         icon: Rss,
         isActive: (p) => p.startsWith("/dashboard/feed"),
       },
+      {
+        href: "/dashboard/contents",
+        label: t.nav.mySpaces,
+        icon: LayoutGrid,
+        isActive: (p) =>
+          p === "/dashboard/contents" || p.startsWith("/dashboard/contents/"),
+      },
+      {
+        href: "/dashboard/bookings",
+        label: t.nav.bookings,
+        icon: Calendar,
+        isActive: (p) => p.startsWith("/dashboard/bookings"),
+      },
+      {
+        href: "/dashboard/followers",
+        label: t.nav.followers,
+        icon: Users,
+        isActive: (p) => p.startsWith("/dashboard/followers"),
+      },
+      {
+        href: "/dashboard/following",
+        label: t.nav.following,
+        icon: UserPlus,
+        isActive: (p) => p.startsWith("/dashboard/following"),
+      },
     ];
 
-    if (FEATURES.widgets) {
-      items.push({
+    // Business
+    const business: NavItem[] = [];
+    if (FEATURES.widgets && entitlements.hasWidgets) {
+      business.push({
         href: "/dashboard/widgets",
         label: "Widgets",
         icon: Blocks,
         isActive: (p) => p.startsWith("/dashboard/widgets"),
       });
     }
-
     if (FEATURES.brand) {
-      items.push({
+      business.push({
         href: "/dashboard/brand",
         label: "Brand",
         icon: Palette,
         isActive: (p) => p.startsWith("/dashboard/brand"),
       });
     }
+    if (entitlements.hasAnalytics) {
+      business.push({
+        href: "/dashboard/analytics",
+        label: t.nav.analytics,
+        icon: BarChart3,
+        isActive: (p) => p.startsWith("/dashboard/analytics"),
+      });
+    }
 
-    items.push({
-      href: "/dashboard/contents",
-      label: t.nav.mySpaces,
-      icon: LayoutGrid,
-      isActive: (p) =>
-        p === "/dashboard/contents" || p.startsWith("/dashboard/contents/"),
-    });
-
+    // Settings
+    const settings: NavItem[] = [
+      {
+        href: "/dashboard/settings",
+        label: t.nav.settings,
+        icon: Settings,
+        isActive: (p) => p.startsWith("/dashboard/settings"),
+      },
+    ];
     if (FEATURES.monetization) {
-      items.push({
+      settings.push({
         href: "/dashboard/credits",
-        label: "Credits",
+        label: "Subscription",
         icon: CreditCard,
         isActive: (p) => p.startsWith("/dashboard/credits"),
       });
     }
+    if (entitlements.hasMcp) {
+      settings.push({
+        href: "/mcp",
+        label: t.nav.mcp,
+        icon: Plug,
+        isActive: (p) => p.startsWith("/mcp"),
+      });
+    }
 
-    return items;
-  }, [t, username]);
+    return [
+      { label: t.nav.groupAccount, items: account },
+      { label: t.nav.groupBusiness, items: business },
+      { label: t.nav.groupSettings, items: settings },
+    ];
+  }, [t, username, entitlements]);
 
   return (
     <aside
@@ -216,83 +275,75 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
             {/* View profile */}
             <Link
               href={username ? `/${username}` : "/dashboard/settings"}
-              className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+              className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <User className="h-4 w-4 shrink-0" />
+              <User aria-hidden className="h-4 w-4 shrink-0" />
               <span className="truncate">{t.nav.viewProfile}</span>
             </Link>
           </div>
         )}
       </div>
 
-      {/* Middle: nav */}
-      <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">
-        {navItems.map((item) => {
-          const active = item.isActive(pathname);
-          const Icon = item.icon;
+      {/* Middle: nav — grouped Account / Business / Settings. Non-first groups
+          carry a divider + top spacing so the sections stay legibly separated,
+          including in the collapsed rail where the text headers are hidden. */}
+      <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+        {navGroups.map((group, groupIndex) => (
+          <div
+            key={group.label}
+            className={cn(
+              "flex flex-col gap-0.5",
+              groupIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/60"
+            )}
+          >
+            {!collapsed ? (
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-2.5 pb-1">
+                {group.label}
+              </p>
+            ) : (
+              <span className="sr-only">{group.label}</span>
+            )}
+            {group.items.map((item) => {
+              const active = item.isActive(pathname);
+              const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent",
-                collapsed && "justify-center"
-              )}
-            >
-              <Icon className={cn("h-4 w-4 shrink-0", active && "text-violet-600")} strokeWidth={active ? 2.5 : 2} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent",
+                    collapsed && "justify-center"
+                  )}
+                >
+                  <Icon aria-hidden className={cn("h-4 w-4 shrink-0", active && "text-violet-600")} strokeWidth={active ? 2.5 : 2} />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* Bottom: settings, MCP, theme, logout */}
+      {/* Bottom: theme, logout */}
       <div className="border-t border-sidebar-border p-2 flex flex-col gap-0.5">
-        <Link
-          href="/dashboard/settings"
-          title={t.nav.settings}
-          className={cn(
-            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-            pathname.startsWith("/dashboard/settings")
-              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent",
-            collapsed && "justify-center"
-          )}
-        >
-          <Settings className={cn("h-4 w-4 shrink-0", pathname.startsWith("/dashboard/settings") && "text-violet-600")} />
-          {!collapsed && <span className="truncate">{t.nav.settings}</span>}
-        </Link>
-
-        <Link
-          href="/mcp"
-          title={t.nav.mcp}
-          className={cn(
-            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-            pathname.startsWith("/mcp")
-              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent",
-            collapsed && "justify-center"
-          )}
-        >
-          <Plug className={cn("h-4 w-4 shrink-0", pathname.startsWith("/mcp") && "text-violet-600")} />
-          {!collapsed && <span className="truncate">{t.nav.mcp}</span>}
-        </Link>
-
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           title={mounted && theme === "dark" ? t.nav.switchLight : t.nav.switchDark}
           className={cn(
             "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             collapsed && "justify-center"
           )}
         >
-          {mounted && theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+          {mounted && theme === "dark" ? <Sun aria-hidden className="h-4 w-4 shrink-0" /> : <Moon aria-hidden className="h-4 w-4 shrink-0" />}
           {!collapsed && <span className="truncate">{mounted && theme === "dark" ? t.nav.switchLight : t.nav.switchDark}</span>}
         </button>
 
@@ -302,10 +353,11 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
           title={t.nav.logout}
           className={cn(
             "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             collapsed && "justify-center"
           )}
         >
-          <LogOut className="h-4 w-4 shrink-0" />
+          <LogOut aria-hidden className="h-4 w-4 shrink-0" />
           {!collapsed && <span className="truncate">{t.nav.logout}</span>}
         </button>
       </div>

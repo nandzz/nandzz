@@ -125,8 +125,8 @@ export async function POST(
   });
 
   if (error) {
-    if (error.message?.includes("INSUFFICIENT_CREDITS")) {
-      return NextResponse.json({ error: "INSUFFICIENT_CREDITS" }, { status: 402 });
+    if (error.message?.includes("SPACE_LIMIT_REACHED")) {
+      return NextResponse.json({ error: "SPACE_LIMIT_REACHED" }, { status: 403 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

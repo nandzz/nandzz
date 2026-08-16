@@ -17,7 +17,7 @@ const MAX_HTML_BYTES = 2 * 1024 * 1024; // 2 MB
 export const publishHtmlDef: ToolDefinition = {
   name: "publish_html",
   description:
-    "Publish an HTML page to the caller's Nandzz space. Requires the user's explicit visibility choice (private or public). Costs credits (default 10).",
+    "Publish an HTML page to the caller's Nandzz space. Requires the user's explicit visibility choice (private or public).",
   inputSchema: {
     type: "object",
     required: ["title", "visibility", "html"],
@@ -43,7 +43,7 @@ export const publishHtml: ToolHandler = async (args, ctx) => {
   }
 
   const asset = await uploadToBucket(ctx, "space-html", html, "index.html", "text/html; charset=utf-8");
-  const { spaceId, freeCredits, paidCredits } = await publishSpace(ctx, {
+  const { spaceId, planCredits, paidCredits } = await publishSpace(ctx, {
     title,
     description: a.description ?? null,
     html_url: asset.publicUrl,
@@ -59,7 +59,7 @@ export const publishHtml: ToolHandler = async (args, ctx) => {
     spaceUrl: buildSpaceUrl(username, spaceId),
     visibility,
     collectionAttached: a.collection_id ?? null,
-    remainingCredits: { free: freeCredits, paid: paidCredits },
+    remainingCredits: { plan: planCredits, paid: paidCredits },
     title,
   });
 };

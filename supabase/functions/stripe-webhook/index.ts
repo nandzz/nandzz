@@ -3,9 +3,9 @@
 // Register the function URL in Stripe Dashboard → Developers → Webhooks
 // per env; each env has its own signing secret.
 //   URL: https://<project-ref>.supabase.co/functions/v1/stripe-webhook
-//   Events: checkout.session.completed, charge.refunded,
+//   Events: checkout.session.completed, charge.refunded  (credit packs),
 //           customer.subscription.created, customer.subscription.updated,
-//           customer.subscription.deleted  (widget entitlements)
+//           customer.subscription.deleted, invoice.paid   (plan subscriptions)
 //
 // Secrets (set with `supabase secrets set --project-ref <ref> ...`):
 //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET

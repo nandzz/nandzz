@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LayoutDashboard, CalendarDays, Users, UserCog, MapPin, Clock, Tag, Bell, CircleAlert, ChevronDown, ArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { SubscribeButton } from "@/components/widgets/SubscribeButton";
 import { AvailabilityManager } from "@/components/widgets/calendar/AvailabilityManager";
 import { ServicesManager } from "@/components/widgets/calendar/ServicesManager";
 import { NotificationsManager } from "@/components/widgets/calendar/NotificationsManager";
@@ -116,7 +116,6 @@ function useNewBookingsToday(
 
 interface Props {
   instanceId: string;
-  catalogId: string;
   hasAccess: boolean;
   enabled: boolean;
   config: CalendarConfig;
@@ -128,7 +127,6 @@ interface Props {
 
 export function WidgetWorkspace({
   instanceId,
-  catalogId,
   hasAccess,
   enabled,
   config,
@@ -345,7 +343,12 @@ export function WidgetWorkspace({
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 dark:text-orange-300">
                 <CircleAlert className="h-4 w-4" /> {t.booking.widgetHiddenNotice}
               </span>
-              <SubscribeButton catalogId={catalogId} label={t.booking.subscribeToActivate} />
+              <Link
+                href="/dashboard/credits"
+                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              >
+                {t.plan.upgradeToStarter}
+              </Link>
             </div>
           )}
           <WidgetOverview data={overview} period={trendPeriod} onPeriodChange={setTrendPeriod} />

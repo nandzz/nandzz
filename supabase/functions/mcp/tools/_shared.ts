@@ -317,24 +317,24 @@ export async function uploadToBucket(
   return { path, publicUrl: data.publicUrl };
 }
 
-// Insert the space row atomically via the existing publish_space_tx RPC.
-// Handles credit deduction; throws INSUFFICIENT_CREDITS if the user is broke.
-// p_cost is intentionally omitted so the DB-side default (or app_settings
-// lookup) applies. Passing p_cost: null instead of omitting it makes the SQL
-// arithmetic go NULL and violates profiles.paid_credits NOT NULL.
+// Insert the space row atomically via the publish_space_tx RPC. Publishing is
+// free now — the RPC only enforces the caller's plan space_limit and returns
+// the user's current AI credit balances (plan_credits / paid_credits), which it
+// does not change. A SPACE_LIMIT_REACHED error means the free-plan 25-space cap
+// (or another plan's cap) was hit.
 export async function publishSpace(
   ctx: Ctx,
   payload: Record<string, unknown>
-): Promise<{ spaceId: string; freeCredits: number; paidCredits: number }> {
+): Promise<{ spaceId: string; planCredits: number; paidCredits: number }> {
   const { data, error } = await ctx.admin.rpc("publish_space_tx", {
     p_user_id: ctx.userId,
     p_space_payload: payload,
     p_client_request_id: crypto.randomUUID(),
   });
   if (error) {
-    if (error.message?.includes("INSUFFICIENT_CREDITS")) {
+    if (error.message?.includes("SPACE_LIMIT_REACHED")) {
       throw new Error(
-        "Not enough credits to publish. The user needs to purchase more credits in the Nandzz app."
+        "You've reached your plan's space limit. The user needs to upgrade their Nandzz plan to publish more spaces."
       );
     }
     throw new Error(`Publish failed: ${error.message}`);
@@ -342,7 +342,7 @@ export async function publishSpace(
   const row = Array.isArray(data) ? data[0] : data;
   return {
     spaceId: row.space_id as string,
-    freeCredits: row.free_space_credits as number,
+    planCredits: row.plan_credits as number,
     paidCredits: row.paid_credits as number,
   };
 }
@@ -489,7 +489,7 @@ export function successResult(opts: {
   spaceUrl: string;
   visibility: "private" | "public";
   collectionAttached: string | null;
-  remainingCredits: { free: number; paid: number };
+  remainingCredits: { plan: number; paid: number };
   title: string;
 }): ToolResult {
   const parts: string[] = [
@@ -498,7 +498,7 @@ export function successResult(opts: {
     `Space ID: ${opts.spaceId}`,
   ];
   if (opts.collectionAttached) parts.push(`Added to collection ${opts.collectionAttached}.`);
-  parts.push(`Remaining credits — free: ${opts.remainingCredits.free}, paid: ${opts.remainingCredits.paid}.`);
+  parts.push(`AI credits — plan: ${opts.remainingCredits.plan}, paid: ${opts.remainingCredits.paid}.`);
   return {
     content: [{ type: "text", text: parts.join("\n") }],
     structuredContent: {

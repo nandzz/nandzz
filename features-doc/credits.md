@@ -36,13 +36,13 @@ Each profile has two credit balances:
 
 ## Credit packs (Stripe products)
 
-Seeded in the migration; admin-editable via `nandzz-admin`:
+Not seeded in any migration — the rows live only in the live DBs, created/edited via `nandzz-admin`:
 
 | Pack | Credits | Price | Equivalent |
 |---|---|---|---|
-| Starter | 500 | $5 | 50 space publishes |
-| Plus | 1,750 | $15 | 175 space publishes (+17% bonus credits) |
-| Pro | 5,000 | $40 | 500 space publishes (+25% bonus credits) |
+| Minimal | 500 | $5 | 50 space publishes |
+| Large | 1,750 | $15 | 175 space publishes (+17% bonus credits) |
+| xLarge | 5,000 | $40 | 500 space publishes (+25% bonus credits) |
 
 Pack records live in `public.credit_packs`. The Stripe Product + Price IDs are populated by the admin "Sync to Stripe" action — Postgres is the source of truth; Stripe is generated from it.
 

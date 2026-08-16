@@ -31,7 +31,7 @@ export function DuplicateSpaceButton({ spaceId, size = "md" }: DuplicateSpaceBut
       const res = await fetch(`/api/spaces/${spaceId}/duplicate`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        alert(data?.error === "INSUFFICIENT_CREDITS" ? t.space.duplicateNoCredits : (data?.error || t.space.duplicateFailed));
+        alert(data?.error === "SPACE_LIMIT_REACHED" ? t.plan.spaceLimitReached : (data?.error || t.space.duplicateFailed));
         return;
       }
       router.push(`/dashboard/contents/edit-space/${data.spaceId}`);

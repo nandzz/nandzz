@@ -7,6 +7,7 @@ import { SpaceGrid } from "@/components/spaces/SpaceGrid";
 import { Button } from "@/components/ui/button";
 import { Hash } from "lucide-react";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { getLikedSpaceIds } from "@/features/social/server";
 
 export async function generateMetadata({
   params,
@@ -93,21 +94,18 @@ export default async function HashtagPage({
   if (user && spaces.length > 0) {
     const spaceIds = spaces.map((s) => s.id);
 
-    const fetchLikes = supabase
-      .from("space_likes")
-      .select("space_id")
-      .eq("user_id", user.id)
-      .in("space_id", spaceIds);
-
     const fetchSaved = supabase
       .from("collection_spaces")
       .select("space_id, collections!inner(user_id)")
       .eq("collections.user_id", user.id)
       .in("space_id", spaceIds);
 
-    const [likesRes, savedRes] = await Promise.all([fetchLikes, fetchSaved]);
+    const [likedIds, savedRes] = await Promise.all([
+      getLikedSpaceIds(supabase, user.id, spaceIds),
+      fetchSaved,
+    ]);
 
-    likedSpaceIds = likesRes.data?.map((l: { space_id: string }) => l.space_id) || [];
+    likedSpaceIds = likedIds;
     savedSpaceIds = [...new Set((savedRes.data ?? []).map((e: { space_id: string }) => e.space_id))];
   }
 

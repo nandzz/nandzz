@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, UserCheck } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toggleFollow } from "../actions/toggle-follow";
 
 interface FollowButtonProps {
   profileId: string;
@@ -20,35 +20,20 @@ export function FollowButton({ profileId, initialIsFollowing }: FollowButtonProp
   const { t } = useLanguage();
 
   const handleClick = async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
+    // Optimistic update
     const wasFollowing = isFollowing;
     setIsFollowing(!wasFollowing);
 
-    try {
-      if (wasFollowing) {
-        const { error } = await supabase
-          .from("user_follows")
-          .delete()
-          .eq("follower_id", user.id)
-          .eq("following_id", profileId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("user_follows")
-          .insert({ follower_id: user.id, following_id: profileId });
-        if (error) throw error;
-      }
-      startTransition(() => router.refresh());
-    } catch {
+    const result = await toggleFollow({ profileId });
+
+    if (!result.ok) {
       setIsFollowing(wasFollowing);
+      if (result.error === "UNAUTHENTICATED") router.push("/login");
+      return;
     }
+
+    setIsFollowing(result.isFollowing);
+    startTransition(() => router.refresh());
   };
 
   return (

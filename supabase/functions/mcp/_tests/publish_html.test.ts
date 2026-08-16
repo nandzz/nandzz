@@ -38,7 +38,7 @@ Deno.test("publish_html: uploads html and calls publish_space_tx", async () => {
 
   assertEquals(res.structuredContent?.visibility, "public");
   assertEquals(res.structuredContent?.space_id, "space-1");
-  assertEquals(res.structuredContent?.remaining_credits, { free: 90, paid: 0 });
+  assertEquals(res.structuredContent?.remaining_credits, { plan: 90, paid: 0 });
   // The response must return the Portal space URL (which enforces is_public),
   // NOT the raw Supabase storage URL (which is publicly fetchable and would
   // leak private assets).

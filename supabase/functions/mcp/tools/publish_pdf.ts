@@ -19,7 +19,7 @@ const MAX_PDF_BYTES = 10 * 1024 * 1024; // matches space-pdfs bucket limit
 export const publishPdfDef: ToolDefinition = {
   name: "publish_pdf",
   description:
-    "Publish a PDF to the caller's Nandzz space. Provide either content_base64 (raw bytes) or source_url (remote URL). Requires the user's explicit visibility choice. Costs credits.",
+    "Publish a PDF to the caller's Nandzz space. Provide either content_base64 (raw bytes) or source_url (remote URL). Requires the user's explicit visibility choice.",
   inputSchema: {
     type: "object",
     required: ["title", "visibility"],
@@ -61,7 +61,7 @@ export const publishPdf: ToolHandler = async (args, ctx) => {
   }
 
   const asset = await uploadToBucket(ctx, "space-pdfs", bytes, "file.pdf", "application/pdf");
-  const { spaceId, freeCredits, paidCredits } = await publishSpace(ctx, {
+  const { spaceId, planCredits, paidCredits } = await publishSpace(ctx, {
     title,
     description: a.description ?? null,
     pdf_url: asset.publicUrl,
@@ -77,7 +77,7 @@ export const publishPdf: ToolHandler = async (args, ctx) => {
     spaceUrl: buildSpaceUrl(username, spaceId),
     visibility,
     collectionAttached: a.collection_id ?? null,
-    remainingCredits: { free: freeCredits, paid: paidCredits },
+    remainingCredits: { plan: planCredits, paid: paidCredits },
     title,
   });
 };

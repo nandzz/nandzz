@@ -4,12 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, CircleAlert, Gauge, ArrowUpRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { SubscribeButton } from "@/components/widgets/SubscribeButton";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {
   instanceId: string;
-  catalogId: string;
   hasAccess: boolean;
   initialEnabled: boolean;
   /** Credits consumed from the plan allowance in the current billing period. */
@@ -27,7 +25,6 @@ interface Props {
 // duplicated here, just linked to.
 export function AgentWidgetWorkspace({
   instanceId,
-  catalogId,
   hasAccess,
   initialEnabled,
   creditsUsed,
@@ -87,9 +84,14 @@ export function AgentWidgetWorkspace({
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 dark:text-orange-300">
-              <CircleAlert className="h-4 w-4" /> {t.booking.billingInactive}
+              <CircleAlert className="h-4 w-4" /> {t.plan.widgetsLocked}
             </span>
-            <SubscribeButton catalogId={catalogId} label={t.booking.subscribeToActivate} />
+            <Link
+              href="/dashboard/credits"
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              {t.plan.upgradeToStarter}
+            </Link>
           </div>
         )}
       </section>

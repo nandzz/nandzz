@@ -82,7 +82,6 @@ export default async function WidgetStudioPage({
         <AgentWorkspaceLoader
           admin={admin}
           instanceId={widget.id}
-          catalogId={widget.catalog_id}
           hasAccess={widget.has_access}
           enabled={widget.enabled}
           creditLimit={widget.catalog.monthly_credit_limit}
@@ -92,7 +91,6 @@ export default async function WidgetStudioPage({
         <CalendarWorkspaceLoader
           admin={admin}
           instanceId={widget.id}
-          catalogId={widget.catalog_id}
           hasAccess={widget.has_access}
           enabled={widget.enabled}
           config={widget.config}
@@ -111,7 +109,6 @@ export default async function WidgetStudioPage({
 async function CalendarWorkspaceLoader({
   admin,
   instanceId,
-  catalogId,
   hasAccess,
   enabled,
   config,
@@ -121,7 +118,6 @@ async function CalendarWorkspaceLoader({
 }: {
   admin: ReturnType<typeof createAdminClient>;
   instanceId: string;
-  catalogId: string;
   hasAccess: boolean;
   enabled: boolean;
   config: Record<string, unknown>;
@@ -146,7 +142,6 @@ async function CalendarWorkspaceLoader({
     <Suspense>
       <WidgetWorkspace
         instanceId={instanceId}
-        catalogId={catalogId}
         hasAccess={hasAccess}
         enabled={enabled}
         config={normalizedConfig}
@@ -162,7 +157,6 @@ async function CalendarWorkspaceLoader({
 async function AgentWorkspaceLoader({
   admin,
   instanceId,
-  catalogId,
   hasAccess,
   enabled,
   creditLimit,
@@ -170,7 +164,6 @@ async function AgentWorkspaceLoader({
 }: {
   admin: ReturnType<typeof createAdminClient>;
   instanceId: string;
-  catalogId: string;
   hasAccess: boolean;
   enabled: boolean;
   creditLimit: number;
@@ -200,7 +193,6 @@ async function AgentWorkspaceLoader({
     <Suspense>
       <AgentWidgetWorkspace
         instanceId={instanceId}
-        catalogId={catalogId}
         hasAccess={hasAccess}
         initialEnabled={enabled}
         creditsUsed={creditsUsed}

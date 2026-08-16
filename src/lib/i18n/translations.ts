@@ -12,6 +12,19 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 };
 
 export type Translations = {
+  plan: {
+    upgradeCta: string;
+    upgradeToStarter: string;
+    upgradeToPro: string;
+    widgetsLockedTitle: string;
+    widgetsLocked: string;
+    mcpLockedTitle: string;
+    mcpLocked: string;
+    analyticsLockedTitle: string;
+    analyticsLocked: string;
+    spaceLimitTitle: string;
+    spaceLimitReached: string;
+  };
   nav: {
     explore: string;
     pricing: string;
@@ -31,6 +44,13 @@ export type Translations = {
     switchLight: string;
     createSpace: string;
     mcp: string;
+    bookings: string;
+    followers: string;
+    following: string;
+    analytics: string;
+    groupAccount: string;
+    groupBusiness: string;
+    groupSettings: string;
   };
   home: {
     badge: string;
@@ -416,6 +436,8 @@ export type Translations = {
     layoutMasonry: string;
     layoutJustified: string;
     layoutFeatured: string;
+    followersPageSubtitle: string;
+    followingPageSubtitle: string;
   };
   agent: {
     suggestWhoAreYou: string;
@@ -1057,12 +1079,19 @@ export type Translations = {
     inactiveSubscribe: string;
     addWidgetSection: string;
     addWidgetButton: string;
+    freeTrial: string;
     noWidgetsAvailable: string;
     allWidgetsLink: string;
     widgetSettingsTitle: string;
     backToWidgetLink: string;
     liveOnProfile: string;
     activeHiddenFromProfile: string;
+    myBookingsTitle: string;
+    myBookingsSubtitle: string;
+    myBookingsEmptyTitle: string;
+    myBookingsEmptyDesc: string;
+    manageBookingCta: string;
+    unknownBusiness: string;
   };
 
   brand: {
@@ -1125,6 +1154,19 @@ export type Translations = {
 
 // ─── English ──────────────────────────────────────────────────────────────────
 const en: Translations = {
+  plan: {
+    upgradeCta: "See plans",
+    upgradeToStarter: "Upgrade to Starter",
+    upgradeToPro: "Upgrade to Pro",
+    widgetsLockedTitle: "Widgets are a paid feature",
+    widgetsLocked: "Widgets are available on the Starter and Pro plans. Upgrade to add booking and AI widgets to your profile.",
+    mcpLockedTitle: "MCP is a paid feature",
+    mcpLocked: "MCP access is available on the Starter and Pro plans. Upgrade to connect Claude and publish to your profile.",
+    analyticsLockedTitle: "Analytics is a Pro feature",
+    analyticsLocked: "Analytics is available on the Pro plan. Upgrade to see views, likes and traffic for your content.",
+    spaceLimitTitle: "Space limit reached",
+    spaceLimitReached: "You've reached your plan's 25-space limit. Upgrade for unlimited spaces.",
+  },
   nav: {
     explore: "Explore",
     pricing: "Pricing",
@@ -1144,6 +1186,13 @@ const en: Translations = {
     switchLight: "Switch to Light",
     createSpace: "Create Content",
     mcp: "Connect AI",
+    bookings: "Bookings",
+    followers: "Followers",
+    following: "Following",
+    analytics: "Analytics",
+    groupAccount: "Account",
+    groupBusiness: "Business",
+    groupSettings: "Settings",
   },
   home: {
     badge: "One page · Every widget",
@@ -1529,6 +1578,8 @@ const en: Translations = {
     layoutMasonry: "Masonry",
     layoutJustified: "Justified",
     layoutFeatured: "Featured",
+    followersPageSubtitle: "People who follow you.",
+    followingPageSubtitle: "People you follow.",
   },
   agent: {
     suggestWhoAreYou: "Who are you?",
@@ -2170,12 +2221,19 @@ const en: Translations = {
     inactiveSubscribe: "Inactive — subscribe to go live",
     addWidgetSection: "Add a widget",
     addWidgetButton: "Add widget",
+    freeTrial: "{days}-day free trial",
     noWidgetsAvailable: "No widgets are available yet. Check back soon.",
     allWidgetsLink: "All widgets",
     widgetSettingsTitle: "Widget settings",
     backToWidgetLink: "Back to widget",
     liveOnProfile: "Live on your profile",
     activeHiddenFromProfile: "Active — hidden from your profile",
+    myBookingsTitle: "My bookings",
+    myBookingsSubtitle: "Appointments you've booked with businesses on Nandzz.",
+    myBookingsEmptyTitle: "No bookings yet",
+    myBookingsEmptyDesc: "Appointments you book through a business's page will appear here.",
+    manageBookingCta: "Manage",
+    unknownBusiness: "Business",
   },
 
   brand: {
@@ -2222,9 +2280,9 @@ const en: Translations = {
     termsDescription: "Terms and conditions for using the nandzz platform.",
     feedTitle: "Feed | Nandzz",
     feedDescription: "Content from people you follow.",
-    pricingTitle: "Credits | Nandzz",
-    pricingDescription: "Pay as you go. {grant} free content credits on signup. Buy more whenever you need them — credits never expire.",
-    pricingShortDescription: "Pay as you go. {grant} free credits on signup. Buy more anytime.",
+    pricingTitle: "Pricing | Nandzz",
+    pricingDescription: "Simple plans for your branded page. Start free, or upgrade to Starter or Pro for widgets, AI credits and analytics.",
+    pricingShortDescription: "Simple plans. Start free, upgrade for widgets, AI and analytics.",
     hashtagDescription: "Browse the latest content tagged #{tag} on Nandzz.",
     profileNotFoundTitle: "Profile Not Found | Nandzz",
     profileDescriptionFallback: "Check out {name}'s web apps on nandzz.",
@@ -2238,6 +2296,19 @@ const en: Translations = {
 
 // ─── Portuguese ───────────────────────────────────────────────────────────────
 const pt: Translations = {
+  plan: {
+    upgradeCta: "Ver planos",
+    upgradeToStarter: "Assinar o Starter",
+    upgradeToPro: "Assinar o Pro",
+    widgetsLockedTitle: "Widgets são um recurso pago",
+    widgetsLocked: "Widgets estão disponíveis nos planos Starter e Pro. Faça upgrade para adicionar widgets de agendamento e IA ao seu perfil.",
+    mcpLockedTitle: "MCP é um recurso pago",
+    mcpLocked: "O acesso ao MCP está disponível nos planos Starter e Pro. Faça upgrade para conectar o Claude e publicar no seu perfil.",
+    analyticsLockedTitle: "Analytics é um recurso do Pro",
+    analyticsLocked: "O Analytics está disponível no plano Pro. Faça upgrade para ver visualizações, curtidas e tráfego do seu conteúdo.",
+    spaceLimitTitle: "Limite de espaços atingido",
+    spaceLimitReached: "Você atingiu o limite de 25 espaços do seu plano. Faça upgrade para espaços ilimitados.",
+  },
   nav: {
     explore: "Explorar",
     pricing: "Preços",
@@ -2257,6 +2328,13 @@ const pt: Translations = {
     switchLight: "Modo Claro",
     createSpace: "Criar Conteúdo",
     mcp: "Conectar IA",
+    bookings: "Agendamentos",
+    followers: "Seguidores",
+    following: "Seguindo",
+    analytics: "Análises",
+    groupAccount: "Conta",
+    groupBusiness: "Negócio",
+    groupSettings: "Configurações",
   },
   home: {
     badge: "Uma página · Todos os widgets",
@@ -2642,6 +2720,8 @@ const pt: Translations = {
     layoutMasonry: "Mosaico",
     layoutJustified: "Justificado",
     layoutFeatured: "Destaque",
+    followersPageSubtitle: "Pessoas que seguem você.",
+    followingPageSubtitle: "Pessoas que você segue.",
   },
   agent: {
     suggestWhoAreYou: "Quem é você?",
@@ -3283,12 +3363,19 @@ const pt: Translations = {
     inactiveSubscribe: "Inativo — assine para ativar",
     addWidgetSection: "Adicionar um widget",
     addWidgetButton: "Adicionar widget",
+    freeTrial: "Teste grátis de {days} dias",
     noWidgetsAvailable: "Nenhum widget disponível ainda. Volte em breve.",
     allWidgetsLink: "Todos os widgets",
     widgetSettingsTitle: "Configurações do widget",
     backToWidgetLink: "Voltar ao widget",
     liveOnProfile: "No ar no seu perfil",
     activeHiddenFromProfile: "Ativo — oculto do seu perfil",
+    myBookingsTitle: "Minhas reservas",
+    myBookingsSubtitle: "Agendamentos que você fez com empresas no Nandzz.",
+    myBookingsEmptyTitle: "Nenhuma reserva ainda",
+    myBookingsEmptyDesc: "Os agendamentos que você fizer pela página de uma empresa aparecerão aqui.",
+    manageBookingCta: "Gerenciar",
+    unknownBusiness: "Empresa",
   },
 
   brand: {
@@ -3335,9 +3422,9 @@ const pt: Translations = {
     termsDescription: "Termos e condições de uso da plataforma nandzz.",
     feedTitle: "Feed | Nandzz",
     feedDescription: "Conteúdos das pessoas que você segue.",
-    pricingTitle: "Créditos | Nandzz",
-    pricingDescription: "Pague conforme o uso. {grant} créditos grátis de conteúdo ao se cadastrar. Compre mais quando precisar — os créditos nunca expiram.",
-    pricingShortDescription: "Pague conforme o uso. {grant} créditos grátis ao se cadastrar. Compre mais quando quiser.",
+    pricingTitle: "Planos | Nandzz",
+    pricingDescription: "Planos simples para a sua página com marca. Comece grátis ou faça upgrade para o Starter ou Pro com widgets, créditos de IA e analytics.",
+    pricingShortDescription: "Planos simples. Comece grátis, faça upgrade para widgets, IA e analytics.",
     hashtagDescription: "Veja os conteúdos mais recentes marcados com #{tag} no Nandzz.",
     profileNotFoundTitle: "Perfil Não Encontrado | Nandzz",
     profileDescriptionFallback: "Confira os web apps de {name} no nandzz.",
@@ -3351,6 +3438,19 @@ const pt: Translations = {
 
 // ─── French ───────────────────────────────────────────────────────────────────
 const fr: Translations = {
+  plan: {
+    upgradeCta: "Voir les offres",
+    upgradeToStarter: "Passer à Starter",
+    upgradeToPro: "Passer à Pro",
+    widgetsLockedTitle: "Les widgets sont une fonctionnalité payante",
+    widgetsLocked: "Les widgets sont disponibles avec les offres Starter et Pro. Améliorez votre offre pour ajouter des widgets de réservation et d'IA à votre profil.",
+    mcpLockedTitle: "MCP est une fonctionnalité payante",
+    mcpLocked: "L'accès MCP est disponible avec les offres Starter et Pro. Améliorez votre offre pour connecter Claude et publier sur votre profil.",
+    analyticsLockedTitle: "Les statistiques sont une fonctionnalité Pro",
+    analyticsLocked: "Les statistiques sont disponibles avec l'offre Pro. Améliorez votre offre pour voir les vues, les mentions J'aime et le trafic de votre contenu.",
+    spaceLimitTitle: "Limite d'espaces atteinte",
+    spaceLimitReached: "Vous avez atteint la limite de 25 espaces de votre offre. Améliorez votre offre pour des espaces illimités.",
+  },
   nav: {
     explore: "Explorer",
     pricing: "Tarifs",
@@ -3370,6 +3470,13 @@ const fr: Translations = {
     switchLight: "Mode Clair",
     createSpace: "Créer un Contenu",
     mcp: "Connecter votre IA",
+    bookings: "Réservations",
+    followers: "Abonnés",
+    following: "Abonnements",
+    analytics: "Statistiques",
+    groupAccount: "Compte",
+    groupBusiness: "Entreprise",
+    groupSettings: "Paramètres",
   },
   home: {
     badge: "Une page · Tous les widgets",
@@ -3755,6 +3862,8 @@ const fr: Translations = {
     layoutMasonry: "Mosaïque",
     layoutJustified: "Justifié",
     layoutFeatured: "À la une",
+    followersPageSubtitle: "Les personnes qui vous suivent.",
+    followingPageSubtitle: "Les personnes que vous suivez.",
   },
   agent: {
     suggestWhoAreYou: "Qui êtes-vous ?",
@@ -4396,12 +4505,19 @@ const fr: Translations = {
     inactiveSubscribe: "Inactif — abonnez-vous pour l'activer",
     addWidgetSection: "Ajouter un widget",
     addWidgetButton: "Ajouter le widget",
+    freeTrial: "Essai gratuit de {days} jours",
     noWidgetsAvailable: "Aucun widget disponible pour le moment. Revenez bientôt.",
     allWidgetsLink: "Tous les widgets",
     widgetSettingsTitle: "Paramètres du widget",
     backToWidgetLink: "Retour au widget",
     liveOnProfile: "En ligne sur votre profil",
     activeHiddenFromProfile: "Actif — masqué de votre profil",
+    myBookingsTitle: "Mes réservations",
+    myBookingsSubtitle: "Les rendez-vous que vous avez réservés auprès d'entreprises sur Nandzz.",
+    myBookingsEmptyTitle: "Aucune réservation pour l'instant",
+    myBookingsEmptyDesc: "Les rendez-vous que vous réservez via la page d'une entreprise apparaîtront ici.",
+    manageBookingCta: "Gérer",
+    unknownBusiness: "Entreprise",
   },
 
   brand: {
@@ -4448,9 +4564,9 @@ const fr: Translations = {
     termsDescription: "Conditions générales d'utilisation de la plateforme nandzz.",
     feedTitle: "Fil d'actualité | Nandzz",
     feedDescription: "Les Contenus des personnes que vous suivez.",
-    pricingTitle: "Crédits | Nandzz",
-    pricingDescription: "Payez à l'usage. {grant} crédits Contenu offerts à l'inscription. Achetez-en plus quand vous voulez — les crédits n'expirent jamais.",
-    pricingShortDescription: "Payez à l'usage. {grant} crédits offerts à l'inscription. Achetez-en plus à tout moment.",
+    pricingTitle: "Tarifs | Nandzz",
+    pricingDescription: "Des offres simples pour votre page personnalisée. Commencez gratuitement, ou passez à Starter ou Pro pour les widgets, les crédits IA et les statistiques.",
+    pricingShortDescription: "Des offres simples. Commencez gratuitement, passez au niveau supérieur pour les widgets, l'IA et les statistiques.",
     hashtagDescription: "Découvrez les derniers Contenus marqués #{tag} sur Nandzz.",
     profileNotFoundTitle: "Profil introuvable | Nandzz",
     profileDescriptionFallback: "Découvrez les applications web de {name} sur nandzz.",
@@ -4464,6 +4580,19 @@ const fr: Translations = {
 
 // ─── Spanish ──────────────────────────────────────────────────────────────────
 const es: Translations = {
+  plan: {
+    upgradeCta: "Ver planes",
+    upgradeToStarter: "Cambiar a Starter",
+    upgradeToPro: "Cambiar a Pro",
+    widgetsLockedTitle: "Los widgets son una función de pago",
+    widgetsLocked: "Los widgets están disponibles en los planes Starter y Pro. Mejora tu plan para añadir widgets de reservas e IA a tu perfil.",
+    mcpLockedTitle: "MCP es una función de pago",
+    mcpLocked: "El acceso a MCP está disponible en los planes Starter y Pro. Mejora tu plan para conectar Claude y publicar en tu perfil.",
+    analyticsLockedTitle: "Las analíticas son una función Pro",
+    analyticsLocked: "Las analíticas están disponibles en el plan Pro. Mejora tu plan para ver visitas, me gusta y tráfico de tu contenido.",
+    spaceLimitTitle: "Límite de espacios alcanzado",
+    spaceLimitReached: "Has alcanzado el límite de 25 espacios de tu plan. Mejora tu plan para espacios ilimitados.",
+  },
   nav: {
     explore: "Explorar",
     pricing: "Precios",
@@ -4483,6 +4612,13 @@ const es: Translations = {
     switchLight: "Modo Claro",
     createSpace: "Crear Contenido",
     mcp: "Conectar IA",
+    bookings: "Reservas",
+    followers: "Seguidores",
+    following: "Siguiendo",
+    analytics: "Analítica",
+    groupAccount: "Cuenta",
+    groupBusiness: "Negocio",
+    groupSettings: "Configuración",
   },
   home: {
     badge: "Una página · Todos los widgets",
@@ -4868,6 +5004,8 @@ const es: Translations = {
     layoutMasonry: "Mosaico",
     layoutJustified: "Justificado",
     layoutFeatured: "Destacado",
+    followersPageSubtitle: "Personas que te siguen.",
+    followingPageSubtitle: "Personas a las que sigues.",
   },
   agent: {
     suggestWhoAreYou: "¿Quién eres?",
@@ -5509,12 +5647,19 @@ const es: Translations = {
     inactiveSubscribe: "Inactivo — suscríbete para activarlo",
     addWidgetSection: "Añadir un widget",
     addWidgetButton: "Añadir widget",
+    freeTrial: "Prueba gratis de {days} días",
     noWidgetsAvailable: "Aún no hay widgets disponibles. Vuelve pronto.",
     allWidgetsLink: "Todos los widgets",
     widgetSettingsTitle: "Configuración del widget",
     backToWidgetLink: "Volver al widget",
     liveOnProfile: "En línea en tu perfil",
     activeHiddenFromProfile: "Activo — oculto de tu perfil",
+    myBookingsTitle: "Mis reservas",
+    myBookingsSubtitle: "Citas que has reservado con negocios en Nandzz.",
+    myBookingsEmptyTitle: "Aún no hay reservas",
+    myBookingsEmptyDesc: "Las citas que reserves a través de la página de un negocio aparecerán aquí.",
+    manageBookingCta: "Gestionar",
+    unknownBusiness: "Negocio",
   },
 
   brand: {
@@ -5561,9 +5706,9 @@ const es: Translations = {
     termsDescription: "Términos y condiciones de uso de la plataforma nandzz.",
     feedTitle: "Feed | Nandzz",
     feedDescription: "Contenidos de las personas que sigues.",
-    pricingTitle: "Créditos | Nandzz",
-    pricingDescription: "Paga según el uso. {grant} créditos de contenido gratis al registrarte. Compra más cuando los necesites — los créditos nunca caducan.",
-    pricingShortDescription: "Paga según el uso. {grant} créditos gratis al registrarte. Compra más cuando quieras.",
+    pricingTitle: "Precios | Nandzz",
+    pricingDescription: "Planes sencillos para tu página con marca. Empieza gratis o mejora a Starter o Pro para widgets, créditos de IA y analíticas.",
+    pricingShortDescription: "Planes sencillos. Empieza gratis, mejora para widgets, IA y analíticas.",
     hashtagDescription: "Explora los últimos contenidos etiquetados con #{tag} en Nandzz.",
     profileNotFoundTitle: "Perfil No Encontrado | Nandzz",
     profileDescriptionFallback: "Descubre los web apps de {name} en nandzz.",
@@ -5577,6 +5722,19 @@ const es: Translations = {
 
 // ─── Japanese ─────────────────────────────────────────────────────────────────
 const ja: Translations = {
+  plan: {
+    upgradeCta: "プランを見る",
+    upgradeToStarter: "Starterにアップグレード",
+    upgradeToPro: "Proにアップグレード",
+    widgetsLockedTitle: "ウィジェットは有料機能です",
+    widgetsLocked: "ウィジェットはStarterおよびProプランで利用できます。アップグレードすると、予約やAIのウィジェットをプロフィールに追加できます。",
+    mcpLockedTitle: "MCPは有料機能です",
+    mcpLocked: "MCPアクセスはStarterおよびProプランで利用できます。アップグレードするとClaudeを接続してプロフィールに公開できます。",
+    analyticsLockedTitle: "アナリティクスはPro機能です",
+    analyticsLocked: "アナリティクスはProプランで利用できます。アップグレードすると、コンテンツの表示回数・いいね・トラフィックを確認できます。",
+    spaceLimitTitle: "スペースの上限に達しました",
+    spaceLimitReached: "プランの25スペースの上限に達しました。アップグレードするとスペースが無制限になります。",
+  },
   nav: {
     explore: "探索",
     pricing: "料金",
@@ -5596,6 +5754,13 @@ const ja: Translations = {
     switchLight: "ライトモード",
     createSpace: "コンテンツ作成",
     mcp: "AIを接続",
+    bookings: "予約",
+    followers: "フォロワー",
+    following: "フォロー中",
+    analytics: "アナリティクス",
+    groupAccount: "アカウント",
+    groupBusiness: "ビジネス",
+    groupSettings: "設定",
   },
   home: {
     badge: "1つのページ · すべてのウィジェット",
@@ -5981,6 +6146,8 @@ const ja: Translations = {
     layoutMasonry: "モザイク",
     layoutJustified: "均等配置",
     layoutFeatured: "注目",
+    followersPageSubtitle: "あなたをフォローしている人。",
+    followingPageSubtitle: "あなたがフォローしている人。",
   },
   agent: {
     suggestWhoAreYou: "あなたは誰ですか？",
@@ -6622,12 +6789,19 @@ const ja: Translations = {
     inactiveSubscribe: "無効 — 登録して有効化",
     addWidgetSection: "ウィジェットを追加",
     addWidgetButton: "ウィジェットを追加",
+    freeTrial: "{days}日間無料トライアル",
     noWidgetsAvailable: "利用可能なウィジェットはまだありません。またご確認ください。",
     allWidgetsLink: "すべてのウィジェット",
     widgetSettingsTitle: "ウィジェット設定",
     backToWidgetLink: "ウィジェットに戻る",
     liveOnProfile: "プロフィールで公開中",
     activeHiddenFromProfile: "有効 — プロフィールでは非表示",
+    myBookingsTitle: "予約一覧",
+    myBookingsSubtitle: "Nandzz上のビジネスで予約した予約です。",
+    myBookingsEmptyTitle: "まだ予約はありません",
+    myBookingsEmptyDesc: "ビジネスのページから予約した予約がここに表示されます。",
+    manageBookingCta: "管理",
+    unknownBusiness: "ビジネス",
   },
 
   brand: {
@@ -6674,9 +6848,9 @@ const ja: Translations = {
     termsDescription: "nandzzプラットフォームの利用規約。",
     feedTitle: "フィード | Nandzz",
     feedDescription: "フォロー中のユーザーのコンテンツ。",
-    pricingTitle: "クレジット | Nandzz",
-    pricingDescription: "従量課金制。登録で{grant}件の無料コンテンツクレジット。必要な時にいつでも追加購入可能 — クレジットの有効期限はありません。",
-    pricingShortDescription: "従量課金制。登録で{grant}件の無料クレジット。いつでも追加購入できます。",
+    pricingTitle: "料金 | Nandzz",
+    pricingDescription: "ブランドページのためのシンプルなプラン。無料で始めて、ウィジェット・AIクレジット・アナリティクスが必要ならStarterやProにアップグレードできます。",
+    pricingShortDescription: "シンプルなプラン。無料で始めて、ウィジェット・AI・アナリティクスにアップグレード。",
     hashtagDescription: "Nandzzで#{tag}のタグが付いた最新のコンテンツをチェック。",
     profileNotFoundTitle: "プロフィールが見つかりません | Nandzz",
     profileDescriptionFallback: "nandzzで{name}のウェブアプリをチェックしよう。",
@@ -6690,6 +6864,19 @@ const ja: Translations = {
 
 // ─── German ───────────────────────────────────────────────────────────────────
 const de: Translations = {
+  plan: {
+    upgradeCta: "Tarife ansehen",
+    upgradeToStarter: "Auf Starter upgraden",
+    upgradeToPro: "Auf Pro upgraden",
+    widgetsLockedTitle: "Widgets sind eine kostenpflichtige Funktion",
+    widgetsLocked: "Widgets sind in den Tarifen Starter und Pro verfügbar. Upgrade, um Buchungs- und KI-Widgets zu deinem Profil hinzuzufügen.",
+    mcpLockedTitle: "MCP ist eine kostenpflichtige Funktion",
+    mcpLocked: "MCP-Zugriff ist in den Tarifen Starter und Pro verfügbar. Upgrade, um Claude zu verbinden und auf deinem Profil zu veröffentlichen.",
+    analyticsLockedTitle: "Analytics ist eine Pro-Funktion",
+    analyticsLocked: "Analytics ist im Pro-Tarif verfügbar. Upgrade, um Aufrufe, Likes und Traffic deiner Inhalte zu sehen.",
+    spaceLimitTitle: "Space-Limit erreicht",
+    spaceLimitReached: "Du hast das Limit von 25 Spaces deines Tarifs erreicht. Upgrade für unbegrenzte Spaces.",
+  },
   nav: {
     explore: "Entdecken",
     pricing: "Preise",
@@ -6709,6 +6896,13 @@ const de: Translations = {
     switchLight: "Hellmodus",
     createSpace: "Inhalt erstellen",
     mcp: "KI verbinden",
+    bookings: "Buchungen",
+    followers: "Follower",
+    following: "Folge ich",
+    analytics: "Statistiken",
+    groupAccount: "Konto",
+    groupBusiness: "Business",
+    groupSettings: "Einstellungen",
   },
   home: {
     badge: "Eine Seite · Alle Widgets",
@@ -7094,6 +7288,8 @@ const de: Translations = {
     layoutMasonry: "Mosaik",
     layoutJustified: "Bündig",
     layoutFeatured: "Hervorgehoben",
+    followersPageSubtitle: "Personen, die dir folgen.",
+    followingPageSubtitle: "Personen, denen du folgst.",
   },
   agent: {
     suggestWhoAreYou: "Wer bist du?",
@@ -7735,12 +7931,19 @@ const de: Translations = {
     inactiveSubscribe: "Inaktiv — abonnieren zum Aktivieren",
     addWidgetSection: "Widget hinzufügen",
     addWidgetButton: "Widget hinzufügen",
+    freeTrial: "{days} Tage kostenlos testen",
     noWidgetsAvailable: "Noch keine Widgets verfügbar. Schau bald wieder vorbei.",
     allWidgetsLink: "Alle Widgets",
     widgetSettingsTitle: "Widget-Einstellungen",
     backToWidgetLink: "Zurück zum Widget",
     liveOnProfile: "Live auf deinem Profil",
     activeHiddenFromProfile: "Aktiv — auf deinem Profil ausgeblendet",
+    myBookingsTitle: "Meine Buchungen",
+    myBookingsSubtitle: "Termine, die du bei Unternehmen auf Nandzz gebucht hast.",
+    myBookingsEmptyTitle: "Noch keine Buchungen",
+    myBookingsEmptyDesc: "Termine, die du über die Seite eines Unternehmens buchst, erscheinen hier.",
+    manageBookingCta: "Verwalten",
+    unknownBusiness: "Unternehmen",
   },
 
   brand: {
@@ -7787,9 +7990,9 @@ const de: Translations = {
     termsDescription: "Allgemeine Geschäftsbedingungen für die Nutzung der nandzz-Plattform.",
     feedTitle: "Feed | Nandzz",
     feedDescription: "Inhalte von Personen, denen du folgst.",
-    pricingTitle: "Guthaben | Nandzz",
-    pricingDescription: "Pay-as-you-go. {grant} kostenlose Inhalt-Guthaben bei der Anmeldung. Kaufe jederzeit mehr — Guthaben verfällt nie.",
-    pricingShortDescription: "Pay-as-you-go. {grant} kostenlose Guthaben bei der Anmeldung. Jederzeit mehr kaufen.",
+    pricingTitle: "Preise | Nandzz",
+    pricingDescription: "Einfache Tarife für deine gebrandete Seite. Starte kostenlos oder upgrade auf Starter oder Pro für Widgets, KI-Guthaben und Analytics.",
+    pricingShortDescription: "Einfache Tarife. Starte kostenlos, upgrade für Widgets, KI und Analytics.",
     hashtagDescription: "Entdecke die neuesten Inhalte mit #{tag} auf Nandzz.",
     profileNotFoundTitle: "Profil nicht gefunden | Nandzz",
     profileDescriptionFallback: "Entdecke {name}s Web-Apps auf nandzz.",
@@ -7803,6 +8006,19 @@ const de: Translations = {
 
 // ─── Italian ──────────────────────────────────────────────────────────────────
 const it: Translations = {
+  plan: {
+    upgradeCta: "Vedi i piani",
+    upgradeToStarter: "Passa a Starter",
+    upgradeToPro: "Passa a Pro",
+    widgetsLockedTitle: "I widget sono una funzione a pagamento",
+    widgetsLocked: "I widget sono disponibili nei piani Starter e Pro. Esegui l'upgrade per aggiungere widget di prenotazione e IA al tuo profilo.",
+    mcpLockedTitle: "MCP è una funzione a pagamento",
+    mcpLocked: "L'accesso a MCP è disponibile nei piani Starter e Pro. Esegui l'upgrade per collegare Claude e pubblicare sul tuo profilo.",
+    analyticsLockedTitle: "Le statistiche sono una funzione Pro",
+    analyticsLocked: "Le statistiche sono disponibili nel piano Pro. Esegui l'upgrade per vedere visualizzazioni, Mi piace e traffico dei tuoi contenuti.",
+    spaceLimitTitle: "Limite di spazi raggiunto",
+    spaceLimitReached: "Hai raggiunto il limite di 25 spazi del tuo piano. Esegui l'upgrade per spazi illimitati.",
+  },
   nav: {
     explore: "Esplora",
     pricing: "Prezzi",
@@ -7822,6 +8038,13 @@ const it: Translations = {
     switchLight: "Modalità Chiara",
     createSpace: "Crea Contenuto",
     mcp: "Connetti IA",
+    bookings: "Prenotazioni",
+    followers: "Follower",
+    following: "Seguiti",
+    analytics: "Statistiche",
+    groupAccount: "Account",
+    groupBusiness: "Business",
+    groupSettings: "Impostazioni",
   },
   home: {
     badge: "Una pagina · Tutti i widget",
@@ -8207,6 +8430,8 @@ const it: Translations = {
     layoutMasonry: "Mosaico",
     layoutJustified: "Giustificato",
     layoutFeatured: "In evidenza",
+    followersPageSubtitle: "Persone che ti seguono.",
+    followingPageSubtitle: "Persone che segui.",
   },
   agent: {
     suggestWhoAreYou: "Chi sei?",
@@ -8848,12 +9073,19 @@ const it: Translations = {
     inactiveSubscribe: "Inattivo — abbonati per attivarlo",
     addWidgetSection: "Aggiungi un widget",
     addWidgetButton: "Aggiungi widget",
+    freeTrial: "Prova gratuita di {days} giorni",
     noWidgetsAvailable: "Nessun widget disponibile per ora. Ricontrolla presto.",
     allWidgetsLink: "Tutti i widget",
     widgetSettingsTitle: "Impostazioni widget",
     backToWidgetLink: "Torna al widget",
     liveOnProfile: "Online sul tuo profilo",
     activeHiddenFromProfile: "Attivo — nascosto dal tuo profilo",
+    myBookingsTitle: "Le mie prenotazioni",
+    myBookingsSubtitle: "Appuntamenti che hai prenotato con attività su Nandzz.",
+    myBookingsEmptyTitle: "Ancora nessuna prenotazione",
+    myBookingsEmptyDesc: "Gli appuntamenti che prenoti tramite la pagina di un'attività appariranno qui.",
+    manageBookingCta: "Gestisci",
+    unknownBusiness: "Attività",
   },
 
   brand: {
@@ -8900,9 +9132,9 @@ const it: Translations = {
     termsDescription: "Termini e condizioni per l'utilizzo della piattaforma nandzz.",
     feedTitle: "Feed | Nandzz",
     feedDescription: "Contenuti delle persone che segui.",
-    pricingTitle: "Crediti | Nandzz",
-    pricingDescription: "Paga in base all'uso. {grant} crediti contenuto gratuiti alla registrazione. Acquistane altri quando vuoi — i crediti non scadono mai.",
-    pricingShortDescription: "Paga in base all'uso. {grant} crediti gratuiti alla registrazione. Acquistane altri quando vuoi.",
+    pricingTitle: "Prezzi | Nandzz",
+    pricingDescription: "Piani semplici per la tua pagina brandizzata. Inizia gratis oppure passa a Starter o Pro per widget, crediti IA e statistiche.",
+    pricingShortDescription: "Piani semplici. Inizia gratis, passa a widget, IA e statistiche.",
     hashtagDescription: "Scopri gli ultimi contenuti taggati #{tag} su Nandzz.",
     profileNotFoundTitle: "Profilo non trovato | Nandzz",
     profileDescriptionFallback: "Scopri le web app di {name} su nandzz.",

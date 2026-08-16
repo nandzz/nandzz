@@ -24,7 +24,9 @@ export type PublishSpacePayload = {
 // calls redirect() and never returns.
 export type PublishSpaceError = {
   ok: false;
-  error: "INSUFFICIENT_CREDITS" | "UNAUTHENTICATED" | "FAILED";
+  // SPACE_LIMIT_REACHED ⇒ Free plan is at its space cap; the UI shows an
+  // upgrade prompt. Publishing itself is free (no credit charge).
+  error: "SPACE_LIMIT_REACHED" | "UNAUTHENTICATED" | "FAILED";
   message?: string;
 };
 
@@ -44,8 +46,8 @@ export async function publishSpace(
   });
 
   if (error) {
-    if (error.message?.includes("INSUFFICIENT_CREDITS")) {
-      return { ok: false, error: "INSUFFICIENT_CREDITS" };
+    if (error.message?.includes("SPACE_LIMIT_REACHED")) {
+      return { ok: false, error: "SPACE_LIMIT_REACHED" };
     }
     return { ok: false, error: "FAILED", message: error.message };
   }

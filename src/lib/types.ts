@@ -28,8 +28,13 @@ export type Profile = {
   social_links: SocialLinks | null;
   created_at: string;
   stripe_customer_id?: string | null;
-  free_space_credits?: number | null;
   paid_credits?: number | null;
+  // Site-wide subscription plan (replaces the old free_space_credits / plan_tier model).
+  plan_slug?: PlanSlug | null;
+  plan_status?: string | null;
+  plan_credits?: number | null;
+  plan_stripe_subscription_id?: string | null;
+  plan_current_period_end?: string | null;
   is_admin?: boolean | null;
   followers_count?: number | null;
   following_count?: number | null;
@@ -48,7 +53,9 @@ export type Profile = {
   show_links?: boolean | null;
 };
 
-export type CreditBucket = "free_space" | "paid";
+// Credits are now LLM-only. The "plan" bucket is the monthly plan allowance
+// (resets each period); "paid" is purchased top-up credits (never expire).
+export type CreditBucket = "plan" | "paid";
 
 export type CreditLedgerEntry = {
   id: number;
@@ -56,7 +63,9 @@ export type CreditLedgerEntry = {
   delta: number;
   bucket: CreditBucket;
   reason: string;
-  balance_after_free: number;
+  // Bucket balances after this entry. `balance_after_plan` follows the old
+  // free-bucket rename (free_space → plan).
+  balance_after_plan: number;
   balance_after_paid: number;
   stripe_event_id: string | null;
   stripe_payment_intent_id: string | null;
@@ -76,6 +85,51 @@ export type CreditPack = {
   currency: string;
   sort_order: number;
   active: boolean;
+};
+
+// ── Subscription plans ───────────────────────────────────────────────────────
+
+export type PlanSlug = "free" | "starter" | "pro";
+
+// A row from `subscription_plans` — the catalog of the three site-wide plans.
+export type SubscriptionPlan = {
+  id: string;
+  slug: PlanSlug;
+  name: string;
+  description: string | null;
+  price_cents: number;
+  currency: string;
+  billing_interval: "month" | "year";
+  monthly_credits: number;
+  space_limit: number | null; // null ⇒ unlimited
+  has_widgets: boolean;
+  has_mcp: boolean;
+  has_analytics: boolean;
+  active: boolean;
+  sort_order: number;
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
+  updated_at: string;
+};
+
+// The gating entitlements a plan grants. Single source consumed by every gate.
+export type PlanEntitlements = {
+  spaceLimit: number | null; // null ⇒ unlimited
+  hasWidgets: boolean;
+  hasMcp: boolean;
+  hasAnalytics: boolean;
+  monthlyCredits: number;
+};
+
+// A user's resolved plan (profile plan_* fields joined to subscription_plans).
+export type UserPlan = {
+  slug: PlanSlug;
+  name: string;
+  status: string | null;
+  planCredits: number; // monthly allowance balance
+  paidCredits: number; // purchased, never-expiring balance
+  periodEnd: string | null;
+  entitlements: PlanEntitlements;
 };
 
 export type Space = {
@@ -226,6 +280,7 @@ export type WidgetCatalogEntry = {
   price_cents: number;
   currency: string;
   billing_interval: "month" | "year";
+  trial_days: number;
   active: boolean;
   sort_order: number;
   monthly_credit_limit: number;

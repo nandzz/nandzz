@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LikeButton } from "@/components/spaces/LikeButton";
+import { LikeButton } from "@/features/social";
+import { getSpaceLiked } from "@/features/social/server";
 import { ShareMenu } from "@/components/spaces/ShareMenu";
 import { StarButton } from "@/components/spaces/StarButton";
 import { DuplicateSpaceButton } from "@/components/spaces/DuplicateSpaceButton";
@@ -153,13 +154,8 @@ export default async function SpaceViewPage({
   let saved = false;
 
   if (user) {
-    const [{ data: likeData }, { data: savedEntries }] = await Promise.all([
-      supabase
-        .from("space_likes")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("space_id", id)
-        .maybeSingle(),
+    const [likedResult, { data: savedEntries }] = await Promise.all([
+      getSpaceLiked(supabase, id, user.id),
       supabase
         .from("collection_spaces")
         .select("collection_id, collections!inner(user_id)")
@@ -167,7 +163,7 @@ export default async function SpaceViewPage({
         .eq("collections.user_id", user.id)
         .limit(1),
     ]);
-    liked = !!likeData;
+    liked = likedResult;
     saved = (savedEntries?.length ?? 0) > 0;
   }
 

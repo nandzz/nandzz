@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Plug, Sparkles, Coins, Shield, FileText, Image as ImageIcon, FileCode2, FolderKanban, ShieldCheck, Pencil, Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { getUserEntitlements } from "@/lib/plan";
+import { FeatureGate } from "@/components/plan/FeatureGate";
 import { CopyField } from "./CopyField";
 import { Sessions } from "./Sessions";
 
@@ -17,6 +19,17 @@ export default async function McpConnectPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login?next=/mcp");
+
+  const entitlements = await getUserEntitlements(user.id);
+  if (!entitlements.hasMcp) {
+    return (
+      <FeatureGate
+        title={t.plan.mcpLockedTitle}
+        description={t.plan.mcpLocked}
+        ctaLabel={t.plan.upgradeToStarter}
+      />
+    );
+  }
 
   const [{ data: profile }, { data: rawSessions }] = await Promise.all([
     supabase

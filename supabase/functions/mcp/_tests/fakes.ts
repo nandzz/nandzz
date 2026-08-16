@@ -152,15 +152,16 @@ export function makeCtx(opts: FakeAdminOptions = {}): FakeAdmin {
   return { rpcCalls, fromCalls, storageUploads, ctx };
 }
 
-// The MCP RPC returns a row per publish_space_tx contract.
+// The MCP RPC returns a row per publish_space_tx contract: space_id plus the
+// caller's current AI credit balances (plan_credits / paid_credits).
 export function publishOk(
   spaceId = "space-1",
-  free = 90,
+  plan = 90,
   paid = 0,
 ): FakeResult {
   return {
     data: [
-      { space_id: spaceId, free_space_credits: free, paid_credits: paid },
+      { space_id: spaceId, plan_credits: plan, paid_credits: paid },
     ],
     error: null,
   };

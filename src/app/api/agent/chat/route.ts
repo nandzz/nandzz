@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUserEntitlements } from "@/lib/plan";
 
 // Thin proxy → Supabase Edge Function (agent-chat).
 // Business logic lives in supabase/functions/agent-chat/index.ts:
@@ -15,7 +16,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //     paid credits); otherwise it falls back to a legacy direct paid-credits
 //     charge that requires MIN_CREDITS_FOR_CHAT.
 //   - visitor (the public "Talk to X" widget card / `/[username]/agent`):
-//     HARD GATE on an active `agent` widget subscription (has_widget_access).
+//     HARD GATE on the owner's plan including widgets (plan.hasWidgets) plus an
+//     enabled `agent` instance.
 // Whenever an `agent` instance is in play, agent_can_serve pauses the agent
 // once that instance's included credits AND the owner's paid credits are both
 // exhausted for the billing period (usage is billed to the owner, not visitors).
@@ -62,10 +64,10 @@ async function resolveAgentInstanceId(
   });
   if (!agentRow) return null;
 
-  const { data: hasAccess } = await admin.rpc("has_widget_access", {
-    p_instance_id: agentRow.id,
-  });
-  return hasAccess ? agentRow.id : null;
+  // Widget access is now the owner's plan entitlement (has_widgets), not a
+  // per-instance subscription.
+  const entitlements = await getUserEntitlements(ownerId);
+  return entitlements.hasWidgets ? agentRow.id : null;
 }
 
 export async function POST(req: NextRequest) {
