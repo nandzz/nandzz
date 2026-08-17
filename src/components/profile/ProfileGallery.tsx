@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Space, Profile } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { GalleryModal } from "./GalleryModal";
+import { GalleryModal } from "@/features/profile";
 import { SectionOwnerMenu } from "./SectionOwnerMenu";
 import { SeeMoreLink } from "./SeeMoreLink";
 import { persistProfileUpdate } from "@/lib/profile/update";

@@ -5,7 +5,7 @@ import { UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
-import { FollowList } from "@/components/profile/FollowList";
+import { FollowList } from "@/features/profile";
 
 export default async function FollowingPage() {
   const supabase = await createClient();

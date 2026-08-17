@@ -1,0 +1,13 @@
+// Client-safe public API for the profile feature. Server-only read helpers live
+// in "./server" so this barrel can be imported from Client Components without
+// pulling in `server-only` modules.
+export { FollowList } from "./components/FollowList";
+export { FollowersDialog } from "./components/FollowersDialog";
+export { GalleryModal } from "./components/GalleryModal";
+export { ProfileHeader } from "./components/ProfileHeader";
+export { ProfileBackground } from "./components/ProfileBackground";
+export { EditProfileDialog } from "./components/EditProfileDialog";
+export { loadMyProfile } from "./actions/load-my-profile";
+export { updateBrand } from "./actions/update-brand";
+export type { LoadMyProfileResult } from "./actions/load-my-profile";
+export type { UpdateBrandResult } from "./actions/update-brand";

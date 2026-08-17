@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { loadMyProfile, updateBrand } from "@/features/profile";
+import { uploadBrandLogo } from "@/features/profile/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +43,6 @@ function isValidHex(value: string) {
 
 export default function BrandPage() {
   const router = useRouter();
-  const supabase = createClient();
   const { t } = useLanguage();
 
   const COLOR_LABELS: Record<ColorKey, string> = {
@@ -65,20 +65,13 @@ export default function BrandPage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const result = await loadMyProfile();
+      if (!result.ok) {
         router.push("/login");
         return;
       }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
+      const data = result.profile;
       if (data) {
         setProfile(data);
         setBrandDescription(data.brand_description || "");
@@ -87,7 +80,7 @@ export default function BrandPage() {
       }
     };
     loadProfile();
-  }, [supabase, router]);
+  }, [router]);
 
   const addBrandValue = () => {
     const value = valueInput.trim();
@@ -112,10 +105,7 @@ export default function BrandPage() {
     setLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!profile) return;
 
       if (brandDescription.length > LIMITS.brandDescription) {
         setError(t.brand.descriptionTooLongError.replace("{n}", String(LIMITS.brandDescription)));
@@ -131,42 +121,36 @@ export default function BrandPage() {
         }
       }
 
-      let logo_url = profile?.logo_url || null;
+      let logo_url = profile.logo_url || null;
 
       if (logoFile) {
-        const filePath = `${user.id}/logo.jpg`;
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(filePath, logoFile, { upsert: true, contentType: "image/jpeg" });
-
-        if (uploadError) {
-          setError(t.brand.uploadLogoFailedPrefix + uploadError.message);
+        // Logo upload stays client-side (see features/profile/storage).
+        try {
+          const publicUrl = await uploadBrandLogo(profile.id, logoFile);
+          logo_url = `${publicUrl}?t=${Date.now()}`;
+        } catch (uploadErr) {
+          setError(
+            t.brand.uploadLogoFailedPrefix +
+              (uploadErr instanceof Error ? uploadErr.message : "")
+          );
           setLoading(false);
           return;
         }
-
-        const { data: publicUrlData } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(filePath);
-        logo_url = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       }
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          logo_url,
-          brand_colors: brandColors,
-          brand_values: brandValues,
-          brand_description: brandDescription || null,
-        })
-        .eq("id", user.id);
+      const result = await updateBrand({
+        logoUrl: logo_url,
+        brandColors,
+        brandValues,
+        brandDescription: brandDescription || null,
+      });
 
-      if (error) throw error;
+      if (!result.ok) throw new Error(result.message || t.common.error);
 
       await fetch("/api/profile/revalidate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: profile?.username }),
+        body: JSON.stringify({ username: profile.username }),
       });
 
       setSuccess(true);

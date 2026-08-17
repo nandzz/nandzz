@@ -1,0 +1,47 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { updateProfileInfoSchema } from "../schemas";
+
+export type UpdateProfileInfoResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: "UNAUTHENTICATED" | "INVALID_INPUT" | "FAILED";
+      message?: string;
+    };
+
+// Persists the EditProfileDialog fields. Scoped to the caller's own row via
+// `.eq("id", user.id)`, so RLS + query agree. Cache revalidation stays in the
+// component's existing /api/profile/revalidate call (behavior preserved).
+export async function updateProfileInfo(input: {
+  displayName: string | null;
+  tagline: string | null;
+  bio: string | null;
+  websiteUrl: string | null;
+  socialLinks: Record<string, string | undefined>;
+}): Promise<UpdateProfileInfoResult> {
+  const parsed = updateProfileInfoSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "INVALID_INPUT" };
+  const { displayName, tagline, bio, websiteUrl, socialLinks } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "UNAUTHENTICATED" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      display_name: displayName,
+      tagline,
+      bio,
+      website_url: websiteUrl,
+      social_links: socialLinks,
+    })
+    .eq("id", user.id);
+  if (error) return { ok: false, error: "FAILED", message: error.message };
+
+  return { ok: true };
+}

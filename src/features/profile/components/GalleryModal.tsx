@@ -5,9 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Loader2, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { loadGalleryPage } from "../actions/load-gallery-page";
 import type { Space } from "@/lib/types";
 
 const PAGE_SIZE = 12;
@@ -42,23 +42,12 @@ export function GalleryModal({ onClose, profileId, username, totalCount }: Galle
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- show the spinner while this page's fetch is in flight; resolved in the .then below.
     setLoading(true);
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    const supabase = createClient();
-    supabase
-      .from("spaces")
-      .select("*", { count: "exact" })
-      .eq("user_id", profileId)
-      .eq("is_public", true)
-      .eq("content_type", "image")
-      .order("created_at", { ascending: false })
-      .range(from, to)
-      .then(({ data, count: freshCount }) => {
-        if (cancelled) return;
-        setImages((data ?? []).filter((s) => imageSrc(s)));
-        if (typeof freshCount === "number") setCount(freshCount);
-        setLoading(false);
-      });
+    loadGalleryPage({ profileId, page }).then((result) => {
+      if (cancelled || !result.ok) return;
+      setImages(result.spaces.filter((s) => imageSrc(s)));
+      if (typeof result.count === "number") setCount(result.count);
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };

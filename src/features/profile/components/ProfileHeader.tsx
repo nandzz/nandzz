@@ -16,7 +16,8 @@ import { FollowButton } from "@/features/social";
 import { FollowersDialog } from "./FollowersDialog";
 import { WidgetStrip } from "@/components/widgets/WidgetStrip";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
-import { createClient } from "@/lib/supabase/client";
+import { uploadAvatar } from "../storage";
+import { updateAvatar } from "../actions/update-avatar";
 import { FEATURES } from "@/lib/flags";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -59,7 +60,9 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
   const [avatarError, setAvatarError] = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Re-sync with server props (e.g. after router.refresh reads freshly-revalidated data)
+  // Re-sync with server props (e.g. after router.refresh reads freshly-revalidated data).
+  // Prop-sync effect, unchanged from the pre-migration implementation.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setLocalAvatarUrl(profile.avatar_url ?? null); }, [profile.avatar_url]);
 
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,24 +85,12 @@ export function ProfileHeader({ profile, isOwner, currentUserId, isFollowing = f
     setAvatarUploading(true);
     setAvatarError("");
     try {
-      const supabase = createClient();
-      const filePath = `${profile.id}/avatar.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
+      const publicUrl = await uploadAvatar(profile.id, blob);
       // Query string busts the browser/CDN cache since the storage path is stable
-      const nextUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+      const nextUrl = `${publicUrl}?t=${Date.now()}`;
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: nextUrl })
-        .eq("id", profile.id);
-      if (updateError) throw updateError;
+      const result = await updateAvatar({ avatarUrl: nextUrl });
+      if (!result.ok) throw new Error(result.message || "Failed to update picture");
 
       setLocalAvatarUrl(nextUrl);
       // Invalidate the profile page's unstable_cache tag so router.refresh reads fresh data

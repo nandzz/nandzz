@@ -4,7 +4,7 @@ Living roadmap for moving the Portal from a layer-based structure (`components/`
 `lib/`, `app/api/`) to **feature-based** modules under `src/features/`, where each
 feature owns its data access and **UI never touches Supabase directly**.
 
-Status: **`social` + `collections` + `comments` shipped**. Rolling out feature-by-feature.
+Status: **`social` + `collections` + `comments` + `profile` shipped**. Rolling out feature-by-feature.
 
 ---
 
@@ -104,7 +104,7 @@ src/features/<feature>/
 | 0 | **social** (likes+follows) | LikeButton, FollowButton; reads across 5 server pages | ✅ done (pilot) |
 | 1 | **collections** | AddToCollectionDialog, StarButton, NewCollectionForm, CollectionActions; `is_public:false` invariant | ✅ done |
 | 2 | **comments** | `features/comments/*` — post/reply/like/mentions actions + reads; delete kept as `/api` route (admin-authorized); dead notification props pruned from prop chain | ✅ done |
-| 3 | **profile** | ProfileBackground (9 `.from()`), EditProfileDialog, settings/brand pages, **FollowList** (deferred client list) | ⬜ todo |
+| 3 | **profile** | ProfileBackground, EditProfileDialog, ProfileHeader, GalleryModal, settings/brand pages, **FollowList** (deferred client list); storage uploads kept client-side | ✅ done |
 | 4 | **spaces** | biggest: HtmlSpaceEditor (10 `.from()`), builders/, AiAssistantPanel, SpaceCard — split into sub-PRs; fold in `lib/actions/publish-space.ts` | ⬜ todo |
 | 5 | **booking / widgets** | already clustered (`components/widgets/calendar/`, `lib/widgets/`, `api/widgets/`); watch WidgetWorkspace realtime + Staff/Location storage uploads | ⬜ todo |
 | 6 | **agent** | AgentChat, AgentStudio, `api/agent/*`, `lib/agent/*` | ⬜ todo |
@@ -114,11 +114,16 @@ src/features/<feature>/
 
 ## 6. Deferrals & gotchas (read before each iteration)
 
-- **FollowList** (`components/profile/FollowList.tsx`) is a client component that fetches
-  paginated follower/following lists with joins on mount. It needs a client-data-fetch
-  pattern (a Server Action or route returning the list) — do it in the **profile**
-  migration, not piecemeal. It does not trip the `features/`-scoped guardrail while it
-  stays put.
+- **FollowList** — ✅ done in the profile migration: the client component now calls a
+  `loadFollowList` Server Action (offset-paginated) instead of a browser `.from()` join.
+  Same pattern used for `GalleryModal` (`loadGalleryPage`) and the settings/brand pages
+  (`loadMyProfile`).
+- **Storage uploads pattern (established by profile):** the 1.5 MB avatar/cover/logo
+  image cap exceeds the default Server-Action body limit, and there is no
+  `serverActions.bodySizeLimit` override — so uploads stay **client-side** (browser →
+  Supabase, in a feature module OUTSIDE `components/` so the guardrail is satisfied:
+  `features/profile/storage.ts`). Only the resulting relational row-write goes through a
+  Server Action. Reuse this split for the **booking** feature's Staff/Location uploads.
 - **Pre-existing failing tests** (NOT caused by this migration — confirmed identical on
   clean `main`; do not chase them): `src/app/api/widgets/[instanceId]/availability/route.test.ts`,
   `src/app/api/widgets/bookings/[token]/route.test.ts`, `src/components/spaces/SpaceGrid.test.tsx`.

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { createPortal } from "react-dom";
 import { X, Mail, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { Profile, SocialLinks } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { updateProfileInfo } from "../actions/update-profile-info";
 import {
   InstagramIcon,
   LinkedinIcon,
@@ -38,7 +38,6 @@ interface EditProfileDialogProps {
 // the form fresh from `profile` each time it opens — no re-seed effect needed.
 export function EditProfileDialog({ onClose, profile }: EditProfileDialogProps) {
   const router = useRouter();
-  const supabase = createClient();
   const { t } = useLanguage();
 
   const [displayName, setDisplayName] = useState(profile.display_name || "");
@@ -84,18 +83,15 @@ export function EditProfileDialog({ onClose, profile }: EditProfileDialogProps) 
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          display_name: displayName || null,
-          tagline: tagline || null,
-          bio: bio || null,
-          website_url: websiteUrl || null,
-          social_links: socialLinks,
-        })
-        .eq("id", profile.id);
+      const result = await updateProfileInfo({
+        displayName: displayName || null,
+        tagline: tagline || null,
+        bio: bio || null,
+        websiteUrl: websiteUrl || null,
+        socialLinks,
+      });
 
-      if (updateError) throw updateError;
+      if (!result.ok) throw new Error(result.message || "Something went wrong");
 
       await fetch("/api/profile/revalidate", {
         method: "POST",

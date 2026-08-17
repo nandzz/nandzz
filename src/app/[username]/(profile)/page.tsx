@@ -4,11 +4,10 @@ import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ProfileHeader, ProfileBackground } from "@/features/profile";
 import { ProfileContent } from "@/components/profile/ProfileContent";
 import { ProfileLinks } from "@/components/profile/ProfileLinks";
 import { ProfileGallery } from "@/components/profile/ProfileGallery";
-import { ProfileBackground } from "@/components/profile/ProfileBackground";
 import { ProfileSections } from "@/components/profile/ProfileSections";
 import {
   resolveGalleryLayout,

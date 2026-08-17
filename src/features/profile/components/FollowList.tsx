@@ -2,20 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-
-type UserRow = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-};
-
-const PAGE_SIZE = 20;
+import { loadFollowList } from "../actions/load-follow-list";
+import type { FollowUser } from "../data/profiles";
 
 interface FollowListProps {
   profileId: string;
@@ -32,43 +24,26 @@ interface FollowListProps {
 // dialog all run the exact same query.
 export function FollowList({ profileId, type, scrollable = false, onNavigate }: FollowListProps) {
   const { t } = useLanguage();
-  const [users, setUsers] = useState<UserRow[]>([]);
+  const [users, setUsers] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
 
   const fetchPage = useCallback(async (from: number, append: boolean) => {
-    const supabase = createClient();
-    const to = from + PAGE_SIZE - 1;
+    const result = await loadFollowList({ profileId, type, offset: from });
+    if (!result.ok) return;
 
-    const query =
-      type === "followers"
-        ? supabase
-            .from("user_follows")
-            .select("profiles!user_follows_follower_id_fkey(id, username, display_name, avatar_url)")
-            .eq("following_id", profileId)
-            .range(from, to)
-        : supabase
-            .from("user_follows")
-            .select("profiles!user_follows_following_id_fkey(id, username, display_name, avatar_url)")
-            .eq("follower_id", profileId)
-            .range(from, to);
-
-    const { data } = await query;
-    // The FK-hinted embed resolves `profiles` to a single joined row at runtime;
-    // the generated types pessimistically widen it to an array, so cast through
-    // unknown to the real shape.
-    const rows = ((data ?? []) as unknown as Array<{ profiles: UserRow | null }>)
-      .map((row) => row.profiles)
-      .filter((p): p is UserRow => Boolean(p));
-
-    setUsers((prev) => (append ? [...prev, ...rows] : rows));
-    setHasMore(rows.length === PAGE_SIZE);
-    setOffset(from + rows.length);
+    setUsers((prev) => (append ? [...prev, ...result.users] : result.users));
+    setHasMore(result.hasMore);
+    setOffset(from + result.users.length);
   }, [profileId, type]);
 
   useEffect(() => {
+    // Reset pagination and reload when the target profile/type changes. This
+    // deliberately drives state from an effect (unchanged from the pre-migration
+    // implementation).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUsers([]);
     setOffset(0);
     setHasMore(false);

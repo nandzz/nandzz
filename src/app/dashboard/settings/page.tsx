@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { loadMyProfile } from "@/features/profile";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,24 +41,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const result = await loadMyProfile();
+      if (!result.ok) {
         router.push("/login");
         return;
       }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (data) setProfile(data);
+      if (result.profile) setProfile(result.profile);
     };
     loadProfile();
-  }, [supabase, router]);
+  }, [router]);
 
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);

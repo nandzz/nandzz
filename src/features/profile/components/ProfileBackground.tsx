@@ -2,7 +2,6 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Camera, X, Move, Check, Share2, Pencil, Trash2, UserPen } from "lucide-react";
 import {
   DropdownMenu,
@@ -12,6 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EditProfileDialog } from "./EditProfileDialog";
+import { uploadBackground, removeBackgroundFiles } from "../storage";
+import {
+  updateBackground,
+  updateBackgroundPosition,
+} from "../actions/update-background";
 import type { Profile } from "@/lib/types";
 
 const MAX_BG_SIZE = 1.5 * 1024 * 1024;
@@ -42,7 +46,6 @@ export function ProfileBackground({
   profile,
 }: ProfileBackgroundProps) {
   const router = useRouter();
-  const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -78,9 +81,12 @@ export function ProfileBackground({
   const dragStart = useRef({ clientX: 0, clientY: 0, posX: 50, posY: 50 });
 
   // Keep local state in sync when the server re-renders with fresh props
+  // (prop-sync effects, unchanged from the pre-migration implementation).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setLocalUrl(backgroundUrl); }, [backgroundUrl]);
   useEffect(() => {
     const p = parsePosition(backgroundPosition);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPosition(p);
     setSavedPosition(p);
   }, [backgroundPosition]);
@@ -100,38 +106,16 @@ export function ProfileBackground({
     setUploading(true);
 
     try {
-      // Delete any existing background files so storage doesn't accumulate
-      const { data: existing } = await supabase.storage
-        .from("profile-backgrounds")
-        .list(profileId);
-
-      if (existing && existing.length > 0) {
-        await supabase.storage
-          .from("profile-backgrounds")
-          .remove(existing.map((f) => `${profileId}/${f.name}`));
-      }
-
-      // Timestamp in filename = unique URL each upload = no browser cache issue
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const filePath = `${profileId}/background-${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("profile-backgrounds")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("profile-backgrounds")
-        .getPublicUrl(filePath);
+      // Storage upload (delete-then-upload) stays client-side; see ../storage.
+      const publicUrl = await uploadBackground(profileId, file);
 
       const resetPos = { x: 50, y: 50 };
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ background_url: publicUrl, background_position: "50% 50%" })
-        .eq("id", profileId);
+      const result = await updateBackground({
+        backgroundUrl: publicUrl,
+        backgroundPosition: "50% 50%",
+      });
 
-      if (updateError) throw updateError;
+      if (!result.ok) throw new Error(result.message || "Upload failed");
 
       setLocalUrl(publicUrl);
       setPosition(resetPos);
@@ -161,22 +145,14 @@ export function ProfileBackground({
     setUploading(true);
     setError("");
     try {
-      const { data: existing } = await supabase.storage
-        .from("profile-backgrounds")
-        .list(profileId);
+      await removeBackgroundFiles(profileId);
 
-      if (existing && existing.length > 0) {
-        await supabase.storage
-          .from("profile-backgrounds")
-          .remove(existing.map((f) => `${profileId}/${f.name}`));
-      }
+      const result = await updateBackground({
+        backgroundUrl: null,
+        backgroundPosition: null,
+      });
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ background_url: null, background_position: null })
-        .eq("id", profileId);
-
-      if (updateError) throw updateError;
+      if (!result.ok) throw new Error(result.message || "Failed to remove background");
 
       // Update local state immediately — no waiting for router.refresh()
       setLocalUrl(null);
@@ -229,11 +205,8 @@ export function ProfileBackground({
   const handleSavePosition = async () => {
     try {
       const posStr = `${Math.round(position.x)}% ${Math.round(position.y)}%`;
-      const { error } = await supabase
-        .from("profiles")
-        .update({ background_position: posStr })
-        .eq("id", profileId);
-      if (error) throw error;
+      const result = await updateBackgroundPosition({ backgroundPosition: posStr });
+      if (!result.ok) throw new Error(result.message || "Failed to save position");
       setSavedPosition(position);
       setRepositioning(false);
       await fetch("/api/profile/revalidate", {
