@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { duplicateSpace } from "../actions/duplicate-space";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -19,22 +19,18 @@ export function DuplicateSpaceButton({ spaceId, size = "md" }: DuplicateSpaceBut
 
   const handleClick = async () => {
     if (busy) return;
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
     setBusy(true);
     try {
-      const res = await fetch(`/api/spaces/${spaceId}/duplicate`, { method: "POST" });
-      const data = await res.json();
+      const res = await duplicateSpace({ id: spaceId });
       if (!res.ok) {
-        alert(data?.error === "SPACE_LIMIT_REACHED" ? t.plan.spaceLimitReached : (data?.error || t.space.duplicateFailed));
+        if (res.error === "UNAUTHENTICATED") {
+          router.push("/login");
+          return;
+        }
+        alert(res.error === "SPACE_LIMIT_REACHED" ? t.plan.spaceLimitReached : (res.error || t.space.duplicateFailed));
         return;
       }
-      router.push(`/dashboard/contents/edit-space/${data.spaceId}`);
+      router.push(`/dashboard/contents/edit-space/${res.spaceId}`);
     } finally {
       setBusy(false);
     }

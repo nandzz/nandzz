@@ -9,5 +9,7 @@ export { ProfileBackground } from "./components/ProfileBackground";
 export { EditProfileDialog } from "./components/EditProfileDialog";
 export { loadMyProfile } from "./actions/load-my-profile";
 export { updateBrand } from "./actions/update-brand";
+export { setSectionVisibility } from "./actions/set-section-visibility";
 export type { LoadMyProfileResult } from "./actions/load-my-profile";
 export type { UpdateBrandResult } from "./actions/update-brand";
+export type { SetSectionVisibilityResult } from "./actions/set-section-visibility";

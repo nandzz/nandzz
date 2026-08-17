@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Globe } from "lucide-react";
-import { SpacePreview } from "@/components/spaces/SpacePreview";
+import { SpacePreview } from "@/features/spaces";
 import type { Space } from "@/lib/types";
 import { getFaviconUrl, getLinkHost, getLinkTarget } from "@/lib/spaces/links";
 

@@ -12,6 +12,12 @@ vi.mock("./SpaceCard", () => ({
   ),
 }));
 
+// Keep this a rendering unit test — stub the visibility action so the profile
+// feature's server barrel isn't pulled into the client test.
+vi.mock("@/features/profile", () => ({
+  setSectionVisibility: vi.fn(async () => ({ ok: true })),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));

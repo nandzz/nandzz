@@ -15,12 +15,11 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/client";
+import { setSectionVisibility } from "@/features/profile";
 import type { SpaceWithProfile, Space } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
   SECTION_ORDER,
-  SECTION_VISIBILITY_COLUMN,
   resolveContentType,
   sectionForType,
   getSectionLabel,
@@ -181,12 +180,8 @@ export function SpaceGrid({
     const previous = visibility;
     setVisibility({ ...visibility, [section]: next }); // optimistic
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profiles")
-        .update({ [SECTION_VISIBILITY_COLUMN[section]]: next })
-        .eq("id", sectionSettings.profileId);
-      if (error) throw error;
+      const result = await setSectionVisibility({ section, value: next });
+      if (!result.ok) throw new Error(result.error);
       await fetch("/api/profile/revalidate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

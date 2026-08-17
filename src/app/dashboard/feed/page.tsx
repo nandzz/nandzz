@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SpaceGrid } from "@/components/spaces/SpaceGrid";
+import { SpaceGrid } from "@/features/spaces";
 import { Button } from "@/components/ui/button";
 import { Compass, Rss } from "lucide-react";
 import type { SpaceWithProfile } from "@/lib/types";

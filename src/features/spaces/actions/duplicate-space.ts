@@ -1,7 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+"use server";
+
 import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { spaceIdSchema } from "../schemas";
+
+export type DuplicateSpaceResult =
+  | { ok: true; spaceId: string }
+  | {
+      ok: false;
+      error:
+        | "UNAUTHENTICATED"
+        | "INVALID_INPUT"
+        | "NOT_FOUND"
+        | "FORBIDDEN"
+        | "COPY_FAILED"
+        | "SPACE_LIMIT_REACHED"
+        | "FAILED";
+      message?: string;
+    };
 
 const BUCKETS = {
   html_url: "space-html",
@@ -24,9 +41,12 @@ function extForField(field: SpaceUrlField, sourcePath: string): string {
   const fromPath = sourcePath.split(".").pop();
   if (fromPath && fromPath.length <= 5) return fromPath;
   switch (field) {
-    case "html_url": return "html";
-    case "pdf_url": return "pdf";
-    default: return "bin";
+    case "html_url":
+      return "html";
+    case "pdf_url":
+      return "pdf";
+    default:
+      return "bin";
   }
 }
 
@@ -49,11 +69,15 @@ async function copyAsset(
   const sourcePath = extractStoragePath(publicUrl, bucket);
   if (!sourcePath) return publicUrl; // external URL — keep as-is
 
-  const { data: blob, error: dlErr } = await admin.storage.from(bucket).download(sourcePath);
+  const { data: blob, error: dlErr } = await admin.storage
+    .from(bucket)
+    .download(sourcePath);
   if (dlErr || !blob) return null;
 
   const ext = extForField(field, sourcePath);
-  const newPath = `${newUserId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const newPath = `${newUserId}/${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}.${ext}`;
   const contentType = contentTypeForField(field, ext);
 
   const { error: upErr } = await admin.storage
@@ -61,46 +85,59 @@ async function copyAsset(
     .upload(newPath, blob, { contentType, upsert: false });
   if (upErr) return null;
 
-  const { data: { publicUrl: newUrl } } = admin.storage.from(bucket).getPublicUrl(newPath);
+  const {
+    data: { publicUrl: newUrl },
+  } = admin.storage.from(bucket).getPublicUrl(newPath);
   return newUrl;
 }
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ spaceId: string }> }
-) {
-  const { spaceId } = await params;
+// Duplicates a space into the caller's account. The admin client is required
+// here (not RLS-scoped): duplicating a *public* space owned by someone else
+// must read+copy their storage assets, which the caller's session can't do. The
+// SSR-client `auth.getUser()` + explicit ownership/public check below is the
+// real authorization guard. Folded in from the old
+// `POST /api/spaces/[spaceId]/duplicate` route.
+export async function duplicateSpace(input: {
+  id: string;
+}): Promise<DuplicateSpaceResult> {
+  const parsed = spaceIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "INVALID_INPUT" };
+  const spaceId = parsed.data.id;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "UNAUTHENTICATED" };
 
   const admin = createAdminClient();
   const { data: source } = await admin
     .from("spaces")
-    .select("id, user_id, title, description, url, html_url, pdf_url, image_url, video_url, markdown_content, preview_image_url, preview_gradient, preview_title, is_public, hashtags")
+    .select(
+      "id, user_id, title, description, url, html_url, pdf_url, image_url, video_url, markdown_content, preview_image_url, preview_gradient, preview_title, is_public, hashtags"
+    )
     .eq("id", spaceId)
     .single();
 
-  if (!source) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+  if (!source) return { ok: false, error: "NOT_FOUND" };
   if (!source.is_public && source.user_id !== user.id) {
-    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    return { ok: false, error: "FORBIDDEN" };
   }
 
   const [html_url, pdf_url, image_url, preview_image_url] = await Promise.all([
     source.html_url ? copyAsset(admin, source.html_url, "html_url", user.id) : null,
     source.pdf_url ? copyAsset(admin, source.pdf_url, "pdf_url", user.id) : null,
     source.image_url ? copyAsset(admin, source.image_url, "image_url", user.id) : null,
-    source.preview_image_url ? copyAsset(admin, source.preview_image_url, "preview_image_url", user.id) : null,
+    source.preview_image_url
+      ? copyAsset(admin, source.preview_image_url, "preview_image_url", user.id)
+      : null,
   ]);
 
   const failed =
     (source.html_url && !html_url) ||
     (source.pdf_url && !pdf_url) ||
     (source.image_url && !image_url);
-  if (failed) {
-    return NextResponse.json({ error: "COPY_FAILED" }, { status: 500 });
-  }
+  if (failed) return { ok: false, error: "COPY_FAILED" };
 
   const payload = {
     title: `${source.title} (copy)`,
@@ -126,15 +163,13 @@ export async function POST(
 
   if (error) {
     if (error.message?.includes("SPACE_LIMIT_REACHED")) {
-      return NextResponse.json({ error: "SPACE_LIMIT_REACHED" }, { status: 403 });
+      return { ok: false, error: "SPACE_LIMIT_REACHED" };
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return { ok: false, error: "FAILED", message: error.message };
   }
 
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row?.space_id) {
-    return NextResponse.json({ error: "NO_SPACE_ID" }, { status: 500 });
-  }
+  if (!row?.space_id) return { ok: false, error: "FAILED", message: "NO_SPACE_ID" };
 
-  return NextResponse.json({ spaceId: row.space_id });
+  return { ok: true, spaceId: row.space_id as string };
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SpaceGrid } from "@/components/spaces/SpaceGrid";
+import { SpaceGrid } from "@/features/spaces";
 import { Button } from "@/components/ui/button";
 import { Hash } from "lucide-react";
 import { getServerTranslations } from "@/lib/i18n/server";

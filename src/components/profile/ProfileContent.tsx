@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SpaceCard } from "@/components/spaces/SpaceCard";
+import { SpaceCard } from "@/features/spaces";
 import type { Space, Profile } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SectionOwnerMenu } from "./SectionOwnerMenu";

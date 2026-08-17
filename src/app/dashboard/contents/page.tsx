@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SpaceGrid } from "@/components/spaces/SpaceGrid";
+import { SpaceGrid } from "@/features/spaces";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Layers, Plus, Rocket, Zap, AlertTriangle, BarChart2, Sparkles } from "lucide-react";
 import type { Space } from "@/lib/types";

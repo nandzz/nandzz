@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SpaceGrid } from "@/components/spaces/SpaceGrid";
+import { SpaceGrid } from "@/features/spaces";
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import { CollectionActions } from "@/features/collections";
 import { getOwnedCollection, getCollectionSpaces } from "@/features/collections/server";

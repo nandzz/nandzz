@@ -3,9 +3,10 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { SpacePreview } from "./SpacePreview";
+import { deleteSpace } from "../actions/delete-space";
+import { duplicateSpace } from "../actions/duplicate-space";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,7 +17,7 @@ import {
 import { ExternalLink, FolderPlus, Pencil, Trash2, Bookmark, Globe, Lock, Copy } from "lucide-react";
 import { LikeButton } from "@/features/social";
 import { ShareButton } from "./ShareButton";
-import { StarButton, AddToCollectionDialog } from "@/features/collections";
+import { StarButton, AddToCollectionDialog, removeSpaceFromCollection } from "@/features/collections";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Space } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -75,25 +76,12 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
   const handleRemoveFromCollection = async () => {
     if (!collectionId) return;
     if (!confirm(t.space.confirmRemoveFromCollection)) return;
-    const supabase = createClient();
-    await supabase
-      .from("collection_spaces")
-      .delete()
-      .eq("collection_id", collectionId)
-      .eq("space_id", space.id);
+    await removeSpaceFromCollection({ collectionId, spaceId: space.id });
     router.refresh();
   };
 
-  const handleOpenSaveDialog = async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/login"); return; }
-    setCollectionDialogOpen(true);
-  };
-
   const handleDelete = async () => {
-    const supabase = createClient();
-    await supabase.from("spaces").delete().eq("id", space.id);
+    await deleteSpace({ id: space.id });
     router.refresh();
   };
 
@@ -101,13 +89,12 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
     if (isDuplicating) return;
     setIsDuplicating(true);
     try {
-      const res = await fetch(`/api/spaces/${space.id}/duplicate`, { method: "POST" });
-      const data = await res.json();
+      const res = await duplicateSpace({ id: space.id });
       if (!res.ok) {
-        alert(data?.error === "SPACE_LIMIT_REACHED" ? t.plan.spaceLimitReached : (data?.error || t.space.duplicateFailed));
+        alert(res.error === "SPACE_LIMIT_REACHED" ? t.plan.spaceLimitReached : (res.error || t.space.duplicateFailed));
         return;
       }
-      router.push(`/dashboard/contents/edit-space/${data.spaceId}`);
+      router.push(`/dashboard/contents/edit-space/${res.spaceId}`);
     } finally {
       setIsDuplicating(false);
     }
@@ -237,7 +224,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
           </ContextMenuItem>
           {!editable && !isOwn && (
             <>
-              <ContextMenuItem onClick={handleOpenSaveDialog}>
+              <ContextMenuItem onClick={() => setCollectionDialogOpen(true)}>
                 <Bookmark className={`size-4 ${isSaved ? "fill-violet-500 text-violet-500" : ""}`} />
                 {isSaved ? t.space.manageCollections : t.space.saveToCollection}
               </ContextMenuItem>
@@ -288,6 +275,7 @@ export function SpaceCard({ space, username, routeUsername, editable, liked, sav
         spaceId={space.id}
         spaceTitle={space.title}
         onSavedChange={setIsSaved}
+        onUnauthenticated={() => router.push("/login")}
       />
 
       <ConfirmDialog

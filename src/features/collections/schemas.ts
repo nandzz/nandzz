@@ -29,5 +29,10 @@ export const setSpaceCollectionsSchema = z.object({
 
 export const spaceIdSchema = z.object({ spaceId: z.uuid() });
 
+export const removeSpaceFromCollectionSchema = z.object({
+  collectionId: z.uuid(),
+  spaceId: z.uuid(),
+});
+
 export type CreateCollectionInput = z.input<typeof createCollectionSchema>;
 export type UpdateCollectionInput = z.infer<typeof updateCollectionSchema>;

@@ -12,8 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { createClient } from "@/lib/supabase/client";
-import { deleteSpaceWithCleanup } from "@/lib/delete-space";
+import { deleteSpace } from "../actions/delete-space";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SpaceOwnerMenuProps {
@@ -28,8 +27,7 @@ export function SpaceOwnerMenu({ spaceId, editHref, redirectTo }: SpaceOwnerMenu
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleDelete = async () => {
-    const supabase = createClient();
-    await deleteSpaceWithCleanup(supabase, spaceId);
+    await deleteSpace({ id: spaceId });
     router.push(redirectTo);
     router.refresh();
   };

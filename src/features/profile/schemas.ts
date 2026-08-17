@@ -55,5 +55,12 @@ export const galleryPageSchema = z.object({
   page: z.number().int().min(1),
 });
 
+// The three profile sections whose public visibility the dashboard grid toggles.
+// Kept in lockstep with SectionId in @/lib/spaces/content-types.
+export const setSectionVisibilitySchema = z.object({
+  section: z.enum(["informative", "gallery", "links"]),
+  value: z.boolean(),
+});
+
 export type UpdateProfileInfoInput = z.infer<typeof updateProfileInfoSchema>;
 export type UpdateBrandInput = z.infer<typeof updateBrandSchema>;

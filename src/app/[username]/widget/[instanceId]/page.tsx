@@ -9,7 +9,7 @@ import { getPublicWidgetById } from "@/lib/widgets/server";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
 import { renderWidgetIcon } from "@/components/widgets/widgetIcon";
 import { CalendarBookingFlow } from "@/components/widgets/calendar/CalendarBookingFlow";
-import { ShareMenu } from "@/components/spaces/ShareMenu";
+import { ShareMenu } from "@/features/spaces";
 import { BackButton } from "@/components/ui/BackButton";
 import type { Profile } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
