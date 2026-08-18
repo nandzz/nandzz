@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AgentDocument, CalendarService } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { CalendarBookingFlow } from "@/components/widgets/calendar/CalendarBookingFlow";
+import { CalendarBookingFlow } from "@/features/booking";
 
 const SENSITIVE_PATTERNS: RegExp[] = [
   /\b(?:password|passwd|pwd)\s*[:=]/i,

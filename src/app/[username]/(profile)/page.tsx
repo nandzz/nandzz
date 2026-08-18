@@ -16,7 +16,7 @@ import {
   resolveSectionOrder,
 } from "@/lib/gallery/layouts";
 import { FEATURES } from "@/lib/flags";
-import { getProfileWidgets } from "@/lib/widgets/server";
+import { getProfileWidgets } from "@/features/booking/server";
 import type { WidgetInstanceWithCatalog, Space } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { getIsFollowing, getLikedSpaceIds } from "@/features/social/server";

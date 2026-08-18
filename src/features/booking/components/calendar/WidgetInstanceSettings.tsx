@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, CircleAlert } from "lucide-react";
+import { updateWidgetInstance } from "@/features/booking/actions/update-widget-instance";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {
@@ -28,15 +29,10 @@ export function WidgetInstanceSettings({ instanceId, hasAccess, initialEnabled }
     setSaving(true);
     setStatus(null);
     try {
-      const res = await fetch(`/api/widgets/instances/${instanceId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
-      });
+      const res = await updateWidgetInstance({ instanceId, enabled: next });
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
         setEnabled(prev);
-        setStatus({ ok: false, msg: data?.error ?? t.booking.errorCouldNotSave });
+        setStatus({ ok: false, msg: res.message ?? t.booking.errorCouldNotSave });
         return;
       }
       setStatus({ ok: true, msg: t.booking.savedMsg });

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { CalendarService } from "@/lib/types";
 import { getLocationScope, withLocationScope } from "@/lib/widgets/calendar";
-import type { CalendarConfigController } from "@/components/widgets/calendar/useCalendarConfig";
+import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {

@@ -1,7 +1,7 @@
 import type { WidgetBooking } from "@/lib/types";
-import type { WidgetOverviewData, OverviewBooking } from "@/components/widgets/calendar/WidgetOverview";
-import type { WidgetBookingsData } from "@/components/widgets/calendar/WidgetBookings";
-import type { WidgetCustomersData, CustomerSummary } from "@/components/widgets/calendar/WidgetCustomers";
+import type { WidgetOverviewData, OverviewBooking } from "@/features/booking/components/calendar/WidgetOverview";
+import type { WidgetBookingsData } from "@/features/booking/components/calendar/WidgetBookings";
+import type { WidgetCustomersData, CustomerSummary } from "@/features/booking/components/calendar/WidgetCustomers";
 import { buildPeriodBuckets, type StatsPeriod } from "@/lib/period";
 
 // Aggregation builders for the widget dashboard tabs (Overview/Bookings/

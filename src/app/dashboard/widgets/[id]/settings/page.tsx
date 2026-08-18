@@ -4,9 +4,8 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getOwnerWidgetById } from "@/lib/widgets/server";
-import { renderWidgetIcon } from "@/components/widgets/widgetIcon";
-import { WidgetInstanceSettings } from "@/components/widgets/calendar/WidgetInstanceSettings";
+import { getOwnerWidgetById } from "@/features/booking/server";
+import { renderWidgetIcon, WidgetInstanceSettings } from "@/features/booking";
 import { getServerTranslations } from "@/lib/i18n/server";
 
 export default async function WidgetInstanceSettingsPage({

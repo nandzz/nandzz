@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createWidgetInstance } from "@/features/booking/actions/create-widget-instance";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Adds a widget instance to the owner's profile (no checkout — widgets are
@@ -26,18 +27,13 @@ export function AddWidgetButton({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/widgets/instances", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ catalog_id: catalogId }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.id) {
+      const res = await createWidgetInstance({ catalogId });
+      if (!res.ok) {
         setError(t.booking.errorCouldNotSave);
         setLoading(false);
         return;
       }
-      router.push(`/dashboard/widgets/${data.id}`);
+      router.push(`/dashboard/widgets/${res.id}`);
       router.refresh();
     } catch {
       setError(t.booking.errorCouldNotSave);

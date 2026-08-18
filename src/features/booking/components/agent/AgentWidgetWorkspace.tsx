@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, CircleAlert, Gauge, ArrowUpRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { updateWidgetInstance } from "@/features/booking/actions/update-widget-instance";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {
@@ -42,15 +43,10 @@ export function AgentWidgetWorkspace({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/widgets/instances/${instanceId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
-      });
+      const res = await updateWidgetInstance({ instanceId, enabled: next });
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
         setEnabled(prev);
-        setError(data?.error ?? t.booking.errorCouldNotSave);
+        setError(res.message ?? t.booking.errorCouldNotSave);
         return;
       }
     } catch {

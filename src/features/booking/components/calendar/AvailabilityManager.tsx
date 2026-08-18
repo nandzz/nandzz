@@ -4,7 +4,7 @@ import { Loader2, Plus, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CalendarConfig, WeekdayKey } from "@/lib/types";
 import { WEEKDAYS, getLocationScope, withLocationScope } from "@/lib/widgets/calendar";
-import type { CalendarConfigController } from "@/components/widgets/calendar/useCalendarConfig";
+import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {

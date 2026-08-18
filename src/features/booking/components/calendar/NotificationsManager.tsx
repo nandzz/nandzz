@@ -3,8 +3,8 @@
 import { Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CalendarConfig } from "@/lib/types";
-import { MessageTemplateEditor } from "@/components/widgets/calendar/MessageTemplateEditor";
-import type { CalendarConfigController } from "@/components/widgets/calendar/useCalendarConfig";
+import { MessageTemplateEditor } from "@/features/booking/components/calendar/MessageTemplateEditor";
+import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {

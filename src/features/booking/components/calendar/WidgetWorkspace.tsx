@@ -5,20 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { LayoutDashboard, CalendarDays, Users, UserCog, MapPin, Clock, Tag, Bell, CircleAlert, ChevronDown, ArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { AvailabilityManager } from "@/components/widgets/calendar/AvailabilityManager";
-import { ServicesManager } from "@/components/widgets/calendar/ServicesManager";
-import { NotificationsManager } from "@/components/widgets/calendar/NotificationsManager";
-import { StaffManager } from "@/components/widgets/calendar/StaffManager";
-import { LocationManager } from "@/components/widgets/calendar/LocationManager";
-import { LocationGate } from "@/components/widgets/calendar/LocationGate";
-import { useCalendarConfig } from "@/components/widgets/calendar/useCalendarConfig";
-import { WidgetOverview } from "@/components/widgets/calendar/WidgetOverview";
-import { WidgetBookings } from "@/components/widgets/calendar/WidgetBookings";
-import { WidgetCustomers } from "@/components/widgets/calendar/WidgetCustomers";
-import { NewBookingBanner } from "@/components/widgets/calendar/NewBookingBanner";
-import { buildOverview, buildBookings, buildCustomers } from "@/lib/widgets/calendarStats";
-import { playBookingChime } from "@/lib/widgets/chime";
+import { subscribeToWidgetBookings } from "@/features/booking/realtime";
+import { AvailabilityManager } from "@/features/booking/components/calendar/AvailabilityManager";
+import { ServicesManager } from "@/features/booking/components/calendar/ServicesManager";
+import { NotificationsManager } from "@/features/booking/components/calendar/NotificationsManager";
+import { StaffManager } from "@/features/booking/components/calendar/StaffManager";
+import { LocationManager } from "@/features/booking/components/calendar/LocationManager";
+import { LocationGate } from "@/features/booking/components/calendar/LocationGate";
+import { useCalendarConfig } from "@/features/booking/components/calendar/useCalendarConfig";
+import { WidgetOverview } from "@/features/booking/components/calendar/WidgetOverview";
+import { WidgetBookings } from "@/features/booking/components/calendar/WidgetBookings";
+import { WidgetCustomers } from "@/features/booking/components/calendar/WidgetCustomers";
+import { NewBookingBanner } from "@/features/booking/components/calendar/NewBookingBanner";
+import { buildOverview, buildBookings, buildCustomers } from "@/features/booking/calendarStats";
+import { playBookingChime } from "@/features/booking/chime";
 import type { CalendarConfig, WidgetBooking } from "@/lib/types";
 import type { StatsPeriod } from "@/lib/period";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -57,7 +57,6 @@ function useNewBookingsToday(
   }, [onConfirmedBooking]);
 
   useEffect(() => {
-    const supabase = createClient();
     // Same-day check anchored to the widget's IANA timezone (en-CA => YYYY-MM-DD).
     const dayFmt = new Intl.DateTimeFormat("en-CA", {
       timeZone: timezone,
@@ -75,38 +74,27 @@ function useNewBookingsToday(
       }, 400);
     };
 
-    const channel = supabase
-      .channel(`widget_bookings:${instanceId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "widget_bookings",
-          filter: `instance_id=eq.${instanceId}`,
-        },
-        (payload) => {
-          const row = payload.new as WidgetBooking;
-          const now = Date.now();
-          const startsMs = new Date(row.starts_at).getTime();
-          const isTodayUpcoming =
-            row.status === "confirmed" &&
-            startsMs >= now &&
-            dayFmt.format(new Date(startsMs)) === dayFmt.format(new Date(now));
-          if (isTodayUpcoming) setNewToday((c) => c + 1);
-          if (row.status === "confirmed") onConfirmedBookingRef.current?.(row);
-          // Any new booking is relevant to the Bookings list / overview tiles.
-          scheduleRefresh();
-        }
-      )
-      .subscribe();
+    const unsubscribe = subscribeToWidgetBookings(instanceId, {
+      onInsert: (row) => {
+        const now = Date.now();
+        const startsMs = new Date(row.starts_at).getTime();
+        const isTodayUpcoming =
+          row.status === "confirmed" &&
+          startsMs >= now &&
+          dayFmt.format(new Date(startsMs)) === dayFmt.format(new Date(now));
+        if (isTodayUpcoming) setNewToday((c) => c + 1);
+        if (row.status === "confirmed") onConfirmedBookingRef.current?.(row);
+        // Any new booking is relevant to the Bookings list / overview tiles.
+        scheduleRefresh();
+      },
+    });
 
     return () => {
       if (refreshTimer.current) {
         clearTimeout(refreshTimer.current);
         refreshTimer.current = null;
       }
-      supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [instanceId, timezone, router]);
 

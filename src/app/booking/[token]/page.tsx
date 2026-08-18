@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
-import { ManageBooking, type ManageBookingData } from "@/components/widgets/calendar/ManageBooking";
+import { ManageBooking, type ManageBookingData } from "@/features/booking";
 
 export const dynamic = "force-dynamic";
 

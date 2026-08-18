@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProfileWidgets } from "@/lib/widgets/server";
+import { getProfileWidgets } from "@/features/booking/server";
 import { AgentPublic } from "@/components/agent/AgentPublic";
 import { FEATURES } from "@/lib/flags";
 

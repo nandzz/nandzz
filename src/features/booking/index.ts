@@ -1,0 +1,32 @@
+// Client-safe public API for the booking / widgets feature.
+//
+// Anything that transitively pulls `import "server-only"` (the `data/` read
+// layer) lives in `server.ts`, not here, so this barrel stays importable from
+// Client Components. Shared, I/O-free calendar/domain helpers deliberately stay
+// in `@/lib/widgets/*` (like `@/lib/types` / `@/lib/utils`) since the kept
+// public HTTP routes depend on them too.
+
+// ── Dashboard surfaces ──────────────────────────────────────────────────────
+export { AddWidgetButton } from "./components/AddWidgetButton";
+export { WidgetStrip } from "./components/WidgetStrip";
+export { WidgetWorkspace } from "./components/calendar/WidgetWorkspace";
+export { WidgetInstanceSettings } from "./components/calendar/WidgetInstanceSettings";
+export { AgentWidgetWorkspace } from "./components/agent/AgentWidgetWorkspace";
+
+// ── Public booking surfaces ─────────────────────────────────────────────────
+export { CalendarBookingFlow } from "./components/calendar/CalendarBookingFlow";
+export { ManageBooking } from "./components/calendar/ManageBooking";
+export type { ManageBookingData } from "./components/calendar/ManageBooking";
+
+// ── Icon helper (catalog `icon` string → lucide element) ────────────────────
+export {
+  renderWidgetIcon,
+  resolveWidgetIcon,
+  FALLBACK_WIDGET_ICON,
+} from "./components/widgetIcon";
+
+// ── Actions (internal dashboard mutations, folded from the instances routes) ─
+export { createWidgetInstance } from "./actions/create-widget-instance";
+export type { CreateWidgetInstanceResult } from "./actions/create-widget-instance";
+export { updateWidgetInstance } from "./actions/update-widget-instance";
+export type { UpdateWidgetInstanceResult } from "./actions/update-widget-instance";

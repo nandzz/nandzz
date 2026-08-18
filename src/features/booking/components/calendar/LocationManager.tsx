@@ -5,10 +5,10 @@ import { Loader2, Plus, Check, Search, MapPinned, MapPinX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
 import type { Location, WeekdayKey } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
-import type { CalendarConfigController } from "@/components/widgets/calendar/useCalendarConfig";
-import { LocationCard } from "@/components/widgets/calendar/LocationCard";
-import { LocationEditor } from "@/components/widgets/calendar/LocationEditor";
+import { getCurrentUserId, uploadLocationPhoto } from "@/features/booking/storage";
+import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
+import { LocationCard } from "@/features/booking/components/calendar/LocationCard";
+import { LocationEditor } from "@/features/booking/components/calendar/LocationEditor";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Photo files must be under this size (mirrors StaffManager's uploader).
@@ -195,24 +195,16 @@ export function LocationManager({ controller }: Props) {
     setUploadingLocationId(locationId);
     setPhotoError(null);
     try {
-      const supabase = createClient();
-      // Storage RLS on the `avatars` bucket requires the first path segment to
-      // equal the owner's auth uid, so every location photo lives under it.
+      // Location photos live under the owner's auth uid (Storage RLS on
+      // `avatars` requires the first path segment to equal it); cache-busted.
       let ownerId = ownerIdRef.current;
       if (!ownerId) {
-        const { data } = await supabase.auth.getUser();
-        ownerId = data.user?.id ?? null;
+        ownerId = await getCurrentUserId();
         ownerIdRef.current = ownerId;
       }
       if (!ownerId) throw new Error(t.booking.notSignedIn);
-      const filePath = `${ownerId}/location/${locationId}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
-      if (uploadError) throw uploadError;
-      const { data: publicUrlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      // Cache-bust: the storage path is stable across re-uploads.
-      updateLocation(locationId, { photo_url: `${publicUrlData.publicUrl}?t=${Date.now()}` });
+      const photoUrl = await uploadLocationPhoto(ownerId, locationId, blob);
+      updateLocation(locationId, { photo_url: photoUrl });
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : t.booking.errorUploadPhoto);
     } finally {
