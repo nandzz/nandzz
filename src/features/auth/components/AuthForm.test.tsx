@@ -14,13 +14,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams,
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
-    auth: {
-      signUp: mockSignUp,
-      signInWithPassword: mockSignIn,
-    },
-  }),
+vi.mock("../auth", () => ({
+  signUpWithMetadata: (...args: unknown[]) => mockSignUp(...args),
+  signInWithPassword: (...args: unknown[]) => mockSignIn(...args),
+  signInWithGoogle: vi.fn().mockResolvedValue({ error: null }),
 }));
 
 beforeEach(() => {
@@ -178,10 +175,7 @@ describe("AuthForm", () => {
       await user.click(screen.getByRole("button", { name: "Log in" }));
 
       await waitFor(() =>
-        expect(mockSignIn).toHaveBeenCalledWith({
-          email: "user@example.com",
-          password: "mypassword",
-        })
+        expect(mockSignIn).toHaveBeenCalledWith("user@example.com", "mypassword")
       );
     });
 
@@ -239,12 +233,8 @@ describe("AuthForm", () => {
         expect(mockSignUp).toHaveBeenCalledWith({
           email: "john@example.com",
           password: "password123",
-          options: {
-            data: {
-              username: "johndoe",
-              display_name: "John Doe",
-            },
-          },
+          username: "johndoe",
+          displayName: "John Doe",
         })
       );
     });
@@ -261,11 +251,7 @@ describe("AuthForm", () => {
 
       await waitFor(() =>
         expect(mockSignUp).toHaveBeenCalledWith(
-          expect.objectContaining({
-            options: expect.objectContaining({
-              data: expect.objectContaining({ username: "johndoe" }),
-            }),
-          })
+          expect.objectContaining({ username: "johndoe" })
         )
       );
     });
@@ -282,11 +268,7 @@ describe("AuthForm", () => {
 
       await waitFor(() =>
         expect(mockSignUp).toHaveBeenCalledWith(
-          expect.objectContaining({
-            options: expect.objectContaining({
-              data: expect.objectContaining({ display_name: "johndoe" }),
-            }),
-          })
+          expect.objectContaining({ displayName: "johndoe" })
         )
       );
     });

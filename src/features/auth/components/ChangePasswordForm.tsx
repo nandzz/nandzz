@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { updateUserPassword } from "../auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +14,6 @@ export function ChangePasswordForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const { t } = useLanguage();
-
-  const supabase = useMemo(() => createClient(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +31,7 @@ export function ChangePasswordForm() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await updateUserPassword(newPassword);
       if (error) {
         setError(error.message);
       } else {

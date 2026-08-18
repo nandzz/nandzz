@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+import { ForgotPasswordForm } from "@/features/auth";
 
 export default function ForgotPasswordPage() {
   return (

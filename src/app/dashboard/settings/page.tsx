@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { loadMyProfile } from "@/features/profile";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -17,27 +15,23 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ShieldCheck,
   CreditCard,
-  Trash2,
   Globe,
 } from "lucide-react";
-import { Dialog } from "@/components/ui/dialog";
 import { FEATURES } from "@/lib/flags";
-import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm";
-import { PhoneVerificationForm } from "@/components/auth/PhoneVerificationForm";
+import {
+  ChangePasswordForm,
+  PhoneVerificationForm,
+  DeleteAccount,
+} from "@/features/auth";
 import type { Profile } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/lib/i18n/translations";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const supabase = createClient();
   const { t, locale, setLocale } = useLanguage();
 
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -50,25 +44,6 @@ export default function SettingsPage() {
     };
     loadProfile();
   }, [router]);
-
-  const handleDeleteAccount = async () => {
-    setDeleteLoading(true);
-    setDeleteError("");
-    try {
-      const res = await fetch("/api/account/delete", { method: "DELETE" });
-      if (!res.ok) {
-        const body = await res.json();
-        setDeleteError(body.error || "Failed to delete account");
-        return;
-      }
-      await supabase.auth.signOut();
-      router.push("/");
-    } catch {
-      setDeleteError("Something went wrong. Please try again.");
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
 
   if (!profile) {
     return (
@@ -205,73 +180,7 @@ export default function SettingsPage() {
             </TabsContent>
           </Tabs>
 
-          {/* Danger Zone */}
-          <div className="mt-8 rounded-xl border border-destructive/30 bg-destructive/5 p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-semibold text-destructive">{t.settings.deleteAccountTitle}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t.settings.deleteAccountDesc}
-                </p>
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="shrink-0"
-                onClick={() => {
-                  setDeleteDialogOpen(true);
-                  setDeleteConfirm("");
-                  setDeleteError("");
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t.settings.deleteAccountButton}
-              </Button>
-            </div>
-          </div>
-
-          <Dialog
-            open={deleteDialogOpen}
-            onClose={() => setDeleteDialogOpen(false)}
-            title={t.settings.deleteDialogTitle}
-          >
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {(() => {
-                  const [before, after] = t.settings.deleteDialogDesc.split("{username}");
-                  return <>{before}<span className="font-mono font-semibold text-foreground">{profile.username}</span>{after}</>;
-                })()}
-              </p>
-              <input
-                type="text"
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder={profile.username}
-                className="w-full rounded-md border border-border/60 bg-muted/50 px-3 py-2 text-sm focus:border-destructive/50 focus:outline-none focus:ring-1 focus:ring-destructive/30"
-              />
-              {deleteError && (
-                <p className="text-sm text-destructive">{deleteError}</p>
-              )}
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(false)}
-                  disabled={deleteLoading}
-                >
-                  {t.settings.deleteDialogCancel}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={deleteConfirm !== profile.username || deleteLoading}
-                  onClick={handleDeleteAccount}
-                >
-                  {deleteLoading ? t.settings.deleting : t.settings.deleteDialogConfirm}
-                </Button>
-              </div>
-            </div>
-          </Dialog>
+          <DeleteAccount username={profile.username} />
         </div>
       </div>
     </div>

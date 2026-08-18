@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { claimSignupProfile } from "@/features/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,8 +24,6 @@ export default function SetupUsernamePage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const supabase = useMemo(() => createClient(), []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -39,31 +37,26 @@ export default function SetupUsernamePage() {
     }
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
       // claim_signup_profile inserts the profile AND writes the welcome-credit
       // grant in one SECURITY DEFINER call, so OAuth signups get the same
       // signup_credit_grant from app_settings that email/password signups get
       // via the handle_new_user trigger.
-      const { error: rpcError } = await supabase.rpc("claim_signup_profile", {
-        p_username: trimmed,
-        p_display_name: displayName.trim() || null,
+      const result = await claimSignupProfile({
+        username: trimmed,
+        displayName: displayName.trim() || null,
       });
 
-      if (rpcError) {
-        if (rpcError.message?.includes("USERNAME_TAKEN")) {
+      if (!result.ok) {
+        if (result.error === "UNAUTHENTICATED") {
+          router.push("/login");
+          return;
+        }
+        if (result.error === "USERNAME_TAKEN") {
           setError(t.setup.usernameTaken);
-        } else if (rpcError.message?.includes("INVALID_USERNAME")) {
+        } else if (result.error === "INVALID_USERNAME") {
           setError(t.setup.usernameInvalid);
         } else {
-          setError(rpcError.message);
+          setError(result.message || t.common.error);
         }
       } else {
         router.push("/dashboard/contents");

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
+import { getPhoneInfo, updateUserPhone, verifyPhoneOtp } from "../auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,28 +22,27 @@ export function PhoneVerificationForm() {
   const [justVerified, setJustVerified] = useState(false);
 
   const { t } = useLanguage();
-  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user?.phone) {
+    getPhoneInfo().then((info) => {
+      if (!info?.phone) {
         setPhoneState("none");
-      } else if (!user.phone_confirmed_at) {
-        setCurrentPhone(user.phone);
-        setPhone(user.phone);
+      } else if (!info.phoneConfirmed) {
+        setCurrentPhone(info.phone);
+        setPhone(info.phone);
         setPhoneState("unverified");
       } else {
-        setCurrentPhone(user.phone);
+        setCurrentPhone(info.phone);
         setPhoneState("verified");
       }
     });
-  }, [supabase]);
+  }, []);
 
   const sendOtp = async (phoneNumber: string) => {
     setError("");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ phone: phoneNumber });
+      const { error } = await updateUserPhone(phoneNumber);
       if (error) {
         setError(error.message);
         return false;
@@ -82,11 +81,7 @@ export function PhoneVerificationForm() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otp,
-        type: "phone_change",
-      });
+      const { error } = await verifyPhoneOtp(phone, otp);
       if (error) {
         setError(error.message);
       } else {

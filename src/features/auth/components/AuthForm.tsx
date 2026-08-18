@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import {
+  signInWithPassword,
+  signUpWithMetadata,
+  signInWithGoogle,
+} from "../auth";
 import { safeNextPath } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +58,7 @@ export function AuthForm() {
   const { t } = useLanguage();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync the mode to the ?tab= URL param when the query string changes (external-state sync, not derived render state)
     setMode(searchParams.get("tab") === "signup" ? "signup" : "login");
   }, [searchParams]);
 
@@ -64,17 +69,12 @@ export function AuthForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const supabase = useMemo(() => createClient(), []);
-
   const handleGoogleSignIn = async () => {
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
+    const { error } = await signInWithGoogle(
+      `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+    );
     if (error) {
       setError(error.message);
       setLoading(false);
@@ -100,15 +100,11 @@ export function AuthForm() {
           return;
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { error } = await signUpWithMetadata({
           email,
           password,
-          options: {
-            data: {
-              username: username.trim().toLowerCase(),
-              display_name: displayName.trim() || username.trim(),
-            },
-          },
+          username: username.trim().toLowerCase(),
+          displayName: displayName.trim() || username.trim(),
         });
 
         if (error) {
@@ -118,10 +114,7 @@ export function AuthForm() {
           router.refresh();
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await signInWithPassword(email, password);
 
         if (error) {
           setError(error.message);

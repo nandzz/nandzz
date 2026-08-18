@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { hasActiveSession, updateUserPassword } from "../auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,17 +26,15 @@ export function ResetPasswordForm() {
   const [error, setError] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
 
-  const supabase = useMemo(() => createClient(), []);
-
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+    hasActiveSession().then((active) => {
+      if (!active) {
         router.replace("/login");
       } else {
         setSessionReady(true);
       }
     });
-  }, [supabase, router]);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +51,7 @@ export function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await updateUserPassword(newPassword);
       if (error) {
         setError(error.message);
       } else {

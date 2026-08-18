@@ -1,90 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import SettingsPage from "./page";
+import { DeleteAccount } from "./DeleteAccount";
 
 const mockPush = vi.fn();
-const mockRefresh = vi.fn();
-const mockGetUser = vi.fn();
-const mockFrom = vi.fn();
 const mockSignOut = vi.fn();
 const mockFetch = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
-    auth: {
-      getUser: mockGetUser,
-      signOut: mockSignOut,
-    },
-    from: mockFrom,
-    storage: {
-      from: () => ({
-        upload: vi.fn().mockResolvedValue({ error: null }),
-        getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "" } }),
-      }),
-    },
-  }),
+vi.mock("../auth", () => ({
+  signOutUser: (...args: unknown[]) => mockSignOut(...args),
 }));
 
-vi.mock("@/lib/flags", () => ({
-  FEATURES: { monetization: false },
-}));
-
-vi.mock("@/components/auth/ChangePasswordForm", () => ({
-  ChangePasswordForm: () => <div />,
-}));
-
-vi.mock("@/components/ui/AvatarCropModal", () => ({
-  AvatarCropModal: () => <div />,
-}));
-
-const mockProfile = {
-  id: "user-1",
-  username: "nandz",
-  display_name: "Felipe",
-  tagline: null,
-  bio: null,
-  website_url: null,
-  social_links: {},
-  avatar_url: null,
-};
-
-function setupProfileMock() {
-  mockGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-  const single = vi.fn().mockResolvedValue({ data: mockProfile });
-  const eq = vi.fn().mockReturnValue({ single });
-  const select = vi.fn().mockReturnValue({ eq });
-  const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
-  mockFrom.mockReturnValue({ select, update });
-}
-
-async function renderAndWait() {
-  render(<SettingsPage />);
-  // Wait for the profile to load — "cannot be undone" is unique to the danger zone
-  await screen.findByText(/cannot be undone/i);
+function renderDanger() {
+  render(<DeleteAccount username="nandz" />);
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  setupProfileMock();
   global.fetch = mockFetch;
 });
 
 describe("Delete Account — danger zone", () => {
   describe("danger zone section", () => {
-    it("renders the danger zone with a Delete Account button", async () => {
-      await renderAndWait();
-      // getAllByRole because the dialog trigger and heading share the same text
+    it("renders the danger zone with a Delete Account button", () => {
+      renderDanger();
       const buttons = screen.getAllByRole("button", { name: /delete account/i });
       expect(buttons.length).toBeGreaterThanOrEqual(1);
     });
 
-    it("shows a warning that the action cannot be undone", async () => {
-      await renderAndWait();
+    it("shows a warning that the action cannot be undone", () => {
+      renderDanger();
       expect(screen.getByText(/cannot be undone/i)).toBeInTheDocument();
     });
   });
@@ -92,8 +41,7 @@ describe("Delete Account — danger zone", () => {
   describe("confirmation dialog", () => {
     async function openDialog() {
       const user = userEvent.setup();
-      await renderAndWait();
-      // The trigger button is the first (and only) "Delete Account" button before the dialog opens
+      renderDanger();
       const [triggerBtn] = screen.getAllByRole("button", { name: /delete account/i });
       await user.click(triggerBtn);
       return user;
@@ -147,7 +95,7 @@ describe("Delete Account — danger zone", () => {
   describe("account deletion flow", () => {
     async function typeAndConfirm() {
       const user = userEvent.setup();
-      await renderAndWait();
+      renderDanger();
       const [triggerBtn] = screen.getAllByRole("button", { name: /delete account/i });
       await user.click(triggerBtn);
       await user.type(screen.getByPlaceholderText("nandz"), "nandz");
@@ -207,7 +155,7 @@ describe("Delete Account — danger zone", () => {
     it("disables the confirm button while deletion is in progress", async () => {
       mockFetch.mockImplementation(() => new Promise(() => {})); // never resolves
       const user = userEvent.setup();
-      await renderAndWait();
+      renderDanger();
       const [triggerBtn] = screen.getAllByRole("button", { name: /delete account/i });
       await user.click(triggerBtn);
       await user.type(screen.getByPlaceholderText("nandz"), "nandz");
