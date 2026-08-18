@@ -2,7 +2,7 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContentBuilderShell } from "./ContentBuilderShell";
-import { useContentBuilderForm } from "./useContentBuilderForm";
+import { useContentBuilderForm } from "../../hooks/useContentBuilderForm";
 import type { BuilderFieldsProps } from "./types";
 
 /**

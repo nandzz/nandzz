@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
 import { Sparkles } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { uploadAiStubHtml } from "@/lib/spaces/ai-stub-html";
+import { uploadAiStubHtml } from "../../storage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContentBuilderShell } from "./ContentBuilderShell";
-import { useContentBuilderForm } from "./useContentBuilderForm";
+import { useContentBuilderForm } from "../../hooks/useContentBuilderForm";
 import type { BuilderFieldsProps } from "./types";
 
 /**
@@ -16,14 +14,13 @@ import type { BuilderFieldsProps } from "./types";
  */
 export function AiBuilder({ space, collectionId }: BuilderFieldsProps) {
   const { t } = useLanguage();
-  const supabase = useMemo(() => createClient(), []);
 
   const validate = (): string | null => null; // title-only — shared checks cover it
 
   const buildTypePayload = async ({ userId, title }: { userId: string; title: string }) => {
     let html_url = space?.html_url || null;
     if (!space?.html_url) {
-      html_url = await uploadAiStubHtml(supabase, userId, title);
+      html_url = await uploadAiStubHtml(userId, title);
     }
     return {
       content_type: "ai",

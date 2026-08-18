@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImageIcon, UploadCloud, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContentBuilderShell } from "./ContentBuilderShell";
-import { useContentBuilderForm } from "./useContentBuilderForm";
+import { useContentBuilderForm } from "../../hooks/useContentBuilderForm";
+import { uploadSpaceImage } from "../../storage";
 import { FileDropzone } from "./FileDropzone";
 import type { BuilderFieldsProps } from "./types";
 
@@ -14,7 +14,6 @@ const MAX_CONTENT_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export function ImageBuilder({ space, collectionId }: BuilderFieldsProps) {
   const { t } = useLanguage();
-  const supabase = useMemo(() => createClient(), []);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null);
 
@@ -37,14 +36,11 @@ export function ImageBuilder({ space, collectionId }: BuilderFieldsProps) {
   const buildTypePayload = async ({ userId }: { userId: string }) => {
     let image_url = space?.image_url || null;
     if (imageFile) {
-      const fileExt = imageFile.name.split(".").pop();
-      const filePath = `${userId}/${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("space-images")
-        .upload(filePath, imageFile, { contentType: imageFile.type, upsert: false });
-      if (uploadError) throw new Error(t.contentBuilder.imageUploadFailedPrefix + uploadError.message);
-      const { data: publicUrlData } = supabase.storage.from("space-images").getPublicUrl(filePath);
-      image_url = publicUrlData.publicUrl;
+      try {
+        image_url = await uploadSpaceImage(userId, imageFile);
+      } catch (uploadErr) {
+        throw new Error(t.contentBuilder.imageUploadFailedPrefix + (uploadErr as Error).message);
+      }
     }
     return {
       content_type: "image",

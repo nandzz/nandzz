@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { createClient } from "@/lib/supabase/client";
+import { subscribeToAiEditJob } from "../realtime";
 
 // ─── File attachments ─────────────────────────────────────────────────────────
 
@@ -166,6 +166,7 @@ export function AiAssistantPanel({ spaceId, htmlUrl, isOpen, onClose }: AiAssist
   // Portal mount/unmount with transition
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- portal mount transition
       setMounted(true);
       const id = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
       return () => cancelAnimationFrame(id);
@@ -180,6 +181,7 @@ export function AiAssistantPanel({ spaceId, htmlUrl, isOpen, onClose }: AiAssist
   useEffect(() => {
     if (isOpen && state.status === "submitted") {
       dispatch({ type: "DISCARD" });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets stale job id when the panel is reopened
       setSubmittedJobId(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,14 +201,8 @@ export function AiAssistantPanel({ spaceId, htmlUrl, isOpen, onClose }: AiAssist
   // "working in background" forever if the edge function fails.
   useEffect(() => {
     if (!submittedJobId) return;
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`ai-edit-job-${submittedJobId}`)
-      .on("postgres_changes", {
-        event: "UPDATE", schema: "public", table: "ai_edit_jobs",
-        filter: `id=eq.${submittedJobId}`,
-      }, (payload) => {
-        const job = payload.new as { status: string; error_code?: string };
+    const unsubscribe = subscribeToAiEditJob(submittedJobId, {
+      onUpdate: (job) => {
         if (job.status === "error") {
           dispatch({
             type: "ERROR",
@@ -217,9 +213,9 @@ export function AiAssistantPanel({ spaceId, htmlUrl, isOpen, onClose }: AiAssist
         } else if (job.status === "done") {
           setSubmittedJobId(null);
         }
-      })
-      .subscribe();
-    return () => { channel.unsubscribe(); };
+      },
+    });
+    return () => { unsubscribe(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submittedJobId]);
 
@@ -409,7 +405,7 @@ function PanelBody({ state, ai, instruction, onInstructionChange, onSubmit, onRe
           <p className="text-xs text-muted-foreground">{ai.submittedDesc}</p>
         </div>
         <p className="text-xs text-muted-foreground/70 italic max-w-[260px] truncate">
-          "{state.instruction}"
+          &quot;{state.instruction}&quot;
         </p>
       </div>
     );

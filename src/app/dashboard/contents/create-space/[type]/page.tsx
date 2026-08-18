@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { BUILDER_REGISTRY, type CreatableContentTypeId } from "@/components/spaces/builders/registry";
+import { BUILDER_REGISTRY, type CreatableContentTypeId } from "@/features/spaces";
 
 function isCreatableType(type: string): type is CreatableContentTypeId {
   return Object.prototype.hasOwnProperty.call(BUILDER_REGISTRY, type);

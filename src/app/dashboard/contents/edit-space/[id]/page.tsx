@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic';
 
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { BUILDER_REGISTRY } from "@/components/spaces/builders/registry";
-import { MetadataOnlyEditor } from "@/components/spaces/builders/MetadataOnlyEditor";
+import { BUILDER_REGISTRY } from "@/features/spaces";
+import { MetadataOnlyEditor } from "@/features/spaces";
 import { resolveContentType } from "@/lib/spaces/content-types";
 
 export default async function EditSpacePage({

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FileText, UploadCloud, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContentBuilderShell } from "./ContentBuilderShell";
-import { useContentBuilderForm } from "./useContentBuilderForm";
+import { useContentBuilderForm } from "../../hooks/useContentBuilderForm";
+import { uploadSpacePdf } from "../../storage";
 import { FileDropzone } from "./FileDropzone";
 import type { BuilderFieldsProps } from "./types";
 
@@ -13,7 +13,6 @@ const MAX_PDF_SIZE = 10 * 1024 * 1024;
 
 export function PdfBuilder({ space, collectionId }: BuilderFieldsProps) {
   const { t } = useLanguage();
-  const supabase = useMemo(() => createClient(), []);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   const validate = (): string | null => {
@@ -24,13 +23,11 @@ export function PdfBuilder({ space, collectionId }: BuilderFieldsProps) {
   const buildTypePayload = async ({ userId }: { userId: string }) => {
     let pdf_url = space?.pdf_url || null;
     if (pdfFile) {
-      const filePath = `${userId}/${Date.now()}.pdf`;
-      const { error: uploadError } = await supabase.storage
-        .from("space-pdfs")
-        .upload(filePath, pdfFile, { contentType: "application/pdf", upsert: false });
-      if (uploadError) throw new Error(t.contentBuilder.pdfUploadFailedPrefix + uploadError.message);
-      const { data: publicUrlData } = supabase.storage.from("space-pdfs").getPublicUrl(filePath);
-      pdf_url = publicUrlData.publicUrl;
+      try {
+        pdf_url = await uploadSpacePdf(userId, pdfFile);
+      } catch (uploadErr) {
+        throw new Error(t.contentBuilder.pdfUploadFailedPrefix + (uploadErr as Error).message);
+      }
     }
     return {
       content_type: "pdf",

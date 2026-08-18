@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Pencil, X, Save, Loader2, Sparkles, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { sandboxHtml } from "@/lib/sandbox-html";
-import { AiAssistantPanel } from "@/components/spaces/AiAssistantPanel";
+import { AiAssistantPanel } from "./AiAssistantPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-
-// Extract the Supabase Storage path from the public URL.
-// URL format: https://<ref>.supabase.co/storage/v1/object/public/space-html/<path>
-function extractStoragePath(publicUrl: string): string {
-  const marker = "/space-html/";
-  const clean = publicUrl.split("?")[0];
-  const idx = clean.indexOf(marker);
-  if (idx === -1) throw new Error("Unexpected html_url format");
-  return clean.slice(idx + marker.length);
-}
+import {
+  fetchPendingAiEditJob,
+  subscribeToAiEditApprovals,
+  type AiEditJobUpdate,
+} from "../realtime";
+import {
+  htmlStoragePath,
+  uploadSpaceHtml,
+  uploadSpacePreviewScreenshot,
+  getCurrentUserId,
+} from "../storage";
+import { resolveAiEditJob } from "../actions/resolve-ai-edit-job";
+import { updateSpace } from "../actions/update-space";
 
 /** Render HTML in a hidden iframe and capture a screenshot using html2canvas */
 async function captureHtmlScreenshot(htmlContent: string): Promise<Blob | null> {
@@ -91,54 +93,30 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
 
   // Check for pending AI edit jobs on mount and subscribe to new completions via Realtime
   useEffect(() => {
-    const supabase = createClient();
+    fetchPendingAiEditJob(spaceId).then((job) => {
+      if (job) setPendingJob(job);
+    });
 
-    supabase
-      .from("ai_edit_jobs")
-      .select("id, instruction, result_html")
-      .eq("space_id", spaceId)
-      .eq("status", "done")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => { if (data?.result_html) setPendingJob(data as PendingJob); });
-
-    const channel = supabase
-      .channel(`ai-edit-approval-${spaceId}`)
-      .on("postgres_changes", {
-        event: "UPDATE", schema: "public", table: "ai_edit_jobs",
-        filter: `space_id=eq.${spaceId}`,
-      }, (payload) => {
-        const job = payload.new as {
-          id: string;
-          status: string;
-          instruction: string;
-          result_html?: string;
-          error_code?: string;
-        };
+    const unsubscribe = subscribeToAiEditApprovals(spaceId, {
+      onUpdate: (job: AiEditJobUpdate) => {
         if (job.status === "done" && job.result_html) {
           setPendingJob({ id: job.id, instruction: job.instruction, result_html: job.result_html });
         } else if (job.status === "error") {
           setFailedJob({ id: job.id, instruction: job.instruction, errorCode: job.error_code ?? "ai_unavailable" });
         }
-      })
-      .subscribe();
+      },
+    });
 
-    return () => { channel.unsubscribe(); };
+    return () => { unsubscribe(); };
   }, [spaceId]);
 
   const handleApproveAiEdit = useCallback(async () => {
     if (!pendingJob) return;
     setIsApplying(true);
     try {
-      const supabase = createClient();
-      const storagePath = extractStoragePath(htmlUrl);
-      const blob = new Blob([pendingJob.result_html], { type: "text/html" });
-      const { error: uploadErr } = await supabase.storage
-        .from("space-html")
-        .upload(storagePath, blob, { contentType: "text/html", upsert: true });
-      if (uploadErr) throw uploadErr;
-      await supabase.from("ai_edit_jobs").delete().eq("id", pendingJob.id);
+      const storagePath = htmlStoragePath(htmlUrl);
+      await uploadSpaceHtml(storagePath, pendingJob.result_html);
+      await resolveAiEditJob({ jobId: pendingJob.id });
       setPendingJob(null);
       setShowingProposed(false);
       setIframeLoaded(false);
@@ -152,21 +130,22 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
 
   const handleDismissAiEdit = useCallback(async () => {
     if (!pendingJob) return;
-    const supabase = createClient();
-    await supabase.from("ai_edit_jobs").delete().eq("id", pendingJob.id);
+    await resolveAiEditJob({ jobId: pendingJob.id });
     setPendingJob(null);
     setShowingProposed(false);
   }, [pendingJob]);
 
   const handleDismissFailedAiEdit = useCallback(async () => {
     if (!failedJob) return;
-    const supabase = createClient();
-    await supabase.from("ai_edit_jobs").delete().eq("id", failedJob.id);
+    await resolveAiEditJob({ jobId: failedJob.id });
     setFailedJob(null);
   }, [failedJob]);
 
   // Reset proposed-iframe loaded flag whenever a new job arrives
-  useEffect(() => { setProposedLoaded(false); }, [pendingJob?.id]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets a derived flag when the pending job changes
+    setProposedLoaded(false);
+  }, [pendingJob?.id]);
 
   // Inject GrapeJS CSS once on mount
   useEffect(() => {
@@ -300,31 +279,19 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
 <body>${bodyHtml}</body>
 </html>`;
 
-      const supabase = createClient();
-      const storagePath = extractStoragePath(htmlUrl);
-      const htmlBlob = new Blob([fullHtml], { type: "text/html" });
-
-      const { error: uploadError } = await supabase.storage
-        .from("space-html")
-        .upload(storagePath, htmlBlob, { contentType: "text/html", upsert: true });
-
-      if (uploadError) throw uploadError;
+      const storagePath = htmlStoragePath(htmlUrl);
+      await uploadSpaceHtml(storagePath, fullHtml);
 
       // Regenerate preview screenshot in the background (non-blocking)
-      captureHtmlScreenshot(fullHtml).then(async (screenshotBlob) => {
-        if (!screenshotBlob) return;
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const previewPath = `${user.id}/${spaceId}-preview.png`;
-        const { error: ssError } = await supabase.storage
-          .from("space-previews")
-          .upload(previewPath, screenshotBlob, { contentType: "image/png", upsert: true });
-        if (ssError) return;
-        const { data: { publicUrl } } = supabase.storage
-          .from("space-previews")
-          .getPublicUrl(previewPath);
-        await supabase.from("spaces").update({ preview_image_url: publicUrl }).eq("id", spaceId);
-      });
+      captureHtmlScreenshot(fullHtml)
+        .then(async (screenshotBlob) => {
+          if (!screenshotBlob) return;
+          const userId = await getCurrentUserId();
+          if (!userId) return;
+          const publicUrl = await uploadSpacePreviewScreenshot(userId, spaceId, screenshotBlob);
+          await updateSpace({ id: spaceId, preview_image_url: publicUrl });
+        })
+        .catch(() => {});
 
       // Bump version so the sandbox iframe reloads with the new content
       setIframeLoaded(false);
@@ -413,7 +380,7 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
             <Sparkles className="size-4 text-primary shrink-0" />
             <p className="text-xs flex-1 min-w-0">
               <span className="font-semibold">{ai.approvalTitle}:</span>{" "}
-              <span className="text-muted-foreground truncate">"{pendingJob.instruction}"</span>
+              <span className="text-muted-foreground truncate">&quot;{pendingJob.instruction}&quot;</span>
             </p>
             <Button
               size="sm"

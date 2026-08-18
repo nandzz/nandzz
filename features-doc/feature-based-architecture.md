@@ -4,7 +4,7 @@ Living roadmap for moving the Portal from a layer-based structure (`components/`
 `lib/`, `app/api/`) to **feature-based** modules under `src/features/`, where each
 feature owns its data access and **UI never touches Supabase directly**.
 
-Status: **`social` + `collections` + `comments` + `profile` shipped; `spaces` in progress (4a display+lifecycle done, 4b editors next)**. Rolling out feature-by-feature.
+Status: **`social` + `collections` + `comments` + `profile` + `spaces` shipped**. Next: booking/widgets. Rolling out feature-by-feature.
 
 ---
 
@@ -105,9 +105,9 @@ src/features/<feature>/
 | 1 | **collections** | AddToCollectionDialog, StarButton, NewCollectionForm, CollectionActions; `is_public:false` invariant | ✅ done |
 | 2 | **comments** | `features/comments/*` — post/reply/like/mentions actions + reads; delete kept as `/api` route (admin-authorized); dead notification props pruned from prop chain | ✅ done |
 | 3 | **profile** | ProfileBackground, EditProfileDialog, ProfileHeader, GalleryModal, settings/brand pages, **FollowList** (deferred client list); storage uploads kept client-side | ✅ done |
-| 4 | **spaces** | biggest — split into sub-PRs. **4a display + lifecycle** ✅ done; **4b editors** ⬜ todo | 🟡 partial |
+| 4 | **spaces** | biggest — done across two sub-PRs (4a display+lifecycle, 4b editors) | ✅ done |
 | 4a | **spaces — display + lifecycle** | SpaceCard, SpaceGrid, SpacePreview, SpaceOwnerMenu, Delete/DuplicateSpaceButton, Share*; `deleteSpace` (folds `lib/delete-space.ts`) + `duplicateSpace` (folds the `/api/spaces/[id]/duplicate` route) actions; cross-feature `profile.setSectionVisibility` + `collections.removeSpaceFromCollection`. Fixed a latent bug: SpaceCard's inline delete skipped storage cleanup — the folded action always cleans up | ✅ done |
-| 4b | **spaces — editors** | HtmlSpaceEditor (10 `.from()`), MarkdownSpaceEditor, AiAssistantPanel (ai-edit async job stays a route), builders/, HashtagPicker, the passive viewers (Pdf/Markdown/Video/Iframe/ViewTracker); fold in `lib/actions/publish-space.ts` | ⬜ todo |
+| 4b | **spaces — editors** | HtmlSpaceEditor, MarkdownSpaceEditor, AiAssistantPanel, builders/ + `hooks/useContentBuilderForm`, HashtagPicker, PreviewCropper, passive viewers (Pdf/Markdown/Video/Iframe/ViewTracker). New: `publishSpace` (folds `lib/actions/publish-space.ts`), `updateSpace`, `resolveAiEditJob`, `loadHashtagSuggestions` actions + `data/hashtags` read + `server.ts`. Client-only `storage.ts` (all space uploads: html/pdf/image/preview) and `realtime.ts` (ai-edit job subscriptions) live outside `components/` per the guardrail. **Kept as routes** (real HTTP endpoints, not simple mutations): `/api/spaces/[id]/ai-edit(+/[jobId])` async job, `/api/spaces/[id]/assets` (GrapeJS asset manager). Deleted dead `TagPicker` stub | ✅ done |
 | 5 | **booking / widgets** | already clustered (`components/widgets/calendar/`, `lib/widgets/`, `api/widgets/`); watch WidgetWorkspace realtime + Staff/Location storage uploads | ⬜ todo |
 | 6 | **agent** | AgentChat, AgentStudio, `api/agent/*`, `lib/agent/*` | ⬜ todo |
 | 7 | **analytics + layout chrome** | NotificationBell, Navbar, Sidebar, MobileTabBar, AiJobsIndicator; fold in `lib/actions/record-view.ts` | ⬜ todo |

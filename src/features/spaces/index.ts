@@ -1,6 +1,9 @@
-// Client-safe public API for the spaces feature. This slice covers the space
-// card/grid display cluster and space lifecycle (delete / duplicate). Editors,
-// builders and the AI assistant migrate in a later slice.
+// Client-safe public API for the spaces feature.
+//
+// Slice 4a: card/grid display cluster + space lifecycle (delete / duplicate).
+// Slice 4b: editors, builders, the AI assistant and the passive viewers.
+
+// ── Display + lifecycle (4a) ────────────────────────────────────────────────
 export { SpaceCard } from "./components/SpaceCard";
 export { SpaceGrid } from "./components/SpaceGrid";
 export { SpacePreview } from "./components/SpacePreview";
@@ -14,3 +17,34 @@ export { deleteSpace } from "./actions/delete-space";
 export { duplicateSpace } from "./actions/duplicate-space";
 export type { DeleteSpaceResult } from "./actions/delete-space";
 export type { DuplicateSpaceResult } from "./actions/duplicate-space";
+
+// ── Editors, viewers, builders (4b) ─────────────────────────────────────────
+export { HtmlSpaceEditor } from "./components/HtmlSpaceEditor";
+export { MarkdownSpaceEditor } from "./components/MarkdownSpaceEditor";
+export { AiAssistantPanel } from "./components/AiAssistantPanel";
+export { MarkdownViewer } from "./components/MarkdownViewer";
+export { PdfViewer } from "./components/PdfViewer";
+export { PdfViewerWrapper } from "./components/PdfViewerWrapper";
+export { VideoEmbed, detectVideo } from "./components/VideoEmbed";
+export { IframeLoader } from "./components/IframeLoader";
+export { ViewTracker } from "./components/ViewTracker";
+export { HashtagPicker } from "./components/HashtagPicker";
+export { PreviewCropper } from "./components/PreviewCropper";
+export { MetadataOnlyEditor } from "./components/builders/MetadataOnlyEditor";
+export {
+  BUILDER_REGISTRY,
+  type CreatableContentTypeId,
+  type BuilderFieldsProps,
+} from "./components/builders/registry";
+
+// ── Editor / builder actions (4b) ───────────────────────────────────────────
+export { publishSpace } from "./actions/publish-space";
+export type {
+  PublishSpacePayload,
+  PublishSpaceError,
+} from "./actions/publish-space";
+export { updateSpace } from "./actions/update-space";
+export type { UpdateSpaceResult } from "./actions/update-space";
+export { resolveAiEditJob } from "./actions/resolve-ai-edit-job";
+export type { ResolveAiEditJobResult } from "./actions/resolve-ai-edit-job";
+export { loadHashtagSuggestions } from "./actions/load-hashtag-suggestions";

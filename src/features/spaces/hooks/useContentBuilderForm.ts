@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, unstable_rethrow } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { publishSpace, type PublishSpacePayload } from "@/lib/actions/publish-space";
+import { publishSpace, type PublishSpacePayload } from "../actions/publish-space";
+import { updateSpace } from "../actions/update-space";
+import { loadHashtagSuggestions } from "../actions/load-hashtag-suggestions";
+import {
+  getCurrentUserId,
+  uploadSpacePreviewImage,
+  removeSpacePreviewByUrl,
+} from "../storage";
 import { DEFAULT_GRADIENT, type GradientKey } from "@/lib/preview-gradients";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Space } from "@/lib/types";
 import type { ContentTypeId } from "@/lib/spaces/content-types";
-import type { BuildTypePayloadContext } from "./types";
+import type { BuildTypePayloadContext } from "../components/builders/types";
 
 const MAX_PREVIEW_IMAGE_SIZE = 1.5 * 1024 * 1024;
 
@@ -19,13 +25,6 @@ export const SHARED_LIMITS = {
   description: 300,
   descriptionLines: 5,
 } as const;
-
-function extractStoragePath(publicUrl: string, bucket: string): string | null {
-  const marker = `/object/public/${bucket}/`;
-  const idx = publicUrl.indexOf(marker);
-  if (idx === -1) return null;
-  return publicUrl.slice(idx + marker.length).split("?")[0];
-}
 
 export interface UseContentBuilderFormParams {
   /** The 6 creatable types, or "html" for the metadata-only legacy editor
@@ -93,7 +92,6 @@ export function useContentBuilderForm({
 }: UseContentBuilderFormParams): UseContentBuilderFormReturn {
   const router = useRouter();
   const { t } = useLanguage();
-  const supabase = useMemo(() => createClient(), []);
   const isEditing = !!space;
 
   const [title, setTitle] = useState(space?.title || "");
@@ -124,18 +122,8 @@ export function useContentBuilderForm({
   const clientRequestIdRef = useRef<string>(crypto.randomUUID());
 
   useEffect(() => {
-    supabase
-      .from("spaces")
-      .select("hashtags")
-      .eq("is_public", true)
-      .limit(200)
-      .then(({ data }) => {
-        if (data) {
-          const all = [...new Set(data.flatMap((s) => s.hashtags ?? []))].sort();
-          setHashtagSuggestions(all);
-        }
-      });
-  }, [supabase]);
+    loadHashtagSuggestions().then(setHashtagSuggestions);
+  }, []);
 
   // Track object URL for preview image thumbnail
   useEffect(() => {
@@ -239,10 +227,8 @@ export function useContentBuilderForm({
     setLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const userId = await getCurrentUserId();
+      if (!userId) {
         setError(t.contentBuilder.mustBeLoggedIn);
         setLoading(false);
         return;
@@ -281,32 +267,22 @@ export function useContentBuilderForm({
 
       // Delete old preview image when replacing or removing
       if (space?.preview_image_url && (previewImage || clearExistingImage)) {
-        const oldPath = extractStoragePath(space.preview_image_url, "space-previews");
-        if (oldPath) {
-          await supabase.storage.from("space-previews").remove([oldPath]);
-        }
+        await removeSpacePreviewByUrl(space.preview_image_url);
       }
 
       // Upload preview image if provided
       if (previewImage) {
-        const fileExt = previewImage.name.split(".").pop();
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("space-previews")
-          .upload(filePath, previewImage);
-
-        if (uploadError) {
-          setError(t.contentBuilder.uploadImageFailedPrefix + uploadError.message);
+        try {
+          preview_image_url = await uploadSpacePreviewImage(userId, previewImage);
+        } catch (uploadErr) {
+          setError(t.contentBuilder.uploadImageFailedPrefix + (uploadErr as Error).message);
           setLoading(false);
           return;
         }
-
-        const { data: publicUrlData } = supabase.storage.from("space-previews").getPublicUrl(filePath);
-        preview_image_url = publicUrlData.publicUrl;
       }
 
       const hasManualPreview = !!previewImage || (!!space?.preview_image_url && !clearExistingImage);
-      const typePayload = await buildTypePayload({ userId: user.id, title, hasManualPreview });
+      const typePayload = await buildTypePayload({ userId, title, hasManualPreview });
 
       // A builder may suggest a derived preview (uploaded content image, video
       // thumbnail, …) via `preview_image_url` in its payload — only used as a
@@ -324,17 +300,18 @@ export function useContentBuilderForm({
         preview_gradient: previewGradient,
         preview_title: previewTitle.trim() || null,
         is_public: isPublic,
-        user_id: user.id,
+        user_id: userId,
         hashtags: selectedHashtags,
       };
 
       if (isEditing && space) {
-        // Edits don't cost credits — stay on the direct client update.
-        // user_id stays on the row from creation; no need to re-send it.
+        // Edits don't cost credits — a plain RLS-guarded update action, not
+        // publish_space_tx. user_id stays on the row from creation; no need to
+        // re-send it.
         const { user_id: _omit, ...updatePayload } = spaceData;
         void _omit;
-        const { error } = await supabase.from("spaces").update(updatePayload).eq("id", space.id);
-        if (error) throw error;
+        const result = await updateSpace({ id: space.id, ...updatePayload });
+        if (!result.ok) throw new Error(result.message || result.error);
         router.push(collectionId ? `/dashboard/collections/${collectionId}` : "/dashboard/contents");
         router.refresh();
       } else {

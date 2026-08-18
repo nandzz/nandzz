@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Save, Loader2 } from "lucide-react";
 import { MarkdownViewer } from "./MarkdownViewer";
+import { updateSpace } from "../actions/update-space";
 
 interface MarkdownSpaceEditorProps {
   spaceId: string;
@@ -50,12 +50,11 @@ export function MarkdownSpaceEditor({ spaceId, initialContent }: MarkdownSpaceEd
     setIsSaving(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const { error: dbError } = await supabase
-        .from("spaces")
-        .update({ markdown_content: draft.trim() || null })
-        .eq("id", spaceId);
-      if (dbError) throw dbError;
+      const result = await updateSpace({
+        id: spaceId,
+        markdown_content: draft.trim() || null,
+      });
+      if (!result.ok) throw new Error(result.message || result.error);
       setContent(draft);
       setSaved(true);
       setMode("preview");

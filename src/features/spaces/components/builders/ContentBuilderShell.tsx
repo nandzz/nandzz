@@ -11,12 +11,12 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ImageIcon, Check, X, Globe } from "lucide-react";
 import { PREVIEW_GRADIENTS, GRADIENT_KEYS } from "@/lib/preview-gradients";
-import { HashtagPicker } from "@/components/spaces/HashtagPicker";
-import { PreviewCropper } from "@/components/spaces/PreviewCropper";
+import { HashtagPicker } from "../HashtagPicker";
+import { PreviewCropper } from "../PreviewCropper";
 import { CONTENT_TYPES, getContentTypeLabel, getContentTypeDescription, type ContentTypeId } from "@/lib/spaces/content-types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Space } from "@/lib/types";
-import type { UseContentBuilderFormReturn } from "./useContentBuilderForm";
+import type { UseContentBuilderFormReturn } from "../../hooks/useContentBuilderForm";
 
 interface ContentBuilderShellProps {
   contentType: ContentTypeId;

@@ -9,10 +9,10 @@ import {
   detectVideo,
   getYoutubeThumbnail,
   getVimeoThumbnail,
-} from "@/components/spaces/VideoEmbed";
+} from "../VideoEmbed";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ContentBuilderShell } from "./ContentBuilderShell";
-import { useContentBuilderForm } from "./useContentBuilderForm";
+import { useContentBuilderForm } from "../../hooks/useContentBuilderForm";
 import type { BuilderFieldsProps } from "./types";
 
 const MAX_URL_LENGTH = 500;
