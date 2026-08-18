@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useId } from "react";
+import { useEffect, useState, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Notification } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { fetchNotifications, subscribeToNotifications } from "../realtime";
+import { markNotificationsRead } from "../actions/mark-notifications-read";
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -57,7 +58,6 @@ function notificationText(n: Notification, t: ReturnType<typeof useLanguage>["t"
 
 export function NotificationBell({ userId }: NotificationBellProps) {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
   const { t } = useLanguage();
   // Unique per mount so multiple instances (e.g. Navbar + Sidebar) don't
   // collide on the same realtime topic.
@@ -66,57 +66,36 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) {
-      setNotifications(data as Notification[]);
-      setUnreadCount(data.filter((n) => !n.read_at).length);
-    }
-  }, [supabase, userId]);
+  const loadNotifications = useCallback(async () => {
+    const data = await fetchNotifications(userId);
+    setNotifications(data);
+    setUnreadCount(data.filter((n) => !n.read_at).length);
+  }, [userId]);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount data load; setState fires after the awaited fetch, not synchronously
+    loadNotifications();
+  }, [loadNotifications]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`notifications:${userId}:${instanceId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const n = payload.new as Notification;
-          setNotifications((prev) => [n, ...prev].slice(0, 20));
-          setUnreadCount((c) => c + 1);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase, userId, instanceId]);
+    return subscribeToNotifications(userId, instanceId, {
+      onInsert: (n) => {
+        setNotifications((prev) => [n, ...prev].slice(0, 20));
+        setUnreadCount((c) => c + 1);
+      },
+    });
+  }, [userId, instanceId]);
 
   const markAllRead = useCallback(async () => {
     const unreadIds = notifications.filter((n) => !n.read_at).map((n) => n.id);
     if (!unreadIds.length) return;
     const now = new Date().toISOString();
-    await supabase.from("notifications").update({ read_at: now }).in("id", unreadIds);
     setNotifications((prev) =>
       prev.map((n) => (unreadIds.includes(n.id) ? { ...n, read_at: now } : n))
     );
     setUnreadCount(0);
-  }, [supabase, notifications]);
+    await markNotificationsRead(unreadIds);
+  }, [notifications]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);

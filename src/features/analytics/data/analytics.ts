@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ViewsSeriesPoint, SpaceAnalytics } from "@/lib/types";
 import { buildPeriodBuckets, type StatsPeriod, type PeriodBucket } from "@/lib/period";

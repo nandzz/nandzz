@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { recordSpaceView } from "@/lib/actions/record-view";
+import { recordSpaceView } from "@/features/analytics";
 
 interface ViewTrackerProps {
   spaceId: string;

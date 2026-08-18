@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,6 +24,7 @@ import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChrome } from "@/contexts/ChromeContext";
 import { cn } from "@/lib/utils";
+import { getSessionUser, onAuthChange, signOutUser, fetchProfileFull } from "../auth";
 
 export function Navbar() {
   const router = useRouter();
@@ -32,45 +32,32 @@ export function Navbar() {
   const { t } = useLanguage();
   const { isHidden } = useChrome();
   const entitlements = usePlanEntitlements();
-  const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    const data = await fetchProfileFull(userId);
     if (data) setProfile(data);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        fetchProfile(user.id);
+    getSessionUser().then((u) => {
+      if (u) {
+        setUser(u);
+        fetchProfile(u.id);
       }
-    };
-    getUser();
+    });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
+    return onAuthChange((u) => {
+      if (u) {
+        setUser(u);
+        fetchProfile(u.id);
       } else {
         setUser(null);
         setProfile(null);
       }
     });
-
-    return () => subscription.unsubscribe();
-  }, [supabase, fetchProfile]);
+  }, [fetchProfile]);
 
   useEffect(() => {
     const handler = () => {
@@ -81,7 +68,7 @@ export function Navbar() {
   }, [user, fetchProfile]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOutUser();
     setUser(null);
     setProfile(null);
     router.refresh();

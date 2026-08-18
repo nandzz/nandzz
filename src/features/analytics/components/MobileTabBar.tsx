@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Home, Plus, LayoutGrid, User, LogIn, Rss } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/lib/types";
+import type { ProfileLite } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChrome } from "@/contexts/ChromeContext";
+import { getSessionUser, onAuthChange, fetchProfileLite } from "../auth";
 
 type TabDef = {
   href: string;
@@ -34,41 +34,34 @@ function getAuthTabDefs(username: string | null): TabDef[] {
 
 export function MobileTabBar() {
   const pathname = usePathname();
-  const supabase = useMemo(() => createClient(), []);
   const { t } = useLanguage();
   const { isHidden } = useChrome();
   const [user, setUser] = useState<{ id: string } | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileLite | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", userId)
-      .single();
-    if (data) setProfile(data as Profile);
-  }, [supabase]);
+    const data = await fetchProfileLite(userId);
+    if (data) setProfile(data);
+  }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUser(user);
-        fetchProfile(user.id);
+    getSessionUser().then((u) => {
+      if (u) {
+        setUser(u);
+        fetchProfile(u.id);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
+    return onAuthChange((u) => {
+      if (u) {
+        setUser(u);
+        fetchProfile(u.id);
       } else {
         setUser(null);
         setProfile(null);
       }
     });
-
-    return () => subscription.unsubscribe();
-  }, [supabase, fetchProfile]);
+  }, [fetchProfile]);
 
   const tabDefs = user ? getAuthTabDefs(profile?.username ?? null) : UNAUTH_TAB_DEFS;
 

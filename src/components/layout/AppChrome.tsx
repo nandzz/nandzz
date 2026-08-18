@@ -1,12 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { Navbar } from "./Navbar";
-import { Sidebar } from "./Sidebar";
+import { useCallback, useEffect, useState } from "react";
+import { Navbar, Sidebar, MobileTabBar } from "@/features/analytics";
+import { onAuthChange, fetchProfileLite } from "@/features/analytics/auth";
 import { ConditionalFooter } from "./ConditionalFooter";
-import { MobileTabBar } from "./MobileTabBar";
 import { isImmersiveRoute, isProfilePage, isWidgetRoute } from "@/lib/layout/appShell";
 import { cn } from "@/lib/utils";
 import type { ProfileLite } from "@/lib/types";
@@ -21,35 +19,26 @@ interface AppChromeProps {
 
 export function AppChrome({ initialUserId, initialProfile, children }: AppChromeProps) {
   const pathname = usePathname();
-  const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState<string | null>(initialUserId);
   const [profile, setProfile] = useState<ProfileLite | null>(initialProfile);
   const [collapsed, setCollapsed] = useState(false);
 
   const fetchProfile = useCallback(async (uid: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username, display_name, avatar_url")
-      .eq("id", uid)
-      .single();
+    const data = await fetchProfileLite(uid);
     if (data) setProfile(data);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        fetchProfile(session.user.id);
+    return onAuthChange((u) => {
+      if (u) {
+        setUserId(u.id);
+        fetchProfile(u.id);
       } else {
         setUserId(null);
         setProfile(null);
       }
     });
-
-    return () => subscription.unsubscribe();
-  }, [supabase, fetchProfile]);
+  }, [fetchProfile]);
 
   useEffect(() => {
     const handler = () => {

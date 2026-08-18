@@ -1,27 +1,15 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef, useId } from "react";
+import { useEffect, useState, useCallback, useRef, useId } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2, CheckCircle2, XCircle, Trash2, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-type JobStatus = "pending" | "processing" | "done" | "error";
-
-interface AiJob {
-  id: string;
-  space_id: string;
-  instruction: string;
-  status: JobStatus;
-  status_text: string | null;
-  created_at: string;
-  spaces?: { title: string; profiles?: { username: string } } | null;
-}
+import { fetchAiJobs, subscribeToAiJobs, type AiJobRow } from "../realtime";
+import { deleteAiJob } from "../actions/delete-ai-job";
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -35,12 +23,11 @@ function relativeTime(dateStr: string): string {
 
 export function AiJobsIndicator({ userId }: { userId: string }) {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
   // Unique per mount so multiple instances (e.g. Navbar + Sidebar) don't
   // collide on the same realtime topic, which throws "cannot add
   // postgres_changes callbacks after subscribe()".
   const instanceId = useId();
-  const [jobs, setJobs] = useState<AiJob[]>([]);
+  const [jobs, setJobs] = useState<AiJobRow[]>([]);
   const [open, setOpen] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -61,38 +48,23 @@ export function AiJobsIndicator({ userId }: { userId: string }) {
     if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
     setConfirmingId(null);
     setJobs((prev) => prev.filter((j) => j.id !== jobId));
-    await supabase.from("ai_edit_jobs").delete().eq("id", jobId);
-  }, [supabase]);
+    await deleteAiJob(jobId);
+  }, []);
 
   const fetchJobs = useCallback(async () => {
-    const { data } = await supabase
-      .from("ai_edit_jobs")
-      .select("id, space_id, instruction, status, status_text, created_at, spaces(title, profiles(username))")
-      .eq("user_id", userId)
-      .in("status", ["pending", "processing", "done", "error"])
-      .order("created_at", { ascending: false })
-      .limit(10);
-    if (data) setJobs(data as unknown as AiJob[]);
-  }, [supabase, userId]);
+    setJobs(await fetchAiJobs(userId));
+  }, [userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount data load; setState fires after the awaited fetch, not synchronously
     fetchJobs();
     return () => { if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current); };
   }, [fetchJobs]);
 
   // Realtime subscription for live updates
   useEffect(() => {
-    const channel = supabase
-      .channel(`ai-jobs-indicator-${userId}-${instanceId}`)
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "ai_edit_jobs",
-        filter: `user_id=eq.${userId}`,
-      }, () => { fetchJobs(); })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [supabase, userId, instanceId, fetchJobs]);
+    return subscribeToAiJobs(userId, instanceId, { onChange: fetchJobs });
+  }, [userId, instanceId, fetchJobs]);
 
   const activeJobs = jobs.filter((j) => j.status === "pending" || j.status === "processing");
   const hasActive = activeJobs.length > 0;

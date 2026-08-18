@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   PanelLeftClose,
@@ -32,6 +31,7 @@ import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { getSessionUser, onAuthChange, signOutUser, fetchProfileLite } from "../auth";
 
 type NavItem = {
   href: string;
@@ -57,48 +57,36 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const entitlements = usePlanEntitlements();
-  const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<ProfileLite | null>(initialProfile);
   const [mounted, setMounted] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount flag to gate theme-dependent icon rendering (avoids hydration mismatch)
   useEffect(() => setMounted(true), []);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username, display_name, avatar_url")
-      .eq("id", userId)
-      .single();
+    const data = await fetchProfileLite(userId);
     if (data) setProfile(data);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        fetchProfile(user.id);
+    getSessionUser().then((u) => {
+      if (u) {
+        setUser(u);
+        fetchProfile(u.id);
       }
-    };
-    getUser();
+    });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
+    return onAuthChange((u) => {
+      if (u) {
+        setUser(u);
+        fetchProfile(u.id);
       } else {
         setUser(null);
         setProfile(null);
       }
     });
-
-    return () => subscription.unsubscribe();
-  }, [supabase, fetchProfile]);
+  }, [fetchProfile]);
 
   useEffect(() => {
     const handler = () => {
@@ -109,7 +97,7 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   }, [user, fetchProfile]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOutUser();
     setUser(null);
     setProfile(null);
     router.refresh();

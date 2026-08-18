@@ -7,6 +7,7 @@ import { AppChrome } from "@/components/layout/AppChrome";
 import { type Locale } from "@/lib/i18n/translations";
 import { getServerTranslations, getCurrentLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
+import { getChromeProfileLite } from "@/features/analytics/server";
 import type { ProfileLite } from "@/lib/types";
 import "./globals.css";
 
@@ -108,12 +109,7 @@ export default async function RootLayout({
 
   let initialProfile: ProfileLite | null = null;
   if (initialUserId) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("username, display_name, avatar_url")
-      .eq("id", initialUserId)
-      .single();
-    if (data) initialProfile = data;
+    initialProfile = await getChromeProfileLite(supabase, initialUserId);
   }
 
   return (
