@@ -7,6 +7,9 @@ import remarkGfm from "remark-gfm";
 import type { AgentDocument, CalendarService } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CalendarBookingFlow } from "@/features/booking";
+import { createAgentDocument } from "../actions/create-agent-document";
+import { updateAgentDocument } from "../actions/update-agent-document";
+import { embedAgentDocument } from "../actions/embed-agent-document";
 
 const SENSITIVE_PATTERNS: RegExp[] = [
   /\b(?:password|passwd|pwd)\s*[:=]/i,
@@ -437,26 +440,27 @@ export function AgentChat({ username, displayName, preview, onDocumentCreated, d
 
     try {
       const isUpdate = !!action.document_id;
-      const url = isUpdate
-        ? `/api/agent/documents/${action.document_id}`
-        : "/api/agent/documents";
+      // For updates: only send title+content to preserve the document's existing
+      // visibility, status, is_sensitive, and sort_order values.
+      const result = isUpdate
+        ? await updateAgentDocument({
+            id: action.document_id!,
+            title: action.title,
+            content: action.content,
+          })
+        : await createAgentDocument({
+            title: action.title,
+            content: action.content,
+            visibility: "public",
+            status: "active",
+            is_sensitive: false,
+            sort_order: 100,
+          });
 
-      const res = await fetch(url, {
-        method: isUpdate ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        // For updates: only send title+content to preserve the document's existing
-        // visibility, status, is_sensitive, and sort_order values.
-        body: JSON.stringify(
-          isUpdate
-            ? { title: action.title, content: action.content }
-            : { title: action.title, content: action.content, visibility: "public", status: "active", is_sensitive: false, sort_order: 100 }
-        ),
-      });
+      if (!result.ok) throw new Error(isUpdate ? "Update failed" : "Create failed");
+      const doc: AgentDocument = result.document;
 
-      if (!res.ok) throw new Error(isUpdate ? "Update failed" : "Create failed");
-      const doc: AgentDocument = await res.json();
-
-      fetch(`/api/agent/documents/${doc.id}/embed`, { method: "POST" }).catch(() => {});
+      embedAgentDocument(doc.id).catch(() => {});
 
       onDocumentCreated?.(doc);
 

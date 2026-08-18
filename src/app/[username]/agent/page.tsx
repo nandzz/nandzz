@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfileWidgets } from "@/features/booking/server";
-import { AgentPublic } from "@/components/agent/AgentPublic";
+import { getPublicAgentDocCount } from "@/features/agent/server";
+import { AgentPublic } from "@/features/agent";
 import { FEATURES } from "@/lib/flags";
 
 export default async function AgentPage({
@@ -38,12 +39,7 @@ export default async function AgentPage({
   const agentWidget = widgets.find((w) => w.catalog.slug === "agent");
   if (!agentWidget) notFound();
 
-  const { count } = await admin
-    .from("agent_documents")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", profile.id)
-    .eq("visibility", "public")
-    .eq("status", "active");
+  const docCount = await getPublicAgentDocCount(admin, profile.id);
 
-  return <AgentPublic profile={profile} hasDocuments={(count ?? 0) > 0} isAuthenticated={!!user} />;
+  return <AgentPublic profile={profile} hasDocuments={docCount > 0} isAuthenticated={!!user} />;
 }

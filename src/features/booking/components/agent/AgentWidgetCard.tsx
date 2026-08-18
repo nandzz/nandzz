@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Profile, WidgetInstanceWithCatalog } from "@/lib/types";
 import { renderWidgetIcon } from "../widgetIcon";
-import { AgentChatOverlay } from "@/components/agent/AgentChatOverlay";
+import { AgentChatOverlay } from "@/features/agent";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {

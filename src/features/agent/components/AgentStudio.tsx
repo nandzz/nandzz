@@ -21,6 +21,11 @@ import { SetupAssistant } from "./SetupAssistant";
 import { AgentChat } from "./AgentChat";
 import { AgentSettings } from "./AgentSettings";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { loadAgentDocuments } from "../actions/load-agent-documents";
+import { createAgentDocument } from "../actions/create-agent-document";
+import { updateAgentDocument } from "../actions/update-agent-document";
+import { deleteAgentDocument } from "../actions/delete-agent-document";
+import { embedAgentDocument } from "../actions/embed-agent-document";
 
 interface AgentStudioProps {
   profile: Profile;
@@ -113,9 +118,9 @@ export function AgentStudio({ profile }: AgentStudioProps) {
     setLoading(true);
     setFetchError(false);
     try {
-      const res = await fetch("/api/agent/documents");
-      if (res.ok) {
-        setDocs(await res.json());
+      const result = await loadAgentDocuments();
+      if (result.ok) {
+        setDocs(result.documents);
       } else {
         setFetchError(true);
       }
@@ -126,7 +131,10 @@ export function AgentStudio({ profile }: AgentStudioProps) {
     }
   }, []);
 
-  useEffect(() => { fetchDocs(); }, [fetchDocs]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount data load; setState fires after the awaited fetch, not synchronously
+    fetchDocs();
+  }, [fetchDocs]);
 
   function openNew() {
     setDraft(emptyDraft());
@@ -162,23 +170,33 @@ export function AgentStudio({ profile }: AgentStudioProps) {
     setSaveError(null);
     try {
       const isNew = !draft.id;
-      const url = isNew ? "/api/agent/documents" : `/api/agent/documents/${draft.id}`;
-      const method = isNew ? "POST" : "PUT";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
-      });
-      if (res.ok) {
-        const saved: AgentDocument = await res.json();
+      const result = isNew
+        ? await createAgentDocument({
+            title: draft.title,
+            content: draft.content,
+            visibility: draft.visibility,
+            status: draft.status,
+            is_sensitive: draft.is_sensitive,
+            sort_order: draft.sort_order,
+          })
+        : await updateAgentDocument({
+            id: draft.id!,
+            title: draft.title,
+            content: draft.content,
+            visibility: draft.visibility,
+            status: draft.status,
+            is_sensitive: draft.is_sensitive,
+            sort_order: draft.sort_order,
+          });
+      if (result.ok) {
+        const saved: AgentDocument = result.document;
         setDocs((prev) =>
           isNew ? [saved, ...prev] : prev.map((d) => (d.id === saved.id ? saved : d))
         );
         setDraft(null);
-        fetch(`/api/agent/documents/${saved.id}/embed`, { method: "POST" }).catch(() => {});
+        embedAgentDocument(saved.id).catch(() => {});
       } else {
-        const body = await res.json().catch(() => ({}));
-        setSaveError(body.error ?? t.agent.failedSave);
+        setSaveError(result.message ?? t.agent.failedSave);
       }
     } catch {
       setSaveError(t.agent.networkError);
@@ -190,8 +208,8 @@ export function AgentStudio({ profile }: AgentStudioProps) {
   async function deleteDoc(id: string) {
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/agent/documents/${id}`, { method: "DELETE" });
-      if (res.ok) {
+      const result = await deleteAgentDocument(id);
+      if (result.ok) {
         setDocs((prev) => prev.filter((d) => d.id !== id));
         if (draft?.id === id) setDraft(null);
       } else {
@@ -531,7 +549,6 @@ export function AgentStudio({ profile }: AgentStudioProps) {
 
       {settingsOpen && (
         <AgentSettings
-          username={profile.username}
           initialEnabled={agentEnabled}
           initialQuestions={suggestedQuestions}
           onClose={() => setSettingsOpen(false)}

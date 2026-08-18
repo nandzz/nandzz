@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { X, Plus, Trash2, Save, Bot, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { saveAgentSettings } from "../actions/save-agent-settings";
 
 const MAX_QUESTIONS = 6;
 const MAX_QUESTION_CHARS = 120;
 
 interface AgentSettingsProps {
-  username: string;
   initialEnabled: boolean;
   initialQuestions: string[];
   onClose: () => void;
@@ -16,7 +16,6 @@ interface AgentSettingsProps {
 }
 
 export function AgentSettings({
-  username,
   initialEnabled,
   initialQuestions,
   onClose,
@@ -47,19 +46,14 @@ export function AgentSettings({
     setError(null);
     const cleaned = questions.map((q) => q.trim()).filter(Boolean).slice(0, MAX_QUESTIONS);
     try {
-      const res = await fetch("/api/agent/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent_enabled: enabled, agent_suggested_questions: cleaned }),
+      // The action persists the settings AND busts the owner's public profile
+      // cache so enable/disable takes effect immediately.
+      const result = await saveAgentSettings({
+        agent_enabled: enabled,
+        agent_suggested_questions: cleaned,
       });
-      if (!res.ok) throw new Error("save failed");
-      // Bust the profile page's cache so enable/disable is reflected immediately.
-      fetch("/api/profile/revalidate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      }).catch(() => {});
-      onSaved({ enabled, questions: cleaned });
+      if (!result.ok) throw new Error("save failed");
+      onSaved({ enabled: result.enabled, questions: result.questions });
       onClose();
     } catch {
       setError(t.agent.settingsError);

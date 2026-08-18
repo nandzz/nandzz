@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AgentStudio } from "@/components/agent/AgentStudio";
+import { AgentStudio } from "@/features/agent";
 import { FEATURES } from "@/lib/flags";
 
 export default async function DashboardAgentPage() {

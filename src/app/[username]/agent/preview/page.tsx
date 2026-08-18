@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { AgentPublic } from "@/components/agent/AgentPublic";
+import { AgentPublic } from "@/features/agent";
 import { FEATURES } from "@/lib/flags";
 
 export default async function AgentPreviewPage({
