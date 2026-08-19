@@ -66,8 +66,20 @@ export async function proxy(request: NextRequest) {
   const { data: claimsData } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;
 
+  const pathname = request.nextUrl.pathname;
+
+  // Guard the authenticated app. A signed-out visitor must never see the
+  // dashboard (or the username-setup step) — not via a stale tab, the back
+  // button, or a direct URL. Without this, sign-out cleared the session but the
+  // client-rendered dashboard shell still showed. Send them to /login instead.
+  if (!userId && (pathname.startsWith("/dashboard") || pathname === SETUP_PATH)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   if (userId) {
-    const pathname = request.nextUrl.pathname;
     const cachedUid = request.cookies.get(PROFILE_UID_COOKIE)?.value;
     const cacheHit = cachedUid === userId;
 

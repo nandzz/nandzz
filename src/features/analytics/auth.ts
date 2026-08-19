@@ -35,10 +35,19 @@ export function onAuthChange(
   return () => subscription.unsubscribe();
 }
 
-/** Signs the current user out. */
+/**
+ * Signs the current user out. Uses `local` scope so it clears this browser's
+ * session synchronously without depending on a network round-trip to revoke
+ * tokens (which can hang and block the post-logout redirect). Any error is
+ * swallowed — the caller navigates away regardless.
+ */
 export async function signOutUser(): Promise<void> {
   const supabase = createClient();
-  await supabase.auth.signOut();
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Session is cleared locally regardless; ignore.
+  }
 }
 
 /** The signed-in user's full profile row (Navbar avatar dropdown). */

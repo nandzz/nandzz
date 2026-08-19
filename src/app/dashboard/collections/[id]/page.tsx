@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/features/spaces";
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import { CollectionActions } from "@/features/collections";
@@ -18,17 +18,15 @@ export default async function CollectionDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
   const t = await getServerTranslations();
 
-  const collection = await getOwnedCollection(supabase, id, user.id);
+  const collection = await getOwnedCollection(supabase, id, userId);
 
   if (!collection) {
     notFound();
@@ -39,7 +37,7 @@ export default async function CollectionDetailPage({
     supabase
       .from("profiles")
       .select("username")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single(),
   ]);
 
@@ -84,7 +82,7 @@ export default async function CollectionDetailPage({
           editable
           showCreateCard
           collectionId={id}
-          currentUserId={user.id}
+          currentUserId={userId}
           ownerUsername={profile?.username || undefined}
         />
       </PageShell>

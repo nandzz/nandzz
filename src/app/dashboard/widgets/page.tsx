@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { getOwnerWidgets, getWidgetCatalog } from "@/features/booking/server";
 import { getUserEntitlements } from "@/lib/plan";
 import { AddWidgetButton, renderWidgetIcon } from "@/features/booking";
@@ -12,15 +12,13 @@ import { PageShell } from "@/components/layout/PageShell";
 
 export default async function WidgetsDashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
   const [widgets, catalog, entitlements, t] = await Promise.all([
-    getOwnerWidgets(user.id),
+    getOwnerWidgets(userId),
     getWidgetCatalog(),
-    getUserEntitlements(user.id),
+    getUserEntitlements(userId),
     getServerTranslations(),
   ]);
 

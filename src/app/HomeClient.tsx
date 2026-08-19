@@ -196,6 +196,21 @@ export function HomeClient() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section className="mx-auto max-w-2xl px-4 py-20">
+        <h2 className="mb-10 text-3xl font-bold tracking-tight text-center">
+          {t.home.faqTitle}
+        </h2>
+        <div className="divide-y divide-border/50">
+          {t.home.faq.map((item) => (
+            <div key={item.q} className="py-6">
+              <h3 className="font-semibold mb-2">{item.q}</h3>
+              <p className="text-muted-foreground leading-relaxed">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* CTA Banner */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-violet-700 to-fuchsia-700 dark:from-violet-800 dark:via-violet-900 dark:to-fuchsia-900" />

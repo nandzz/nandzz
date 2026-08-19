@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Rocket } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CONTENT_TYPES, getContentTypeLabel, getContentTypeDescription } from "@/lib/spaces/content-types";
 import { getServerTranslations } from "@/lib/i18n/server";
@@ -16,11 +16,9 @@ export default async function CreateSpacePage({
   searchParams: Promise<{ collectionId?: string }>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOwnerWidgetById } from "@/features/booking/server";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
@@ -22,12 +22,10 @@ export default async function WidgetStudioPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
-  const widget = await getOwnerWidgetById(user.id, id);
+  const widget = await getOwnerWidgetById(userId, id);
   if (!widget) notFound();
 
   const slug = widget.catalog.slug;
@@ -37,7 +35,7 @@ export default async function WidgetStudioPage({
   const [t, locale, { data: profile }] = await Promise.all([
     getServerTranslations(),
     getCurrentLocale(),
-    admin.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+    admin.from("profiles").select("username").eq("id", userId).maybeSingle(),
   ]);
 
   const isAgent = slug === "agent";

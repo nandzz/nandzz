@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { getDashboardAnalytics } from "@/features/analytics/server";
 import { ViewsChart, AnalyticsPeriodControl } from "@/features/analytics";
 import { BackButton } from "@/components/ui/BackButton";
@@ -19,12 +19,10 @@ export default async function AnalyticsDashboardPage({
   searchParams: Promise<{ period?: string }>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
-  const entitlements = await getUserEntitlements(user.id);
+  const entitlements = await getUserEntitlements(userId);
   const t = await getServerTranslations();
   if (!entitlements.hasAnalytics) {
     return (
@@ -38,7 +36,7 @@ export default async function AnalyticsDashboardPage({
 
   const period = parseStatsPeriod((await searchParams).period);
   const locale = await getCurrentLocale();
-  const analytics = await getDashboardAnalytics(user.id, locale, period);
+  const analytics = await getDashboardAnalytics(userId, locale, period);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">

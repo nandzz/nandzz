@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/features/spaces";
 import { Button } from "@/components/ui/button";
 import { Compass, Rss } from "lucide-react";
@@ -31,10 +31,10 @@ export default async function FeedPage({
   const t = await getServerTranslations();
   const { page } = await searchParams;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
-  const followingIds = await getFollowingIds(supabase, user.id);
+  const followingIds = await getFollowingIds(supabase, userId);
 
   let spaces: SpaceWithProfile[] = [];
   let likedSpaceIds: string[] = [];
@@ -53,7 +53,7 @@ export default async function FeedPage({
         .eq("is_public", true)
         .order("created_at", { ascending: false })
         .range(from, to),
-      getAllLikedSpaceIds(supabase, user.id),
+      getAllLikedSpaceIds(supabase, userId),
     ]);
 
     spaces = (rawSpaces ?? []) as SpaceWithProfile[];
@@ -106,7 +106,7 @@ export default async function FeedPage({
               spaces={spaces}
               showAuthor
               likedSpaceIds={likedSpaceIds}
-              currentUserId={user.id}
+              currentUserId={userId}
             />
             {totalPages > 1 && (
               <div className="mt-10 flex items-center justify-center gap-2">

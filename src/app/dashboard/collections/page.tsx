@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FolderOpen, Layers } from "lucide-react";
@@ -16,15 +16,13 @@ export default async function CollectionsPage() {
   const supabase = await createClient();
   const t = await getServerTranslations();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
-  const collections = await getUserCollectionsWithCounts(supabase, user.id);
+  const collections = await getUserCollectionsWithCounts(supabase, userId);
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">

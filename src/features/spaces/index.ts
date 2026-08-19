@@ -23,7 +23,14 @@ export { HtmlSpaceEditor } from "./components/HtmlSpaceEditor";
 export { MarkdownSpaceEditor } from "./components/MarkdownSpaceEditor";
 export { AiAssistantPanel } from "./components/AiAssistantPanel";
 export { MarkdownViewer } from "./components/MarkdownViewer";
-export { PdfViewer } from "./components/PdfViewer";
+// NOTE: The raw `PdfViewer` is intentionally NOT re-exported here. It imports
+// `react-pdf` (pdf.js) at module scope, which touches browser-only globals like
+// `DOMMatrix` and crashes during SSR. Because a barrel statically evaluates
+// every re-exported module, exposing it here would drag pdf.js into the server
+// bundle of any file that imports anything from `@/features/spaces` (e.g.
+// LinkChip). Consumers must use `PdfViewerWrapper`, which loads it via
+// `next/dynamic({ ssr: false })` — a lazy import that never evaluates on the
+// server.
 export { PdfViewerWrapper } from "./components/PdfViewerWrapper";
 export { VideoEmbed, detectVideo } from "./components/VideoEmbed";
 export { IframeLoader } from "./components/IframeLoader";

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { getOwnerWidgetById } from "@/features/booking/server";
 import { renderWidgetIcon, WidgetInstanceSettings } from "@/features/booking";
 import { getServerTranslations } from "@/lib/i18n/server";
@@ -15,12 +15,10 @@ export default async function WidgetInstanceSettingsPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
-  const widget = await getOwnerWidgetById(user.id, id);
+  const widget = await getOwnerWidgetById(userId, id);
   if (!widget) notFound();
 
   const t = await getServerTranslations();

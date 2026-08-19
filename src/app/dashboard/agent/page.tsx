@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { AgentStudio } from "@/features/agent";
 import { FEATURES } from "@/lib/flags";
 
@@ -7,16 +7,14 @@ export default async function DashboardAgentPage() {
   if (!FEATURES.agent) notFound();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) redirect("/login");
+  if (!userId) redirect("/login");
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
 
   if (!profile) notFound();

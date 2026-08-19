@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -24,10 +23,9 @@ import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChrome } from "@/contexts/ChromeContext";
 import { cn } from "@/lib/utils";
-import { getSessionUser, onAuthChange, signOutUser, fetchProfileFull } from "../auth";
+import { getSessionUser, onAuthChange, fetchProfileFull } from "../auth";
 
 export function Navbar() {
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const { isHidden } = useChrome();
@@ -67,11 +65,11 @@ export function Navbar() {
     return () => window.removeEventListener("profile-updated", handler);
   }, [user, fetchProfile]);
 
-  const handleLogout = async () => {
-    await signOutUser();
-    setUser(null);
-    setProfile(null);
-    router.refresh();
+  const handleLogout = () => {
+    // Hand off to the server sign-out route: it clears the auth cookies on its
+    // response and redirects to the public home page, guaranteeing a full
+    // sign-out (client-only sign-out left the SSR session cookies behind).
+    window.location.href = "/auth/signout";
   };
 
   return (

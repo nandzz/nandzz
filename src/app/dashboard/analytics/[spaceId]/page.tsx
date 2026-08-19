@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { getSpaceAnalytics } from "@/features/analytics/server";
 import { ViewsChart, AnalyticsPeriodControl } from "@/features/analytics";
 import { BackButton } from "@/components/ui/BackButton";
@@ -22,12 +22,10 @@ export default async function SpaceAnalyticsPage({
   const { spaceId } = await params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
-  const entitlements = await getUserEntitlements(user.id);
+  const entitlements = await getUserEntitlements(userId);
   const t = await getServerTranslations();
   if (!entitlements.hasAnalytics) {
     return (
@@ -45,7 +43,7 @@ export default async function SpaceAnalyticsPage({
     .eq("id", spaceId)
     .single();
 
-  if (!space || space.user_id !== user.id) notFound();
+  if (!space || space.user_id !== userId) notFound();
 
   const period = parseStatsPeriod((await searchParams).period);
   const locale = await getCurrentLocale();

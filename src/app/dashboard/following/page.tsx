@@ -2,17 +2,15 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { UserPlus } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
 import { FollowList } from "@/features/profile";
 
 export default async function FollowingPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
   const t = await getServerTranslations();
 
@@ -28,7 +26,7 @@ export default async function FollowingPage() {
         </div>
       </div>
 
-      <FollowList profileId={user.id} type="following" />
+      <FollowList profileId={userId} type="following" />
     </PageShell>
   );
 }

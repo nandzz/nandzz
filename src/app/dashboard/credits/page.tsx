@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Check, History, LayoutGrid, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { BuyCreditsButton } from "./BuyCreditsButton";
@@ -34,14 +34,14 @@ export default async function SubscriptionPage({
   const params = await searchParams;
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login?redirect=/dashboard/credits");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login?redirect=/dashboard/credits");
 
   const page = Math.max(1, Number(params.page) || 1);
   const offset = (page - 1) * PAGE_SIZE;
 
   const [plan, { data: plans }, { data: packs }, { data: ledger, count }] = await Promise.all([
-    getUserPlan(user.id),
+    getUserPlan(userId),
     supabase
       .from("subscription_plans")
       .select("*")
@@ -57,7 +57,7 @@ export default async function SubscriptionPage({
       // The DB column is still named `balance_after_free`, but it now holds the
       // plan-bucket balance — alias it so readers see `balance_after_plan`.
       .select("*, balance_after_plan:balance_after_free", { count: "exact" })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       // Reservation hold/release/refund rows are internal bookkeeping — the
       // user-visible delta is captured by the corresponding usage or refund row.
       .not("reason", "in", "(llm_reservation_hold,llm_reservation_release,llm_reservation_refund)")

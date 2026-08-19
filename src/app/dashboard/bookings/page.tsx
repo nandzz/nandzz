@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerTranslations, getCurrentLocale } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
@@ -11,10 +11,8 @@ import { fetchBookerBookings, hasAnyBookerBookings } from "@/lib/bookings/server
 
 export default async function MyBookingsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const userId = await getUserIdFromClaims(supabase);
+  if (!userId) redirect("/login");
 
   const [t, locale] = await Promise.all([getServerTranslations(), getCurrentLocale()]);
 
@@ -30,8 +28,8 @@ export default async function MyBookingsPage() {
   // Subsequent pages / other filters load through /api/bookings.
   const admin = createAdminClient();
   const [{ bookings, hasMore }, hasAny] = await Promise.all([
-    fetchBookerBookings(admin, user.id, "upcoming", now, 0),
-    hasAnyBookerBookings(admin, user.id),
+    fetchBookerBookings(admin, userId, "upcoming", now, 0),
+    hasAnyBookerBookings(admin, userId),
   ]);
 
   return (

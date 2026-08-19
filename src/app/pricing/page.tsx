@@ -1,8 +1,19 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { PricingClient } from "./PricingClient";
+import { pricingFaqs } from "./faqs";
 import type { CreditPack, SubscriptionPlan } from "@/lib/types";
 import { getServerTranslations } from "@/lib/i18n/server";
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: pricingFaqs.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: { "@type": "Answer", text: item.a },
+  })),
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerTranslations();
@@ -40,9 +51,15 @@ export default async function PricingPage() {
   ]);
 
   return (
-    <PricingClient
-      plans={(plans ?? []) as SubscriptionPlan[]}
-      packs={(packs ?? []) as CreditPack[]}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <PricingClient
+        plans={(plans ?? []) as SubscriptionPlan[]}
+        packs={(packs ?? []) as CreditPack[]}
+      />
+    </>
   );
 }

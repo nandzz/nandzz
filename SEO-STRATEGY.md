@@ -161,6 +161,23 @@ Confirm `src/app/manifest.ts` (or `site.webmanifest`) is complete for PWA/app-in
 
 ---
 
+## 7b. AI Search / GEO — Implemented ✅
+
+Making content discoverable and citable by AI answer engines (ChatGPT, Claude, Perplexity, Google AI Overviews).
+
+| Item | Status | Details |
+|---|---|---|
+| AI crawlers allowed | ✅ Done | `robots.ts` uses wildcard `allow: "/"` — GPTBot, PerplexityBot, ClaudeBot, Google-Extended can all cite us |
+| `/llms.txt` | ✅ Done | Static `public/llms.txt` — product overview, positioning, competitor framing, key page links |
+| `/pricing.md` | ✅ Done | Dynamic route (`src/app/pricing.md/route.ts`) built from live `subscription_plans` + `credit_packs` — machine-readable pricing for AI buying-agents, stays in sync |
+| `FAQPage` schema — pricing | ✅ Done | JSON-LD on `/pricing` from the shared `pricingFaqs` source (matches the visible FAQ) |
+| `FAQPage` schema + FAQ — home | ✅ Done | Localised FAQ section in `HomeClient` + matching JSON-LD (built from `t.home.faq`, so schema tracks the rendered locale) |
+| `SoftwareApplication` offers | ✅ Done | Homepage offers now generated from the live plan catalog via `getPublicPricing()` — no more stale hardcoded `$9 Pro` |
+
+**Still open (AI-SEO):**
+- [ ] Default `og:image` (1200×630) — needs a real design asset; currently falls back to `/logo.png`.
+- [ ] Third-party presence (the biggest GEO lever): review-site profiles, ProductHunt, creator/small-biz community mentions — AI cites third-party sources more than owned domains.
+
 ## 8. Monitoring
 
 Once live:

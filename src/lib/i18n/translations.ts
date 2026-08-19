@@ -81,6 +81,8 @@ export type Translations = {
     ctaTitle: string;
     ctaDesc: string;
     ctaButton: string;
+    faqTitle: string;
+    faq: { q: string; a: string }[];
   };
   footer: {
     description: string;
@@ -1223,6 +1225,25 @@ const en: Translations = {
     ctaTitle: "Ready to be found?",
     ctaDesc: "Set up your page in minutes — no website needed.",
     ctaButton: "Create your page",
+    faqTitle: "Frequently asked questions",
+    faq: [
+      {
+        q: "What is Nandzz?",
+        a: "Nandzz is a branded one-page site plus widgets — booking, content, and pools — for businesses and solo pros who want to be found on social and booked in a tap. No website needed.",
+      },
+      {
+        q: "Can I take bookings from my Instagram or social bio?",
+        a: "Yes. Put your nandzz.com/yourbrand link in any social bio and visitors land on your branded page, where they can book you in a tap — with your staff and availability built in.",
+      },
+      {
+        q: "Do I need a website to use Nandzz?",
+        a: "No. Nandzz is your page. Claim your handle, add the widgets you need, and share the link — you're live in minutes without building a site.",
+      },
+      {
+        q: "Is Nandzz free?",
+        a: "Yes, you can start free with a branded page and content sections. Paid plans add widgets like booking and the AI agent, analytics, and monthly AI credits.",
+      },
+    ],
   },
   footer: {
     description: "A gallery for web pages, PDFs, tools, and interactive creations.",
@@ -2365,6 +2386,25 @@ const pt: Translations = {
     ctaTitle: "Pronto para ser encontrado?",
     ctaDesc: "Monte sua página em minutos — sem precisar de site.",
     ctaButton: "Criar minha página",
+    faqTitle: "Perguntas frequentes",
+    faq: [
+      {
+        q: "O que é a Nandzz?",
+        a: "A Nandzz é um site de uma página com a sua marca, mais widgets — agendamento, conteúdo e pools — para negócios e autônomos que querem ser encontrados nas redes e agendados num toque. Sem precisar de site.",
+      },
+      {
+        q: "Posso receber agendamentos pela minha bio do Instagram ou das redes?",
+        a: "Sim. Coloque o link nandzz.com/suamarca em qualquer bio e os visitantes chegam à sua página, onde agendam num toque — com sua equipe e disponibilidade já integradas.",
+      },
+      {
+        q: "Preciso de um site para usar a Nandzz?",
+        a: "Não. A Nandzz é a sua página. Registre seu nome, adicione os widgets que precisar e compartilhe o link — você fica no ar em minutos, sem criar um site.",
+      },
+      {
+        q: "A Nandzz é gratuita?",
+        a: "Sim, você pode começar de graça com uma página de marca e seções de conteúdo. Os planos pagos adicionam widgets como agendamento e o agente de IA, análises e créditos de IA mensais.",
+      },
+    ],
   },
   footer: {
     description: "Uma galeria para páginas web, PDFs, ferramentas e criações interativas.",
@@ -3507,6 +3547,25 @@ const fr: Translations = {
     ctaTitle: "Prêt à être trouvé ?",
     ctaDesc: "Créez votre page en quelques minutes — sans site web.",
     ctaButton: "Créer ma page",
+    faqTitle: "Questions fréquentes",
+    faq: [
+      {
+        q: "Qu'est-ce que Nandzz ?",
+        a: "Nandzz est un site d'une page à votre image, avec des widgets — réservation, contenu et pools — pour les entreprises et indépendants qui veulent être trouvés sur les réseaux et réservés en un clin d'œil. Sans site web.",
+      },
+      {
+        q: "Puis-je recevoir des réservations depuis ma bio Instagram ou mes réseaux ?",
+        a: "Oui. Placez votre lien nandzz.com/votremarque dans n'importe quelle bio : les visiteurs arrivent sur votre page et vous réservent en un geste — avec votre équipe et vos disponibilités déjà intégrées.",
+      },
+      {
+        q: "Ai-je besoin d'un site web pour utiliser Nandzz ?",
+        a: "Non. Nandzz est votre page. Réservez votre nom, ajoutez les widgets qu'il vous faut et partagez le lien — vous êtes en ligne en quelques minutes, sans créer de site.",
+      },
+      {
+        q: "Nandzz est-il gratuit ?",
+        a: "Oui, vous pouvez commencer gratuitement avec une page à votre image et des sections de contenu. Les offres payantes ajoutent des widgets comme la réservation et l'agent IA, les statistiques et des crédits IA mensuels.",
+      },
+    ],
   },
   footer: {
     description: "Une galerie pour pages web, PDFs, outils et créations interactives.",
@@ -4649,6 +4708,25 @@ const es: Translations = {
     ctaTitle: "¿Listo para que te encuentren?",
     ctaDesc: "Crea tu página en minutos — sin necesidad de web.",
     ctaButton: "Crear mi página",
+    faqTitle: "Preguntas frecuentes",
+    faq: [
+      {
+        q: "¿Qué es Nandzz?",
+        a: "Nandzz es un sitio de una página con tu marca, más widgets — reservas, contenido y pools — para negocios y autónomos que quieren que los encuentren en redes y los reserven en un toque. Sin necesidad de web.",
+      },
+      {
+        q: "¿Puedo recibir reservas desde mi bio de Instagram o redes?",
+        a: "Sí. Pon tu enlace nandzz.com/tumarca en cualquier bio y los visitantes llegan a tu página, donde te reservan en un toque — con tu equipo y disponibilidad ya integrados.",
+      },
+      {
+        q: "¿Necesito una web para usar Nandzz?",
+        a: "No. Nandzz es tu página. Reserva tu nombre, añade los widgets que necesites y comparte el enlace — estás en línea en minutos, sin crear una web.",
+      },
+      {
+        q: "¿Nandzz es gratis?",
+        a: "Sí, puedes empezar gratis con una página de marca y secciones de contenido. Los planes de pago añaden widgets como reservas y el agente de IA, analíticas y créditos de IA mensuales.",
+      },
+    ],
   },
   footer: {
     description: "Una galería para páginas web, PDFs, herramientas y creaciones interactivas.",
@@ -5791,6 +5869,25 @@ const ja: Translations = {
     ctaTitle: "見つけてもらう準備は？",
     ctaDesc: "数分でページを作成 — ウェブサイトは不要。",
     ctaButton: "ページを作成",
+    faqTitle: "よくある質問",
+    faq: [
+      {
+        q: "Nandzzとは何ですか？",
+        a: "Nandzzは、あなたのブランドの1ページサイトに、予約・コンテンツ・プールなどのウィジェットを組み合わせられるサービスです。SNSで見つけてもらい、ワンタップで予約してもらいたいビジネスや個人事業主のためのもので、ウェブサイトは必要ありません。",
+      },
+      {
+        q: "InstagramやSNSのプロフィールから予約を受けられますか？",
+        a: "はい。nandzz.com/yourbrandのリンクをSNSのプロフィールに貼るだけで、訪問者はあなたのページに移動し、ワンタップで予約できます。スタッフや予約可能時間も組み込まれています。",
+      },
+      {
+        q: "Nandzzを使うのにウェブサイトは必要ですか？",
+        a: "いいえ。Nandzzがあなたのページになります。ハンドルを取得し、必要なウィジェットを追加してリンクを共有するだけ。サイトを作らなくても数分で公開できます。",
+      },
+      {
+        q: "Nandzzは無料ですか？",
+        a: "はい。ブランドページとコンテンツセクションを無料で始められます。有料プランでは、予約やAIエージェントなどのウィジェット、分析機能、毎月のAIクレジットが追加されます。",
+      },
+    ],
   },
   footer: {
     description: "Webページ、PDF、ツール、インタラクティブな作品のギャラリー。",
@@ -6933,6 +7030,25 @@ const de: Translations = {
     ctaTitle: "Bereit, gefunden zu werden?",
     ctaDesc: "Erstelle deine Seite in Minuten — ganz ohne Website.",
     ctaButton: "Seite erstellen",
+    faqTitle: "Häufige Fragen",
+    faq: [
+      {
+        q: "Was ist Nandzz?",
+        a: "Nandzz ist eine gebrandete One-Page-Site samt Widgets — Buchung, Inhalte und Pools — für Unternehmen und Solo-Profis, die auf Social Media gefunden und mit einem Tipp gebucht werden wollen. Ganz ohne Website.",
+      },
+      {
+        q: "Kann ich Buchungen über meine Instagram- oder Social-Bio annehmen?",
+        a: "Ja. Setze deinen Link nandzz.com/deinemarke in jede Bio, und Besucher landen auf deiner Seite, wo sie dich mit einem Tipp buchen — inklusive Team und Verfügbarkeiten.",
+      },
+      {
+        q: "Brauche ich eine Website, um Nandzz zu nutzen?",
+        a: "Nein. Nandzz ist deine Seite. Sichere dir deinen Namen, füge die passenden Widgets hinzu und teile den Link — in wenigen Minuten bist du online, ganz ohne eigene Website.",
+      },
+      {
+        q: "Ist Nandzz kostenlos?",
+        a: "Ja, du kannst kostenlos mit einer gebrandeten Seite und Inhaltsbereichen starten. Bezahlte Tarife ergänzen Widgets wie Buchung und den KI-Agenten, Analysen und monatliche KI-Credits.",
+      },
+    ],
   },
   footer: {
     description: "Eine Galerie für Webseiten, PDFs, Tools und interaktive Kreationen.",
@@ -8075,6 +8191,25 @@ const it: Translations = {
     ctaTitle: "Pronto a farti trovare?",
     ctaDesc: "Crea la tua pagina in pochi minuti — senza sito web.",
     ctaButton: "Crea la mia pagina",
+    faqTitle: "Domande frequenti",
+    faq: [
+      {
+        q: "Che cos'è Nandzz?",
+        a: "Nandzz è un sito di una pagina con il tuo brand, più widget — prenotazioni, contenuti e pool — per attività e professionisti che vogliono farsi trovare sui social ed essere prenotati con un tocco. Senza bisogno di un sito web.",
+      },
+      {
+        q: "Posso ricevere prenotazioni dalla mia bio di Instagram o dei social?",
+        a: "Sì. Metti il link nandzz.com/iltuobrand in qualsiasi bio e i visitatori arrivano alla tua pagina, dove ti prenotano con un tocco — con staff e disponibilità già integrati.",
+      },
+      {
+        q: "Mi serve un sito web per usare Nandzz?",
+        a: "No. Nandzz è la tua pagina. Registra il tuo nome, aggiungi i widget che ti servono e condividi il link — sei online in pochi minuti, senza creare un sito.",
+      },
+      {
+        q: "Nandzz è gratis?",
+        a: "Sì, puoi iniziare gratis con una pagina brandizzata e sezioni di contenuti. I piani a pagamento aggiungono widget come prenotazioni e l'agente IA, analisi e crediti IA mensili.",
+      },
+    ],
   },
   footer: {
     description: "Una galleria per pagine web, PDF, strumenti e creazioni interattive.",

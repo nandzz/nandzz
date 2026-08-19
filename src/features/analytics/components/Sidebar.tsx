@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,7 +31,7 @@ import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { getSessionUser, onAuthChange, signOutUser, fetchProfileLite } from "../auth";
+import { getSessionUser, onAuthChange, fetchProfileLite } from "../auth";
 
 type NavItem = {
   href: string;
@@ -53,7 +53,6 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const entitlements = usePlanEntitlements();
@@ -96,11 +95,11 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
     return () => window.removeEventListener("profile-updated", handler);
   }, [user, fetchProfile]);
 
-  const handleLogout = async () => {
-    await signOutUser();
-    setUser(null);
-    setProfile(null);
-    router.refresh();
+  const handleLogout = () => {
+    // Hand off to the server sign-out route: it clears the auth cookies on its
+    // response and redirects to the public home page, guaranteeing a full
+    // sign-out (client-only sign-out left the SSR session cookies behind).
+    window.location.href = "/auth/signout";
   };
 
   const username = profile?.username ?? null;

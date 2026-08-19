@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { BUILDER_REGISTRY, type CreatableContentTypeId } from "@/features/spaces";
 
 function isCreatableType(type: string): type is CreatableContentTypeId {
@@ -16,11 +16,9 @@ export default async function CreateSpaceTypePage({
   searchParams: Promise<{ collectionId?: string }>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 

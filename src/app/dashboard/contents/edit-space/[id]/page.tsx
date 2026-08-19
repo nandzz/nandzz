@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { BUILDER_REGISTRY } from "@/features/spaces";
 import { MetadataOnlyEditor } from "@/features/spaces";
 import { resolveContentType } from "@/lib/spaces/content-types";
@@ -13,11 +13,9 @@ export default async function EditSpacePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
@@ -25,7 +23,7 @@ export default async function EditSpacePage({
     .from("spaces")
     .select("*")
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
 
   if (!space) {

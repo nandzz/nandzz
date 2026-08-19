@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { SpaceGrid } from "@/features/spaces";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Layers, Plus, Rocket, Zap, AlertTriangle, BarChart2, Sparkles } from "lucide-react";
@@ -16,11 +16,9 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const t = await getServerTranslations();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getUserIdFromClaims(supabase);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
@@ -28,14 +26,14 @@ export default async function DashboardPage() {
     supabase
       .from("profiles")
       .select("display_name, username, show_contents, show_gallery, show_links")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single(),
     supabase
       .from("spaces")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false }),
-    getUserEntitlements(user.id),
+    getUserEntitlements(userId),
   ]);
 
   const greeting = profile?.display_name || profile?.username || "there";
@@ -132,12 +130,12 @@ export default async function DashboardPage() {
             spaces={spaces}
             showCreateCard
             editable
-            currentUserId={user.id}
+            currentUserId={userId}
             ownerUsername={profile?.username || undefined}
             sectionSettings={
               profile?.username
                 ? {
-                    profileId: user.id,
+                    profileId: userId,
                     username: profile.username,
                     visibility: {
                       informative: profile.show_contents ?? true,
