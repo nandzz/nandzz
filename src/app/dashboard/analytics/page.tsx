@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
+import { getAccountType } from "@/lib/account/server";
 import { getDashboardAnalytics } from "@/features/analytics/server";
 import { ViewsChart, AnalyticsPeriodControl } from "@/features/analytics";
 import { BackButton } from "@/components/ui/BackButton";
@@ -21,6 +22,10 @@ export default async function AnalyticsDashboardPage({
   const supabase = await createClient();
   const userId = await getUserIdFromClaims(supabase);
   if (!userId) redirect("/login");
+
+  // Business-only section (matches the nav gating): personal accounts can't
+  // reach Analytics by direct URL.
+  if ((await getAccountType(supabase, userId)) !== "business") redirect("/dashboard/feed");
 
   const entitlements = await getUserEntitlements(userId);
   const t = await getServerTranslations();

@@ -7,17 +7,24 @@ export type SocialLinks = {
   youtube?: string;
 };
 
+// Account type: a Personal account (default) vs a Business account. Personal
+// accounts hide the Business sections (Widgets, Brand, …) and book others;
+// Business accounts reveal those sections and hide the personal Bookings view.
+export type AccountType = "personal" | "business";
+
 // Minimal profile shape used to seed the app shell (AppChrome/Sidebar) from
 // the server without a full `Profile` fetch.
 export type ProfileLite = {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  account_type: AccountType;
 };
 
 export type Profile = {
   id: string;
   username: string;
+  account_type: AccountType;
   display_name: string | null;
   tagline: string | null;
   bio: string | null;
@@ -400,14 +407,29 @@ export type WidgetInstanceWithCatalog = WidgetInstance & {
 
 export type WidgetBookingStatus = "confirmed" | "cancelled";
 
+// One line of a multi-service booking's breakdown. Present on `WidgetBooking.services`
+// only when more than one service was booked; single-service bookings leave it null
+// and are fully described by the aggregate service_id/service_name/duration/price.
+export type BookingServiceSnapshot = {
+  service_id: string;
+  name: string;
+  duration_min: number;
+  price_cents: number | null;
+};
+
 export type WidgetBooking = {
   id: string;
   instance_id: string;
   owner_user_id: string;
+  // Primary (first) service id. For multi-service bookings the full list lives
+  // in `services`; the columns below are the aggregates (name joined with " + ",
+  // duration/price summed).
   service_id: string;
   service_name: string;
   duration_min: number;
   price_cents: number | null;
+  // Per-service breakdown for multi-service bookings; null/absent ⇒ single service.
+  services?: BookingServiceSnapshot[] | null;
   staff_id: string | null; // snapshot of the assigned staff member (config id)
   staff_name: string | null;
   location_id: string | null; // snapshot of the booked location (config id)

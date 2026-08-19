@@ -12,8 +12,12 @@ export async function getChromeProfileLite(
 ): Promise<ProfileLite | null> {
   const { data } = await supabase
     .from("profiles")
-    .select("username, display_name, avatar_url")
+    .select("username, display_name, avatar_url, account_type")
     .eq("id", userId)
     .single();
-  return (data as ProfileLite) ?? null;
+  if (!data) return null;
+  return {
+    ...(data as ProfileLite),
+    account_type: (data as ProfileLite).account_type ?? "personal",
+  };
 }

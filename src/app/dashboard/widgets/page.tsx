@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
+import { getAccountType } from "@/lib/account/server";
 import { getOwnerWidgets, getWidgetCatalog } from "@/features/booking/server";
 import { getUserEntitlements } from "@/lib/plan";
 import { AddWidgetButton, renderWidgetIcon } from "@/features/booking";
@@ -14,6 +15,9 @@ export default async function WidgetsDashboardPage() {
   const supabase = await createClient();
   const userId = await getUserIdFromClaims(supabase);
   if (!userId) redirect("/login");
+
+  // Business-only section: personal accounts can't reach it by direct URL.
+  if ((await getAccountType(supabase, userId)) !== "business") redirect("/dashboard/feed");
 
   const [widgets, catalog, entitlements, t] = await Promise.all([
     getOwnerWidgets(userId),

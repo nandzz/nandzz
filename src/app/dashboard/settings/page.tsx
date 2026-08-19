@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loadMyProfile } from "@/features/profile";
 import { Label } from "@/components/ui/label";
@@ -12,10 +13,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ShieldCheck,
   CreditCard,
   Globe,
+  Briefcase,
+  User,
 } from "lucide-react";
 import { FEATURES } from "@/lib/flags";
 import {
@@ -23,7 +28,8 @@ import {
   PhoneVerificationForm,
   DeleteAccount,
 } from "@/features/auth";
-import type { Profile } from "@/lib/types";
+import { setAccountType } from "@/features/analytics/auth";
+import type { AccountType, Profile } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/lib/i18n/translations";
 
@@ -32,6 +38,22 @@ export default function SettingsPage() {
   const { t, locale, setLocale } = useLanguage();
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [switchOpen, setSwitchOpen] = useState(false);
+
+  const accountType: AccountType = profile?.account_type ?? "personal";
+  const isBusiness = accountType === "business";
+
+  const handleSwitchAccountType = async () => {
+    if (!profile) return;
+    const next: AccountType = isBusiness ? "personal" : "business";
+    const ok = await setAccountType(profile.id, next);
+    if (ok) {
+      setProfile((prev) => (prev ? { ...prev, account_type: next } : prev));
+      // Let the layout chrome (Sidebar / Navbar) re-read the profile and
+      // re-gate the Business / Bookings sections without a reload.
+      window.dispatchEvent(new Event("profile-updated"));
+    }
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -120,24 +142,52 @@ export default function SettingsPage() {
                       {t.settings.billingPageDesc}
                     </p>
                     <div className="flex gap-3">
-                      <a href="/dashboard/billing">
-                        <button className="inline-flex items-center gap-2 rounded-md bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 text-sm font-medium shadow-sm shadow-violet-600/25 transition-colors">
-                          <CreditCard className="h-4 w-4" />
-                          {t.settings.billingViewPage}
-                        </button>
-                      </a>
-                      <a href="/pricing">
-                        <button className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background hover:bg-accent px-4 py-2 text-sm font-medium transition-colors">
-                          {t.settings.billingViewPlans}
-                        </button>
-                      </a>
+                      <Link
+                        href="/dashboard/billing"
+                        className="inline-flex items-center gap-2 rounded-md bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 text-sm font-medium shadow-sm shadow-violet-600/25 transition-colors"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        {t.settings.billingViewPage}
+                      </Link>
+                      <Link
+                        href="/pricing"
+                        className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background hover:bg-accent px-4 py-2 text-sm font-medium transition-colors"
+                      >
+                        {t.settings.billingViewPlans}
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
             )}
 
-            <TabsContent value="preferences">
+            <TabsContent value="preferences" className="space-y-6">
+              <Card className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl">{t.settings.accountTypeTitle}</CardTitle>
+                  <CardDescription>{t.settings.accountTypeDesc}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    {isBusiness ? (
+                      <Briefcase className="h-5 w-5 text-violet-600" />
+                    ) : (
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t.settings.accountTypeCurrent}</p>
+                      <p className="text-sm font-medium">
+                        {isBusiness ? t.settings.accountTypeBusiness : t.settings.accountTypePersonal}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={() => setSwitchOpen(true)} className="gap-2">
+                    {isBusiness ? <User className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
+                    {isBusiness ? t.nav.switchToPersonal : t.nav.switchToBusiness}
+                  </Button>
+                </CardContent>
+              </Card>
+
               <Card className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 border-border/60">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl">{t.settings.preferencesTitle}</CardTitle>
@@ -183,6 +233,17 @@ export default function SettingsPage() {
           <DeleteAccount username={profile.username} />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={switchOpen}
+        onClose={() => setSwitchOpen(false)}
+        onConfirm={handleSwitchAccountType}
+        title={isBusiness ? t.nav.switchToPersonalTitle : t.nav.switchToBusinessTitle}
+        description={isBusiness ? t.nav.switchToPersonalDesc : t.nav.switchToBusinessDesc}
+        confirmLabel={isBusiness ? t.nav.switchToPersonalConfirm : t.nav.switchToBusinessConfirm}
+        cancelLabel={t.common.cancel}
+        variant="default"
+      />
     </div>
   );
 }

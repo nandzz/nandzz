@@ -14,16 +14,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Plug, Blocks, Calendar, Users, BarChart3, Palette } from "lucide-react";
+import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Plug, Blocks, Calendar, Users, BarChart3, Palette, Briefcase } from "lucide-react";
 import type { Profile } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
 import { usePlanEntitlements } from "@/lib/plan-client";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChrome } from "@/contexts/ChromeContext";
 import { cn } from "@/lib/utils";
-import { getSessionUser, onAuthChange, fetchProfileFull } from "../auth";
+import { getSessionUser, onAuthChange, fetchProfileFull, setAccountType } from "../auth";
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
@@ -32,6 +33,11 @@ export function Navbar() {
   const entitlements = usePlanEntitlements();
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [switchOpen, setSwitchOpen] = useState(false);
+
+  // Business account gates the Business sections; default (personal) until the
+  // profile resolves so business-only chrome never flashes.
+  const isBusiness = profile?.account_type === "business";
 
   const fetchProfile = useCallback(async (userId: string) => {
     const data = await fetchProfileFull(userId);
@@ -64,6 +70,15 @@ export function Navbar() {
     window.addEventListener("profile-updated", handler);
     return () => window.removeEventListener("profile-updated", handler);
   }, [user, fetchProfile]);
+
+  const handleSwitchToBusiness = useCallback(async () => {
+    if (!user) return;
+    const ok = await setAccountType(user.id, "business");
+    if (ok) {
+      setProfile((prev) => (prev ? { ...prev, account_type: "business" } : prev));
+      window.dispatchEvent(new Event("profile-updated"));
+    }
+  }, [user]);
 
   const handleLogout = () => {
     // Hand off to the server sign-out route: it clears the auth cookies on its
@@ -121,7 +136,7 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {user ? (
             <div className="hidden md:flex items-center gap-3">
-              {FEATURES.widgets && entitlements.hasWidgets && (
+              {isBusiness && FEATURES.widgets && entitlements.hasWidgets && (
                 <Link
                   href="/dashboard/widgets"
                   className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -282,10 +297,12 @@ export function Navbar() {
                     <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {t.nav.groupAccount}
                     </DropdownMenuLabel>
-                    <DropdownMenuItem render={<Link href="/dashboard/bookings" />} className="gap-2">
-                      <Calendar aria-hidden className="h-4 w-4 text-muted-foreground" />
-                      {t.nav.bookings}
-                    </DropdownMenuItem>
+                    {!isBusiness && (
+                      <DropdownMenuItem render={<Link href="/dashboard/bookings" />} className="gap-2">
+                        <Calendar aria-hidden className="h-4 w-4 text-muted-foreground" />
+                        {t.nav.bookings}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem render={<Link href="/dashboard/followers" />} className="gap-2">
                       <Users aria-hidden className="h-4 w-4 text-muted-foreground" />
                       {t.nav.followers}
@@ -303,22 +320,31 @@ export function Navbar() {
                     <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {t.nav.groupBusiness}
                     </DropdownMenuLabel>
-                    {FEATURES.widgets && entitlements.hasWidgets && (
+                    {isBusiness && FEATURES.widgets && entitlements.hasWidgets && (
                       <DropdownMenuItem render={<Link href="/dashboard/widgets" />} className="gap-2">
                         <Blocks aria-hidden className="h-4 w-4 text-muted-foreground" />
                         Widgets
                       </DropdownMenuItem>
                     )}
-                    {FEATURES.brand && (
+                    {isBusiness && FEATURES.brand && (
                       <DropdownMenuItem render={<Link href="/dashboard/brand" />} className="gap-2">
                         <Palette aria-hidden className="h-4 w-4 text-muted-foreground" />
                         Brand
                       </DropdownMenuItem>
                     )}
-                    {entitlements.hasAnalytics && (
+                    {isBusiness && entitlements.hasAnalytics && (
                       <DropdownMenuItem render={<Link href="/dashboard/analytics" />} className="gap-2">
                         <BarChart3 aria-hidden className="h-4 w-4 text-muted-foreground" />
                         {t.nav.analytics}
+                      </DropdownMenuItem>
+                    )}
+                    {!isBusiness && (
+                      <DropdownMenuItem
+                        onClick={() => setSwitchOpen(true)}
+                        className="gap-2 text-violet-600 focus:text-violet-600"
+                      >
+                        <Briefcase aria-hidden className="h-4 w-4" />
+                        {t.nav.switchToBusiness}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuGroup>
@@ -382,6 +408,17 @@ export function Navbar() {
           </DropdownMenu>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={switchOpen}
+        onClose={() => setSwitchOpen(false)}
+        onConfirm={handleSwitchToBusiness}
+        title={t.nav.switchToBusinessTitle}
+        description={t.nav.switchToBusinessDesc}
+        confirmLabel={t.nav.switchToBusinessConfirm}
+        cancelLabel={t.common.cancel}
+        variant="default"
+      />
     </nav>
   );
 }

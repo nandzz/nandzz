@@ -51,6 +51,14 @@ export type Translations = {
     groupAccount: string;
     groupBusiness: string;
     groupSettings: string;
+    switchToBusiness: string;
+    switchToBusinessTitle: string;
+    switchToBusinessDesc: string;
+    switchToBusinessConfirm: string;
+    switchToPersonal: string;
+    switchToPersonalTitle: string;
+    switchToPersonalDesc: string;
+    switchToPersonalConfirm: string;
   };
   home: {
     badge: string;
@@ -215,6 +223,11 @@ export type Translations = {
     preferencesDesc: string;
     languageLabel: string;
     languageHint: string;
+    accountTypeTitle: string;
+    accountTypeDesc: string;
+    accountTypeCurrent: string;
+    accountTypePersonal: string;
+    accountTypeBusiness: string;
     deleteAccountTitle: string;
     deleteAccountDesc: string;
     deleteAccountButton: string;
@@ -1195,6 +1208,14 @@ const en: Translations = {
     groupAccount: "Account",
     groupBusiness: "Business",
     groupSettings: "Settings",
+    switchToBusiness: "Switch to Business Account",
+    switchToBusinessTitle: "Switch to a Business Account?",
+    switchToBusinessDesc: "Business accounts unlock the Widgets and Brand tools to get your business found and booked. Your personal Bookings section will be hidden, since a business gets booked rather than books others.",
+    switchToBusinessConfirm: "Switch to Business",
+    switchToPersonal: "Switch to Personal Account",
+    switchToPersonalTitle: "Switch to a Personal Account?",
+    switchToPersonalDesc: "Personal accounts hide the Widgets and Brand tools and restore your personal Bookings section, so you can book other businesses again. You can switch back to a Business account anytime.",
+    switchToPersonalConfirm: "Switch to Personal",
   },
   home: {
     badge: "One page · Every widget",
@@ -1376,6 +1397,11 @@ const en: Translations = {
     preferencesDesc: "Customize your experience on Nandzz",
     languageLabel: "Language",
     languageHint: "Choose the language for the interface",
+    accountTypeTitle: "Account type",
+    accountTypeDesc: "A Personal account books other businesses. A Business account unlocks the Widgets and Brand tools to get found and booked, and hides your personal Bookings section.",
+    accountTypeCurrent: "Current",
+    accountTypePersonal: "Personal",
+    accountTypeBusiness: "Business",
     deleteAccountTitle: "Delete Account",
     deleteAccountDesc: "Permanently delete your account and all your content. This cannot be undone.",
     deleteAccountButton: "Delete Account",
@@ -2356,6 +2382,14 @@ const pt: Translations = {
     groupAccount: "Conta",
     groupBusiness: "Negócio",
     groupSettings: "Configurações",
+    switchToBusiness: "Mudar para Conta Empresarial",
+    switchToBusinessTitle: "Mudar para uma Conta Empresarial?",
+    switchToBusinessDesc: "Contas empresariais liberam as ferramentas de Widgets e Marca para o seu negócio ser encontrado e agendado. A sua seção pessoal de Agendamentos será ocultada, pois uma empresa é agendada em vez de agendar outras.",
+    switchToBusinessConfirm: "Mudar para Empresarial",
+    switchToPersonal: "Mudar para Conta Pessoal",
+    switchToPersonalTitle: "Mudar para uma Conta Pessoal?",
+    switchToPersonalDesc: "Contas pessoais ocultam as ferramentas de Widgets e Marca e restauram a sua seção pessoal de Agendamentos, para você poder agendar outras empresas novamente. Você pode voltar a uma conta Empresarial quando quiser.",
+    switchToPersonalConfirm: "Mudar para Pessoal",
   },
   home: {
     badge: "Uma página · Todos os widgets",
@@ -2537,6 +2571,11 @@ const pt: Translations = {
     preferencesDesc: "Personalize sua experiência no Nandzz",
     languageLabel: "Idioma",
     languageHint: "Escolha o idioma da interface",
+    accountTypeTitle: "Tipo de conta",
+    accountTypeDesc: "Uma conta Pessoal agenda outras empresas. Uma conta Empresarial libera as ferramentas de Widgets e Marca para ser encontrada e agendada, e oculta a sua seção pessoal de Agendamentos.",
+    accountTypeCurrent: "Atual",
+    accountTypePersonal: "Pessoal",
+    accountTypeBusiness: "Empresarial",
     deleteAccountTitle: "Excluir Conta",
     deleteAccountDesc: "Exclua permanentemente sua conta e todos os seus conteúdos. Isso não pode ser desfeito.",
     deleteAccountButton: "Excluir Conta",
@@ -3517,6 +3556,14 @@ const fr: Translations = {
     groupAccount: "Compte",
     groupBusiness: "Entreprise",
     groupSettings: "Paramètres",
+    switchToBusiness: "Passer en compte professionnel",
+    switchToBusinessTitle: "Passer en compte professionnel ?",
+    switchToBusinessDesc: "Les comptes professionnels débloquent les outils Widgets et Marque pour faire connaître et réserver votre entreprise. Votre section Réservations personnelle sera masquée, car une entreprise est réservée plutôt qu'elle ne réserve.",
+    switchToBusinessConfirm: "Passer en professionnel",
+    switchToPersonal: "Passer en compte personnel",
+    switchToPersonalTitle: "Passer en compte personnel ?",
+    switchToPersonalDesc: "Les comptes personnels masquent les outils Widgets et Marque et rétablissent votre section Réservations personnelle, pour que vous puissiez à nouveau réserver d'autres entreprises. Vous pouvez repasser en compte professionnel à tout moment.",
+    switchToPersonalConfirm: "Passer en personnel",
   },
   home: {
     badge: "Une page · Tous les widgets",
@@ -3698,6 +3745,11 @@ const fr: Translations = {
     preferencesDesc: "Personnalisez votre expérience sur Nandzz",
     languageLabel: "Langue",
     languageHint: "Choisissez la langue de l'interface",
+    accountTypeTitle: "Type de compte",
+    accountTypeDesc: "Un compte Personnel réserve d'autres entreprises. Un compte Professionnel débloque les outils Widgets et Marque pour être trouvé et réservé, et masque votre section Réservations personnelle.",
+    accountTypeCurrent: "Actuel",
+    accountTypePersonal: "Personnel",
+    accountTypeBusiness: "Professionnel",
     deleteAccountTitle: "Supprimer le Compte",
     deleteAccountDesc: "Supprimez définitivement votre compte et tous vos contenus. Cette action est irréversible.",
     deleteAccountButton: "Supprimer le Compte",
@@ -4678,6 +4730,14 @@ const es: Translations = {
     groupAccount: "Cuenta",
     groupBusiness: "Negocio",
     groupSettings: "Configuración",
+    switchToBusiness: "Cambiar a Cuenta de Empresa",
+    switchToBusinessTitle: "¿Cambiar a una Cuenta de Empresa?",
+    switchToBusinessDesc: "Las cuentas de empresa desbloquean las herramientas de Widgets y Marca para que tu negocio sea encontrado y reservado. Tu sección personal de Reservas se ocultará, ya que a una empresa la reservan en lugar de reservar a otros.",
+    switchToBusinessConfirm: "Cambiar a Empresa",
+    switchToPersonal: "Cambiar a Cuenta Personal",
+    switchToPersonalTitle: "¿Cambiar a una Cuenta Personal?",
+    switchToPersonalDesc: "Las cuentas personales ocultan las herramientas de Widgets y Marca y restauran tu sección personal de Reservas, para que puedas reservar otras empresas de nuevo. Puedes volver a una cuenta de Empresa cuando quieras.",
+    switchToPersonalConfirm: "Cambiar a Personal",
   },
   home: {
     badge: "Una página · Todos los widgets",
@@ -4859,6 +4919,11 @@ const es: Translations = {
     preferencesDesc: "Personaliza tu experiencia en Nandzz",
     languageLabel: "Idioma",
     languageHint: "Elige el idioma de la interfaz",
+    accountTypeTitle: "Tipo de cuenta",
+    accountTypeDesc: "Una cuenta Personal reserva otras empresas. Una cuenta de Empresa desbloquea las herramientas de Widgets y Marca para ser encontrada y reservada, y oculta tu sección personal de Reservas.",
+    accountTypeCurrent: "Actual",
+    accountTypePersonal: "Personal",
+    accountTypeBusiness: "Empresa",
     deleteAccountTitle: "Eliminar Cuenta",
     deleteAccountDesc: "Elimina permanentemente tu cuenta y todos tus contenidos. Esto no se puede deshacer.",
     deleteAccountButton: "Eliminar Cuenta",
@@ -5839,6 +5904,14 @@ const ja: Translations = {
     groupAccount: "アカウント",
     groupBusiness: "ビジネス",
     groupSettings: "設定",
+    switchToBusiness: "ビジネスアカウントに切り替える",
+    switchToBusinessTitle: "ビジネスアカウントに切り替えますか？",
+    switchToBusinessDesc: "ビジネスアカウントでは、ウィジェットとブランドのツールが使えるようになり、ビジネスが見つけられ予約されやすくなります。ビジネスは予約する側ではなく予約される側なので、個人の予約セクションは非表示になります。",
+    switchToBusinessConfirm: "ビジネスに切り替える",
+    switchToPersonal: "個人アカウントに切り替える",
+    switchToPersonalTitle: "個人アカウントに切り替えますか？",
+    switchToPersonalDesc: "個人アカウントではウィジェットとブランドのツールが非表示になり、個人の予約セクションが復元されるので、再び他のビジネスを予約できます。いつでもビジネスアカウントに戻すことができます。",
+    switchToPersonalConfirm: "個人に切り替える",
   },
   home: {
     badge: "1つのページ · すべてのウィジェット",
@@ -6020,6 +6093,11 @@ const ja: Translations = {
     preferencesDesc: "Nandzz での体験をカスタマイズ",
     languageLabel: "言語",
     languageHint: "インターフェースの言語を選択",
+    accountTypeTitle: "アカウントの種類",
+    accountTypeDesc: "個人アカウントは他のビジネスを予約します。ビジネスアカウントはウィジェットとブランドのツールを解放して見つけられ予約されやすくし、個人の予約セクションを非表示にします。",
+    accountTypeCurrent: "現在",
+    accountTypePersonal: "個人",
+    accountTypeBusiness: "ビジネス",
     deleteAccountTitle: "アカウント削除",
     deleteAccountDesc: "アカウントとすべてのコンテンツを完全に削除します。この操作は元に戻せません。",
     deleteAccountButton: "アカウント削除",
@@ -7000,6 +7078,14 @@ const de: Translations = {
     groupAccount: "Konto",
     groupBusiness: "Business",
     groupSettings: "Einstellungen",
+    switchToBusiness: "Zu Geschäftskonto wechseln",
+    switchToBusinessTitle: "Zu einem Geschäftskonto wechseln?",
+    switchToBusinessDesc: "Geschäftskonten schalten die Widgets- und Marken-Tools frei, damit dein Unternehmen gefunden und gebucht wird. Dein persönlicher Buchungsbereich wird ausgeblendet, da ein Unternehmen gebucht wird, statt selbst zu buchen.",
+    switchToBusinessConfirm: "Zu Business wechseln",
+    switchToPersonal: "Zu Privatkonto wechseln",
+    switchToPersonalTitle: "Zu einem Privatkonto wechseln?",
+    switchToPersonalDesc: "Privatkonten blenden die Widgets- und Marken-Tools aus und stellen deinen persönlichen Buchungsbereich wieder her, sodass du wieder andere Unternehmen buchen kannst. Du kannst jederzeit zu einem Geschäftskonto zurückwechseln.",
+    switchToPersonalConfirm: "Zu Privat wechseln",
   },
   home: {
     badge: "Eine Seite · Alle Widgets",
@@ -7181,6 +7267,11 @@ const de: Translations = {
     preferencesDesc: "Passe deine Erfahrung auf Nandzz an",
     languageLabel: "Sprache",
     languageHint: "Wähle die Sprache der Benutzeroberfläche",
+    accountTypeTitle: "Kontotyp",
+    accountTypeDesc: "Ein Privatkonto bucht andere Unternehmen. Ein Geschäftskonto schaltet die Widgets- und Marken-Tools frei, um gefunden und gebucht zu werden, und blendet deinen persönlichen Buchungsbereich aus.",
+    accountTypeCurrent: "Aktuell",
+    accountTypePersonal: "Privat",
+    accountTypeBusiness: "Business",
     deleteAccountTitle: "Konto löschen",
     deleteAccountDesc: "Lösche dein Konto und alle deine Inhalte dauerhaft. Dies kann nicht rückgängig gemacht werden.",
     deleteAccountButton: "Konto löschen",
@@ -8161,6 +8252,14 @@ const it: Translations = {
     groupAccount: "Account",
     groupBusiness: "Business",
     groupSettings: "Impostazioni",
+    switchToBusiness: "Passa a un account Business",
+    switchToBusinessTitle: "Passare a un account Business?",
+    switchToBusinessDesc: "Gli account Business sbloccano gli strumenti Widget e Brand per far trovare e prenotare la tua attività. La tua sezione personale Prenotazioni verrà nascosta, poiché un'attività viene prenotata anziché prenotare altri.",
+    switchToBusinessConfirm: "Passa a Business",
+    switchToPersonal: "Passa a un account Personale",
+    switchToPersonalTitle: "Passare a un account Personale?",
+    switchToPersonalDesc: "Gli account personali nascondono gli strumenti Widget e Brand e ripristinano la tua sezione personale Prenotazioni, così puoi prenotare di nuovo altre attività. Puoi tornare a un account Business in qualsiasi momento.",
+    switchToPersonalConfirm: "Passa a Personale",
   },
   home: {
     badge: "Una pagina · Tutti i widget",
@@ -8342,6 +8441,11 @@ const it: Translations = {
     preferencesDesc: "Personalizza la tua esperienza su Nandzz",
     languageLabel: "Lingua",
     languageHint: "Scegli la lingua dell'interfaccia",
+    accountTypeTitle: "Tipo di account",
+    accountTypeDesc: "Un account Personale prenota altre attività. Un account Business sblocca gli strumenti Widget e Brand per farsi trovare e prenotare, e nasconde la tua sezione personale Prenotazioni.",
+    accountTypeCurrent: "Attuale",
+    accountTypePersonal: "Personale",
+    accountTypeBusiness: "Business",
     deleteAccountTitle: "Elimina Account",
     deleteAccountDesc: "Elimina definitivamente il tuo account e tutti i tuoi contenuti. Questa azione è irreversibile.",
     deleteAccountButton: "Elimina Account",

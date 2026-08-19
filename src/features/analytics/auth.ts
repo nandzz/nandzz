@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Profile, ProfileLite } from "@/lib/types";
+import type { AccountType, Profile, ProfileLite } from "@/lib/types";
 
 // Client-side auth-session + profile helpers for the layout chrome
 // (Navbar / Sidebar / MobileTabBar). Supabase Auth (`getUser`,
@@ -70,8 +70,30 @@ export async function fetchProfileLite(
   const supabase = createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("username, display_name, avatar_url")
+    .select("username, display_name, avatar_url, account_type")
     .eq("id", userId)
     .single();
-  return (data as ProfileLite) ?? null;
+  if (!data) return null;
+  return {
+    ...(data as ProfileLite),
+    account_type: (data as ProfileLite).account_type ?? "personal",
+  };
+}
+
+/**
+ * Persists the signed-in user's account type ('personal' | 'business') on their
+ * profile row. On success the caller should dispatch a `profile-updated` event
+ * so the layout chrome (Sidebar / Navbar) re-reads the profile and re-gates the
+ * Business / Bookings sections. Returns true on success.
+ */
+export async function setAccountType(
+  userId: string,
+  accountType: AccountType
+): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ account_type: accountType })
+    .eq("id", userId);
+  return !error;
 }

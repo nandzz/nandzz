@@ -23,15 +23,17 @@ import {
   Users,
   UserPlus,
   BarChart3,
+  Briefcase,
 } from "lucide-react";
 import type { ProfileLite } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
 import { usePlanEntitlements } from "@/lib/plan-client";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { getSessionUser, onAuthChange, fetchProfileLite } from "../auth";
+import { getSessionUser, onAuthChange, fetchProfileLite, setAccountType } from "../auth";
 
 type NavItem = {
   href: string;
@@ -41,6 +43,7 @@ type NavItem = {
 };
 
 type NavGroup = {
+  id: string;
   label: string;
   items: NavItem[];
 };
@@ -59,6 +62,12 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<ProfileLite | null>(initialProfile);
   const [mounted, setMounted] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
+
+  // Account type gates the Business sections. Until the profile resolves we
+  // treat the account as personal (the default for every user), so business-only
+  // nav never flashes before the profile loads.
+  const isBusiness = profile?.account_type === "business";
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount flag to gate theme-dependent icon rendering (avoids hydration mismatch)
   useEffect(() => setMounted(true), []);
@@ -95,6 +104,16 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
     return () => window.removeEventListener("profile-updated", handler);
   }, [user, fetchProfile]);
 
+  const handleSwitchToBusiness = useCallback(async () => {
+    if (!user) return;
+    const ok = await setAccountType(user.id, "business");
+    if (ok) {
+      // Optimistically flip locally, then let the chrome re-read the row.
+      setProfile((prev) => (prev ? { ...prev, account_type: "business" } : prev));
+      window.dispatchEvent(new Event("profile-updated"));
+    }
+  }, [user]);
+
   const handleLogout = () => {
     // Hand off to the server sign-out route: it clears the auth cookies on its
     // response and redirects to the public home page, guaranteeing a full
@@ -120,12 +139,18 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
         isActive: (p) =>
           p === "/dashboard/contents" || p.startsWith("/dashboard/contents/"),
       },
-      {
-        href: "/dashboard/bookings",
-        label: t.nav.bookings,
-        icon: Calendar,
-        isActive: (p) => p.startsWith("/dashboard/bookings"),
-      },
+      // Bookings is a personal-account capability: a business gets booked
+      // rather than books other businesses, so it's hidden for business accounts.
+      ...(!isBusiness
+        ? [
+            {
+              href: "/dashboard/bookings",
+              label: t.nav.bookings,
+              icon: Calendar,
+              isActive: (p: string) => p.startsWith("/dashboard/bookings"),
+            },
+          ]
+        : []),
       {
         href: "/dashboard/followers",
         label: t.nav.followers,
@@ -140,9 +165,10 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
       },
     ];
 
-    // Business
+    // Business — only for business accounts. Personal accounts see the
+    // "Switch to Business Account" CTA instead (rendered below the group).
     const business: NavItem[] = [];
-    if (FEATURES.widgets && entitlements.hasWidgets) {
+    if (isBusiness && FEATURES.widgets && entitlements.hasWidgets) {
       business.push({
         href: "/dashboard/widgets",
         label: "Widgets",
@@ -150,7 +176,7 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
         isActive: (p) => p.startsWith("/dashboard/widgets"),
       });
     }
-    if (FEATURES.brand) {
+    if (isBusiness && FEATURES.brand) {
       business.push({
         href: "/dashboard/brand",
         label: "Brand",
@@ -158,7 +184,7 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
         isActive: (p) => p.startsWith("/dashboard/brand"),
       });
     }
-    if (entitlements.hasAnalytics) {
+    if (isBusiness && entitlements.hasAnalytics) {
       business.push({
         href: "/dashboard/analytics",
         label: t.nav.analytics,
@@ -194,11 +220,11 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
     }
 
     return [
-      { label: t.nav.groupAccount, items: account },
-      { label: t.nav.groupBusiness, items: business },
-      { label: t.nav.groupSettings, items: settings },
+      { id: "account", label: t.nav.groupAccount, items: account },
+      { id: "business", label: t.nav.groupBusiness, items: business },
+      { id: "settings", label: t.nav.groupSettings, items: settings },
     ];
-  }, [t, username, entitlements]);
+  }, [t, entitlements, isBusiness]);
 
   return (
     <aside
@@ -314,9 +340,39 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
                 </Link>
               );
             })}
+
+            {/* Personal accounts see a CTA to upgrade into a Business account,
+                which reveals the Widgets / Brand tools and hides Bookings. */}
+            {group.id === "business" && user && !isBusiness && (
+              <button
+                type="button"
+                onClick={() => setSwitchOpen(true)}
+                title={t.nav.switchToBusiness}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                  "text-violet-600 hover:bg-sidebar-accent",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  collapsed && "justify-center"
+                )}
+              >
+                <Briefcase aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2} />
+                {!collapsed && <span className="truncate">{t.nav.switchToBusiness}</span>}
+              </button>
+            )}
           </div>
         ))}
       </nav>
+
+      <ConfirmDialog
+        open={switchOpen}
+        onClose={() => setSwitchOpen(false)}
+        onConfirm={handleSwitchToBusiness}
+        title={t.nav.switchToBusinessTitle}
+        description={t.nav.switchToBusinessDesc}
+        confirmLabel={t.nav.switchToBusinessConfirm}
+        cancelLabel={t.common.cancel}
+        variant="default"
+      />
 
       {/* Bottom: theme, logout */}
       <div className="border-t border-sidebar-border p-2 flex flex-col gap-0.5">

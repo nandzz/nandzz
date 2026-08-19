@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
+import { getAccountType } from "@/lib/account/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerTranslations, getCurrentLocale } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
@@ -13,6 +14,10 @@ export default async function MyBookingsPage() {
   const supabase = await createClient();
   const userId = await getUserIdFromClaims(supabase);
   if (!userId) redirect("/login");
+
+  // Personal-only section: a business gets booked rather than books others, so
+  // business accounts can't reach their personal Bookings by direct URL.
+  if ((await getAccountType(supabase, userId)) === "business") redirect("/dashboard/feed");
 
   const [t, locale] = await Promise.all([getServerTranslations(), getCurrentLocale()]);
 
