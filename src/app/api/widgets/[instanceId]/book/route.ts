@@ -17,19 +17,33 @@ export async function POST(
   const { instanceId } = await params;
   const body = (await req.json()) as {
     service_id?: string;
+    service_ids?: string[];
     starts_at?: string;
     customer_name?: string;
     customer_email?: string;
     customer_phone?: string;
+    customer_address?: string;
     notes?: string;
     staff_id?: string | null;
     location_id?: string | null;
   };
 
+  // Multi-service: prefer the explicit list, falling back to the single
+  // `service_id` (legacy / AI path). The RPC sums their durations + prices.
+  const serviceIds = (
+    Array.isArray(body.service_ids) && body.service_ids.length > 0
+      ? body.service_ids
+      : body.service_id
+        ? [body.service_id]
+        : []
+  )
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean);
+
   // The public web form requires a phone number (the MCP/AI programmatic path
   // stays lenient — see create_booking_tx, which keeps customer_phone nullable).
   if (
-    !body.service_id ||
+    serviceIds.length === 0 ||
     !body.starts_at ||
     !body.customer_name ||
     !body.customer_email ||
@@ -58,11 +72,13 @@ export async function POST(
   const { data: booking, error } = await admin
     .rpc("create_booking_tx", {
       p_instance_id: instanceId,
-      p_service_id: body.service_id,
+      p_service_id: serviceIds[0],
+      p_service_ids: serviceIds,
       p_starts_at: body.starts_at,
       p_customer_name: body.customer_name,
       p_customer_email: body.customer_email,
       p_customer_phone: body.customer_phone ?? null,
+      p_customer_address: body.customer_address?.trim() || null,
       p_notes: body.notes ?? null,
       p_created_by: createdBy,
       p_staff_id: body.staff_id ?? null,

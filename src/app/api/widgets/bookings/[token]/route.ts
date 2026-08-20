@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  combineServices,
   computeAvailableSlots,
   eligibleStaffForService,
   normalizeCalendarConfig,
@@ -140,10 +141,27 @@ export async function PATCH(
     ? config.locations.find((l) => l.id === booking.location_id)
     : undefined;
   const services = location ? location.services : config.services;
-  const service = services.find((s) => s.id === booking.service_id);
-  if (!service) {
+  const staffSourceForCombine = location ? location.staff : config.staff;
+
+  // Multi-service bookings reschedule as one unit: resolve every booked service
+  // and fold them into a combined service (summed duration, intersected staff).
+  // The stored `services` breakdown is the source of truth; single-service
+  // bookings fall back to `service_id`.
+  const bookedServiceIds = booking.services?.map((s) => s.service_id) ?? [booking.service_id];
+  const resolvedServices = bookedServiceIds.map((id) => services.find((s) => s.id === id));
+  if (resolvedServices.some((s) => !s)) {
     return NextResponse.json({ error: "This service is no longer offered." }, { status: 409 });
   }
+  const combined = combineServices(
+    resolvedServices as NonNullable<(typeof resolvedServices)[number]>[],
+    staffSourceForCombine
+  );
+  if (!combined) {
+    return NextResponse.json({ error: "This service is no longer offered." }, { status: 409 });
+  }
+  // Preserve the originally reserved span even if the config's durations were
+  // edited after the booking was made.
+  const service = { ...combined, duration_min: booking.duration_min };
 
   const requestedIso = new Date(starts_at).toISOString();
   const fromDate = todayInZone(config.timezone, new Date(starts_at));

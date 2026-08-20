@@ -5,6 +5,13 @@ const supabaseHost = "*.supabase.co";
 
 
 const nextConfig: NextConfig = {
+  // Turbopack's on-disk dev cache (.next/dev/cache/turbopack) isn't pruned and
+  // grows unbounded across sessions — it once reached 18GB and thrashed the dev
+  // server (588% CPU, 3.6GB RAM). Keep the dev cache in memory only so it resets
+  // each restart and can never balloon on disk. Costs a few seconds on cold start.
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+  },
   // Include agent markdown files in the serverless function bundle.
   // Required because fs.readFileSync is used at request time in route handlers.
   outputFileTracingIncludes: {

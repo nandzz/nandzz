@@ -70,10 +70,11 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     render(<CalendarBookingFlow instanceId="inst_1" services={[service]} timezone="UTC" businessName="Acme" />);
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [calledUrl] = fetchMock.mock.calls[0];
-    expect(String(calledUrl)).toBe("/api/widgets/inst_1/availability?service_id=svc_1&days=60");
+    expect(String(calledUrl)).toBe("/api/widgets/inst_1/availability?service_ids=svc_1&days=60");
   });
 
   it("skips the specialist step and goes straight to details for a single-resource (unstaffed) slot", async () => {
@@ -82,6 +83,7 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     render(<CalendarBookingFlow instanceId="inst_1" services={[service]} timezone="UTC" businessName="Acme" />);
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     const slotButton = await screen.findByRole("button", { name: /9:00/ });
     await user.click(slotButton);
 
@@ -89,7 +91,7 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     expect(screen.queryByText("Choose your specialist")).not.toBeInTheDocument();
   });
 
-  it("shows the specialist step for a slot with eligible free staff, then proceeds to details", async () => {
+  it("shows the specialist step FIRST (before day/time) when 2+ staff are eligible, then proceeds", async () => {
     setupFetch({ slots: [slotWithStaff] });
     const user = userEvent.setup();
     render(
@@ -103,19 +105,69 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     );
 
     await user.click(screen.getByText("Haircut"));
-    const slotButton = await screen.findByRole("button", { name: /9:00/ });
-    await user.click(slotButton);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
 
+    // Staff step is shown before any day/time is picked.
     expect(screen.getByText("Choose your specialist")).toBeInTheDocument();
     expect(screen.getByText("Any available")).toBeInTheDocument();
     expect(screen.getByText("Alex")).toBeInTheDocument();
     expect(screen.getByText("Bella")).toBeInTheDocument();
+    // No time slots yet — availability is only loaded after the staff pick.
+    expect(screen.queryByRole("button", { name: /9:00/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByText("Alex"));
+    const slotButton = await screen.findByRole("button", { name: /9:00/ });
+    await user.click(slotButton);
+
     expect(screen.getByText("Your details")).toBeInTheDocument();
     // The booking summary now lists the specialist as its own labeled row.
     expect(screen.getByText("Specialist")).toBeInTheDocument();
     expect(screen.getByText("Alex")).toBeInTheDocument();
+  });
+
+  it("scopes the availability request to the chosen specialist (staff_id)", async () => {
+    const fetchMock = setupFetch({ slots: [slotWithStaff] });
+    const user = userEvent.setup();
+    render(
+      <CalendarBookingFlow
+        instanceId="inst_1"
+        services={[service]}
+        staff={[staffA, staffB]}
+        timezone="UTC"
+        businessName="Acme"
+      />
+    );
+
+    await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByText("Alex"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const availCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/availability"))!;
+    expect(String(availCall[0])).toContain("staff_id=st_a");
+  });
+
+  it("skips the specialist step when only one staff is eligible for the service", async () => {
+    // svc_a is restricted to staffA, so with two staff only one is eligible ⇒
+    // no real choice ⇒ straight to day/time, exactly like a single resource.
+    const svcRestricted: CalendarService = { id: "svc_a", name: "Shave", duration_min: 20, staff_ids: ["st_a"] };
+    setupFetch({ slots: [slotNoStaff] });
+    const user = userEvent.setup();
+    render(
+      <CalendarBookingFlow
+        instanceId="inst_1"
+        services={[svcRestricted]}
+        staff={[staffA, staffB]}
+        timezone="UTC"
+        businessName="Acme"
+      />
+    );
+
+    await user.click(screen.getByText("Shave"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(screen.queryByText("Choose your specialist")).not.toBeInTheDocument();
+    await screen.findByRole("button", { name: /9:00/ });
   });
 
   it("submits 'any available' (staff_id: \"\") when that option is chosen", async () => {
@@ -132,9 +184,10 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     );
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByText("Any available"));
     const slotButton = await screen.findByRole("button", { name: /9:00/ });
     await user.click(slotButton);
-    await user.click(screen.getByText("Any available"));
     await fillDetailsAndSubmit(user);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/book"), expect.anything()));
@@ -149,6 +202,7 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     render(<CalendarBookingFlow instanceId="inst_1" services={[service]} timezone="UTC" businessName="Acme" />);
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     const slotButton = await screen.findByRole("button", { name: /9:00/ });
     await user.click(slotButton);
     await user.click(screen.getByRole("button", { name: "Confirm booking" }));
@@ -171,6 +225,7 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     );
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     const slotButton = await screen.findByRole("button", { name: /9:00/ });
     await user.click(slotButton);
     await fillDetailsAndSubmit(user);
@@ -189,6 +244,7 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     render(<CalendarBookingFlow instanceId="inst_1" services={[service]} timezone="UTC" businessName="Acme" />);
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     const slotButton = await screen.findByRole("button", { name: /9:00/ });
     await user.click(slotButton);
     await fillDetailsAndSubmit(user);
@@ -204,6 +260,7 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     render(<CalendarBookingFlow instanceId="inst_1" services={[service]} timezone="UTC" businessName="Acme" />);
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     const slotButton = await screen.findByRole("button", { name: /9:00/ });
     await user.click(slotButton);
     await fillDetailsAndSubmit(user);
@@ -219,10 +276,70 @@ describe("CalendarBookingFlow — legacy single-location mode", () => {
     render(<CalendarBookingFlow instanceId="inst_1" services={[service]} timezone="UTC" businessName="Acme" />);
 
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     await screen.findByRole("button", { name: /9:00/ });
     await user.click(screen.getByRole("button", { name: "Back" }));
 
     expect(screen.getByText("Choose a service")).toBeInTheDocument();
+  });
+
+  it("navigates back through slot → staff → service in the staffed flow", async () => {
+    setupFetch({ slots: [slotWithStaff] });
+    const user = userEvent.setup();
+    render(
+      <CalendarBookingFlow
+        instanceId="inst_1"
+        services={[service]}
+        staff={[staffA, staffB]}
+        timezone="UTC"
+        businessName="Acme"
+      />
+    );
+
+    await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByText("Alex"));
+    await screen.findByRole("button", { name: /9:00/ });
+
+    // slot → staff
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("Choose your specialist")).toBeInTheDocument();
+    // staff → service
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("Choose a service")).toBeInTheDocument();
+  });
+
+  it("selects multiple services, sums the duration, and books all of them", async () => {
+    const fetchMock = setupFetch({ slots: [slotNoStaff] });
+    const user = userEvent.setup();
+    render(
+      <CalendarBookingFlow
+        instanceId="inst_1"
+        services={[service, service2]}
+        timezone="UTC"
+        businessName="Acme"
+      />
+    );
+
+    await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByText("Color"));
+    // Running total: 30 + 60 = 90 minutes.
+    expect(screen.getByText("90 min")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    // Availability is requested for both services at once.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [availUrl] = fetchMock.mock.calls[0];
+    expect(String(availUrl)).toContain("service_ids=svc_1%2Csvc_2");
+
+    const slotButton = await screen.findByRole("button", { name: /9:00/ });
+    await user.click(slotButton);
+    await fillDetailsAndSubmit(user);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/book"), expect.anything()));
+    const bookCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/book"))!;
+    const body = JSON.parse((bookCall[1] as RequestInit).body as string);
+    expect(body.service_ids).toEqual(["svc_1", "svc_2"]);
   });
 
   it("jumps straight to the slot step and loads availability on mount when a service is preselected", async () => {
@@ -288,6 +405,7 @@ describe("CalendarBookingFlow — multi-location mode", () => {
 
     await user.click(screen.getByText("Downtown"));
     await user.click(screen.getByText("Haircut"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [calledUrl] = fetchMock.mock.calls[0];

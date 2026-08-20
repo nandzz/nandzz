@@ -62,6 +62,7 @@ function bookingRow(overrides: Partial<WidgetBooking> = {}): WidgetBooking {
     customer_name: "Jamie Rivera",
     customer_email: "jamie@example.com",
     customer_phone: "+15551234567",
+    customer_address: null,
     notes: null,
     status: "confirmed",
     manage_token: "tok_abc",

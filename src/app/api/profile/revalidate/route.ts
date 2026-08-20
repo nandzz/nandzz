@@ -28,8 +28,11 @@ export async function POST(request: Request) {
   }
 
   // Tag invalidates the unstable_cache entry in app/[username]/(profile)/page.tsx;
-  // path drops any route-level caches for the profile URL.
-  revalidateTag(`profile:${username}`, "max");
+  // path drops any route-level caches for the profile URL. `{ expire: 0 }` forces
+  // immediate expiration (read-your-own-writes) — with the default "max" the next
+  // visit is served the STALE order while it revalidates in the background, so an
+  // owner who reorders and reloads once still sees the old order ("not persisted").
+  revalidateTag(`profile:${username}`, { expire: 0 });
   revalidatePath(`/${username}`);
 
   return Response.json({ revalidated: true });

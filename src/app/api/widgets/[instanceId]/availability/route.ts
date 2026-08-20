@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserEntitlements } from "@/lib/plan";
 import {
+  combineServices,
   computeAvailableSlots,
   normalizeCalendarConfig,
   todayInZone,
@@ -17,12 +18,20 @@ export async function GET(
 ) {
   const { instanceId } = await params;
   const url = new URL(req.url);
+  // Multi-service: `service_ids` (comma-separated) sums the selected services'
+  // durations so the reserved slot spans the whole booking. `service_id` (single)
+  // stays supported for the legacy/AI path.
+  const serviceIdsParam = url.searchParams.get("service_ids");
   const serviceId = url.searchParams.get("service_id");
+  const requestedServiceIds = (serviceIdsParam ?? serviceId ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const staffId = url.searchParams.get("staff_id");
   const locationId = url.searchParams.get("location_id");
   const days = Math.min(60, Math.max(1, Number(url.searchParams.get("days") ?? 14)));
 
-  if (!serviceId) {
+  if (requestedServiceIds.length === 0) {
     return NextResponse.json({ error: "service_id is required" }, { status: 400 });
   }
 
@@ -52,8 +61,17 @@ export async function GET(
     return NextResponse.json({ error: "Unknown location" }, { status: 400 });
   }
   const services = location ? location.services : config.services;
+  const staffSource = location ? location.staff : config.staff;
 
-  const service = services.find((s) => s.id === serviceId);
+  // Resolve every requested service (order preserved), then fold them into one
+  // combined service whose duration is the sum and whose eligible-staff set is
+  // the intersection — the availability engine then treats the whole booking as
+  // a single unit reserving the summed span.
+  const selected = requestedServiceIds.map((id) => services.find((s) => s.id === id));
+  if (selected.some((s) => !s)) {
+    return NextResponse.json({ error: "Unknown service" }, { status: 400 });
+  }
+  const service = combineServices(selected as NonNullable<(typeof selected)[number]>[], staffSource);
   if (!service) {
     return NextResponse.json({ error: "Unknown service" }, { status: 400 });
   }

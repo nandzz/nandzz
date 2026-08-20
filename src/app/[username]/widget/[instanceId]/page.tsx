@@ -148,6 +148,8 @@ export default async function WidgetPage({
               businessName={displayName}
               staff={config.staff}
               showPrices={config.show_prices}
+              collectAddress={config.collect_address}
+              addressRequired={config.address_required}
             />
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">

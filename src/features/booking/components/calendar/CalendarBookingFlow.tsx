@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CalendarDays, Clock, Loader2, Check, ChevronLeft, ChevronRight, Pencil, Sparkles, Tag, MapPin } from "lucide-react";
 import type { CalendarService, Location, StaffMember } from "@/lib/types";
-import { eligibleStaffForService, todayInZone, type Slot } from "@/lib/widgets/calendar";
+import { eligibleStaffForServices, todayInZone, type Slot } from "@/lib/widgets/calendar";
 import { BOOKING_ERROR_KEYS } from "@/lib/widgets/booking-errors";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MonthCalendar, CalendarSkeleton } from "./MonthCalendar";
@@ -27,6 +27,12 @@ interface Props {
   // Whether to show service prices to the visitor. Owner-controlled; defaults to
   // shown so callers that don't pass it keep the prior behavior.
   showPrices?: boolean;
+  // Whether to ask the visitor for an address, and whether it's mandatory. Both
+  // owner-controlled per instance; default off so callers that don't pass them
+  // keep the prior behavior (no address field). `addressRequired` is only
+  // meaningful when `collectAddress` is true.
+  collectAddress?: boolean;
+  addressRequired?: boolean;
   initialServiceId?: string;
   onBooked?: (manageUrl: string) => void;
 }
@@ -41,6 +47,8 @@ export function CalendarBookingFlow({
   businessName,
   staff: legacyStaff = [],
   showPrices = true,
+  collectAddress = false,
+  addressRequired = false,
   initialServiceId,
   onBooked,
 }: Props) {
@@ -74,7 +82,12 @@ export function CalendarBookingFlow({
     if (locations.length > 1) return "location";
     return preselected ? "slot" : "service";
   });
-  const [service, setService] = useState<CalendarService | null>(preselected);
+  // Multi-service: the visitor can pick several services in one booking; their
+  // durations and prices add up. `preselected` (from the AI chat / deep link)
+  // seeds a single-service selection.
+  const [selectedServices, setSelectedServices] = useState<CalendarService[]>(
+    preselected ? [preselected] : []
+  );
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -82,19 +95,33 @@ export function CalendarBookingFlow({
   // the visitor actively picks a day (auto-selecting the first day keeps it open).
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [slot, setSlot] = useState<Slot | null>(null);
-  // Eligible staff free at the picked slot (drives the "specialist" step). Empty
-  // ⇒ no staff choice for this slot, so we skip straight to details.
-  const [slotStaff, setSlotStaff] = useState<StaffMember[]>([]);
   // Chosen specialist; "" means "any available" (server auto-assigns).
   const [staffId, setStaffId] = useState<string>("");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manageUrl, setManageUrl] = useState<string | null>(null);
 
+  // Running totals for the selected services — the summed duration reserves the
+  // whole slot, the summed price is what the visitor will pay.
+  const totalDuration = selectedServices.reduce((n, s) => n + (s.duration_min || 0), 0);
+  const totalPriceCents = selectedServices.reduce((n, s) => n + (s.price_cents ?? 0), 0);
+  const anyPriced = selectedServices.some(
+    (s) => typeof s.price_cents === "number" && s.price_cents > 0
+  );
+  const servicesLabel = selectedServices.map((s) => s.name).join(" + ");
+
+  // Staff who can perform EVERY selected service. The "choose your specialist"
+  // step is shown (right after services, before day/time) only when 2+ of them
+  // exist; 0 or 1 ⇒ no real choice, so it's skipped exactly like a
+  // single-resource business. `staffStepUsed` also drives back-navigation.
+  // Cheap to recompute each render (O(staff × services)), so no memo.
+  const eligibleStaff = eligibleStaffForServices(staff, selectedServices);
+  const staffStepUsed = selectedServices.length > 0 && eligibleStaff.length > 1;
+
   // If a service was preselected (e.g. from the AI chat), load its slots on mount.
   useEffect(() => {
-    if (preselected) void loadSlots(preselected);
+    if (preselected) void loadSlots([preselected]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -129,13 +156,20 @@ export function CalendarBookingFlow({
     return dateKeyFmt.format(new Date(iso));
   }
 
-  async function loadSlots(s: CalendarService) {
+  // `forStaffId` (default "") scopes availability to a single specialist chosen
+  // in the staff step; "" leaves the window unscoped (any available / no staff).
+  async function loadSlots(svcs: CalendarService[], forStaffId = "") {
+    if (svcs.length === 0) return;
     setLoadingSlots(true);
     setError(null);
     setSelectedDate(null);
     setCalendarOpen(true);
     try {
-      const params = new URLSearchParams({ service_id: s.id, days: String(BOOKING_WINDOW_DAYS) });
+      const params = new URLSearchParams({
+        service_ids: svcs.map((s) => s.id).join(","),
+        days: String(BOOKING_WINDOW_DAYS),
+      });
+      if (forStaffId) params.set("staff_id", forStaffId);
       if (location) params.set("location_id", location.id);
       const res = await fetch(`/api/widgets/${instanceId}/availability?${params.toString()}`);
       const data = await res.json();
@@ -153,48 +187,62 @@ export function CalendarBookingFlow({
   // location" pseudo-option: a booking happens at one physical place.
   function pickLocation(loc: Location) {
     setLocation(loc);
-    setService(null);
+    setSelectedServices([]);
     setSlot(null);
-    setSlotStaff([]);
     setStaffId("");
     setStep("service");
   }
 
-  async function pickService(s: CalendarService) {
-    setService(s);
+  // Toggle a service in/out of the multi-select. Selection order is preserved so
+  // the summary + combined name read in the order the visitor picked them.
+  function toggleService(s: CalendarService) {
+    setSelectedServices((prev) =>
+      prev.some((x) => x.id === s.id) ? prev.filter((x) => x.id !== s.id) : [...prev, s]
+    );
+  }
+
+  // Continue from the service step once at least one service is chosen. When 2+
+  // specialists can do the whole booking, the visitor picks one FIRST (staff
+  // step) so availability can be scoped to them; otherwise (0 or 1 eligible
+  // staff) there's no real choice, so we go straight to day/time and load
+  // availability unscoped — byte-for-byte a single-resource business.
+  async function proceedFromServices() {
+    if (selectedServices.length === 0) return;
     setSlot(null);
-    setSlotStaff([]);
     setStaffId("");
+    const eligible = eligibleStaffForServices(staff, selectedServices);
+    if (eligible.length > 1) {
+      setStep("staff");
+      return;
+    }
     setStep("slot");
-    await loadSlots(s);
+    await loadSlots(selectedServices);
   }
 
-  // Staff who can perform `service` AND are free at `s`. Intersects the slot's
-  // free-staff list (from the availability API) with the service's eligible
-  // staff. Returns [] when there's no staff data — the specialist step is then
-  // skipped (single-resource instance, or the availability route hasn't attached
-  // `staff_ids` yet).
-  function freeStaffForSlot(s: Slot): StaffMember[] {
-    if (!service || staff.length === 0) return [];
-    const freeIds = s.staff_ids;
-    if (!freeIds || freeIds.length === 0) return [];
-    const freeSet = new Set(freeIds);
-    const eligible = eligibleStaffForService(staff, service);
-    return eligible.filter((m) => freeSet.has(m.id));
+  // Specialist chosen ("" = any available) → scope availability to them and move
+  // on to day/time.
+  async function pickStaff(id: string) {
+    setStaffId(id);
+    setStep("slot");
+    await loadSlots(selectedServices, id);
   }
 
-  // Time-slot picked → branch into the specialist step when a choice exists.
+  // Time-slot picked → straight to details; the specialist (if any) was already
+  // chosen before this step.
   function pickSlot(s: Slot) {
     setSlot(s);
-    setStaffId("");
-    const free = freeStaffForSlot(s);
-    setSlotStaff(free);
-    setStep(free.length > 0 ? "staff" : "details");
+    setStep("details");
   }
 
   async function submit() {
-    if (!service || !slot) return;
+    if (selectedServices.length === 0 || !slot) return;
     if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
+      setError(t.booking.errorRequiredFields);
+      return;
+    }
+    // Address is only validated when the owner both collects it and marks it
+    // required — otherwise it's optional (or absent entirely).
+    if (collectAddress && addressRequired && !form.address.trim()) {
       setError(t.booking.errorRequiredFields);
       return;
     }
@@ -205,13 +253,14 @@ export function CalendarBookingFlow({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          service_id: service.id,
+          service_ids: selectedServices.map((s) => s.id),
           starts_at: slot.start,
           staff_id: staffId,
           location_id: location ? location.id : undefined,
           customer_name: form.name,
           customer_email: form.email,
           customer_phone: form.phone.trim(),
+          customer_address: collectAddress ? form.address.trim() || undefined : undefined,
           notes: form.notes || undefined,
         }),
       });
@@ -279,10 +328,12 @@ export function CalendarBookingFlow({
 
   const back = () => {
     setError(null);
-    // From details, return to the specialist step only when it was shown.
-    if (step === "details") setStep(slotStaff.length > 0 ? "staff" : "slot");
-    else if (step === "staff") setStep("slot");
-    else if (step === "slot") setStep("service");
+    // Order: [location] → service → [staff] → slot → details. Optional steps are
+    // skipped in reverse exactly as they were skipped on the way in.
+    if (step === "details") setStep("slot");
+    // From the slot step, return to the specialist step only when it was shown.
+    else if (step === "slot") setStep(staffStepUsed ? "staff" : "service");
+    else if (step === "staff") setStep("service");
     // From service, return to the location chooser only when it was shown
     // (locations.length > 1) — mirrors the staff step's skip symmetry.
     else if (step === "service" && locations.length > 1) setStep("location");
@@ -341,40 +392,93 @@ export function CalendarBookingFlow({
         </div>
       )}
 
-      {/* Step 1 — service */}
+      {/* Step 1 — service (multi-select: pick one or more; totals add up) */}
       {step === "service" && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{t.booking.chooseService}</h3>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">{t.booking.chooseService}</h3>
+            <p className="text-xs text-muted-foreground">{t.booking.selectServicesHint}</p>
+          </div>
           {services.length === 0 && (
             <p className="text-sm text-muted-foreground">{t.booking.noServicesAvailable}</p>
           )}
-          {services.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => pickService(s)}
-              className="w-full text-left rounded-xl border border-border bg-background px-4 py-3 transition hover:border-emerald-400 hover:shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-sm">{s.name}</span>
-                {showPrices && typeof s.price_cents === "number" && s.price_cents > 0 && (
-                  <span className="text-sm text-muted-foreground">
-                    ${(s.price_cents / 100).toFixed(2)}
+          {services.map((s) => {
+            const checked = selectedServices.some((x) => x.id === s.id);
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                onClick={() => toggleService(s)}
+                className={`w-full text-left rounded-xl border px-4 py-3 transition hover:shadow-sm ${
+                  checked
+                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+                    : "border-border bg-background hover:border-emerald-400"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                      checked
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : "border-border bg-background"
+                    }`}
+                  >
+                    {checked && <Check className="h-3.5 w-3.5" />}
                   </span>
-                )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-sm">{s.name}</span>
+                      {showPrices && typeof s.price_cents === "number" && s.price_cents > 0 && (
+                        <span className="text-sm text-muted-foreground">
+                          ${(s.price_cents / 100).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" /> {t.booking.durationMin.replace("{min}", String(s.duration_min))}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+
+          {selectedServices.length > 0 && (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 px-4 py-3">
+                <span className="text-sm font-medium">{t.booking.total}</span>
+                <span className="inline-flex items-center gap-3 text-sm">
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    {t.booking.durationMin.replace("{min}", String(totalDuration))}
+                  </span>
+                  {showPrices && anyPriced && (
+                    <span className="font-semibold tabular-nums">
+                      ${(totalPriceCents / 100).toFixed(2)}
+                    </span>
+                  )}
+                </span>
               </div>
-              <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" /> {t.booking.durationMin.replace("{min}", String(s.duration_min))}
-              </span>
-            </button>
-          ))}
+              <button
+                type="button"
+                onClick={proceedFromServices}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                {t.booking.continue}
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Step 2 — date + time */}
+      {/* Step 3 — date + time (availability scoped to the chosen specialist) */}
       {step === "slot" && (
         <div className="space-y-4">
           <h3 className="text-sm font-semibold">
-            {t.booking.pickDateTime.replace("{service}", service?.name ?? "")}
+            {t.booking.pickDateTime.replace("{service}", servicesLabel)}
           </h3>
           {loadingSlots ? (
             <CalendarSkeleton />
@@ -446,25 +550,20 @@ export function CalendarBookingFlow({
         </div>
       )}
 
-      {/* Step 3 — specialist (only when the picked slot has eligible free staff) */}
-      {step === "staff" && slot && (
+      {/* Step 2 — specialist (shown right after services, before day/time, only
+          when 2+ eligible staff exist; availability is then scoped to the pick) */}
+      {step === "staff" && (
         <div className="space-y-2">
           <div className="space-y-1">
             <h3 className="text-sm font-semibold">{t.booking.chooseSpecialist}</h3>
             <p className="text-sm text-muted-foreground">
-              {t.booking.specialistSummary
-                .replace("{service}", service?.name ?? "")
-                .replace("{date}", fmtDay(slot.start))
-                .replace("{time}", fmtTime(slot.start))}
+              {t.booking.specialistForService.replace("{service}", servicesLabel)}
             </p>
           </div>
 
-          {/* Any available — auto-assign; sets the chosen id to "". */}
+          {/* Any available — auto-assign; loads availability unscoped. */}
           <button
-            onClick={() => {
-              setStaffId("");
-              setStep("details");
-            }}
+            onClick={() => pickStaff("")}
             className="w-full text-left rounded-xl border border-border bg-background px-4 py-3 transition hover:border-emerald-400 hover:shadow-sm"
           >
             <div className="flex items-center gap-3">
@@ -480,13 +579,10 @@ export function CalendarBookingFlow({
             </div>
           </button>
 
-          {slotStaff.map((m) => (
+          {eligibleStaff.map((m) => (
             <button
               key={m.id}
-              onClick={() => {
-                setStaffId(m.id);
-                setStep("details");
-              }}
+              onClick={() => pickStaff(m.id)}
               className="w-full text-left rounded-xl border border-border bg-background px-4 py-3 transition hover:border-emerald-400 hover:shadow-sm"
             >
               <div className="flex items-center gap-3">
@@ -514,19 +610,30 @@ export function CalendarBookingFlow({
           {/* Booking summary — a clear recap of every choice made so far, so the
               visitor confirms exactly what they're booking before contact details. */}
           <div className="overflow-hidden rounded-xl border border-border bg-muted/40 divide-y divide-border/70">
-            <SummaryRow
-              icon={<Tag className="h-4 w-4" />}
-              label={t.booking.summaryService}
-              value={service?.name ?? ""}
-              meta={[
-                t.booking.durationMin.replace("{min}", String(service?.duration_min ?? "")),
-                showPrices && typeof service?.price_cents === "number" && service.price_cents > 0
-                  ? `$${(service.price_cents / 100).toFixed(2)}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            />
+            {selectedServices.map((s) => (
+              <SummaryRow
+                key={s.id}
+                icon={<Tag className="h-4 w-4" />}
+                label={t.booking.summaryService}
+                value={s.name}
+                meta={[
+                  t.booking.durationMin.replace("{min}", String(s.duration_min)),
+                  showPrices && typeof s.price_cents === "number" && s.price_cents > 0
+                    ? `$${(s.price_cents / 100).toFixed(2)}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            ))}
+            {selectedServices.length > 1 && (
+              <SummaryRow
+                icon={<Tag className="h-4 w-4" />}
+                label={t.booking.total}
+                value={t.booking.durationMin.replace("{min}", String(totalDuration))}
+                meta={showPrices && anyPriced ? `$${(totalPriceCents / 100).toFixed(2)}` : null}
+              />
+            )}
             <SummaryRow
               icon={<CalendarDays className="h-4 w-4" />}
               label={t.booking.summaryWhen}
@@ -578,6 +685,19 @@ export function CalendarBookingFlow({
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
+          {collectAddress && (
+            <input
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              placeholder={
+                addressRequired
+                  ? t.booking.customerAddressPlaceholder
+                  : t.booking.customerAddressPlaceholderOptional
+              }
+              autoComplete="street-address"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+          )}
           <textarea
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
             placeholder={t.booking.notesPlaceholder}

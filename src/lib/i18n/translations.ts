@@ -826,6 +826,9 @@ export type Translations = {
     widgetUnavailable: string;
     back: string;
     chooseService: string;
+    selectServicesHint: string;
+    total: string;
+    continue: string;
     noServicesAvailable: string;
     durationMin: string;
     pickDateTime: string;
@@ -834,7 +837,7 @@ export type Translations = {
     change: string;
     selectDateToSeeTimes: string;
     chooseSpecialist: string;
-    specialistSummary: string;
+    specialistForService: string;
     summaryService: string;
     summaryWhen: string;
     summarySpecialist: string;
@@ -846,6 +849,8 @@ export type Translations = {
     fullNamePlaceholder: string;
     emailPlaceholder: string;
     phonePlaceholder: string;
+    customerAddressPlaceholder: string;
+    customerAddressPlaceholderOptional: string;
     notesPlaceholder: string;
     confirmBooking: string;
     bookedTitle: string;
@@ -1035,6 +1040,10 @@ export type Translations = {
     addButton: string;
     showPricesLabel: string;
     showPricesDesc: string;
+    collectAddressLabel: string;
+    collectAddressDesc: string;
+    addressRequiredLabel: string;
+    addressRequiredDesc: string;
     addServiceHint: string;
     servicePlaceholder: string;
     minSuffix: string;
@@ -2000,6 +2009,9 @@ const en: Translations = {
     widgetUnavailable: "This widget can't be displayed yet.",
     back: "Back",
     chooseService: "Choose a service",
+    selectServicesHint: "Select one or more — times and prices add up.",
+    total: "Total",
+    continue: "Continue",
     noServicesAvailable: "No services available yet.",
     durationMin: "{min} min",
     pickDateTime: "Pick a date & time · {service}",
@@ -2008,7 +2020,7 @@ const en: Translations = {
     change: "Change",
     selectDateToSeeTimes: "Select a date to see open times.",
     chooseSpecialist: "Choose your specialist",
-    specialistSummary: "{service} · {date} at {time}",
+    specialistForService: "For {service}",
     summaryService: "Service",
     summaryWhen: "When",
     summarySpecialist: "Specialist",
@@ -2020,6 +2032,8 @@ const en: Translations = {
     fullNamePlaceholder: "Full name",
     emailPlaceholder: "Email",
     phonePlaceholder: "Phone",
+    customerAddressPlaceholder: "Address",
+    customerAddressPlaceholderOptional: "Address (optional)",
     notesPlaceholder: "Notes (optional)",
     confirmBooking: "Confirm booking",
     bookedTitle: "You're booked!",
@@ -2209,6 +2223,10 @@ const en: Translations = {
     addButton: "Add",
     showPricesLabel: "Show prices on the booking page",
     showPricesDesc: "When off, visitors book without seeing service prices.",
+    collectAddressLabel: "Ask for the customer's address",
+    collectAddressDesc: "Show an address field on the booking page — useful for mobile or at-home services.",
+    addressRequiredLabel: "Require the address",
+    addressRequiredDesc: "When on, visitors must fill in their address to book.",
     addServiceHint: "Add at least one service so visitors can book.",
     servicePlaceholder: "Service name",
     minSuffix: "min",
@@ -3174,6 +3192,9 @@ const pt: Translations = {
     widgetUnavailable: "Este widget ainda não pode ser exibido.",
     back: "Voltar",
     chooseService: "Escolha um serviço",
+    selectServicesHint: "Selecione um ou mais — durações e preços somam.",
+    total: "Total",
+    continue: "Continuar",
     noServicesAvailable: "Nenhum serviço disponível ainda.",
     durationMin: "{min} min",
     pickDateTime: "Escolha data e horário · {service}",
@@ -3182,7 +3203,7 @@ const pt: Translations = {
     change: "Alterar",
     selectDateToSeeTimes: "Selecione uma data para ver os horários disponíveis.",
     chooseSpecialist: "Escolha seu especialista",
-    specialistSummary: "{service} · {date} às {time}",
+    specialistForService: "Para {service}",
     summaryService: "Serviço",
     summaryWhen: "Quando",
     summarySpecialist: "Profissional",
@@ -3194,6 +3215,8 @@ const pt: Translations = {
     fullNamePlaceholder: "Nome completo",
     emailPlaceholder: "E-mail",
     phonePlaceholder: "Telefone",
+    customerAddressPlaceholder: "Endereço",
+    customerAddressPlaceholderOptional: "Endereço (opcional)",
     notesPlaceholder: "Observações (opcional)",
     confirmBooking: "Confirmar agendamento",
     bookedTitle: "Você está agendado!",
@@ -3383,6 +3406,10 @@ const pt: Translations = {
     addButton: "Adicionar",
     showPricesLabel: "Mostrar preços na página de agendamento",
     showPricesDesc: "Quando desativado, os visitantes agendam sem ver os preços dos serviços.",
+    collectAddressLabel: "Pedir o endereço do cliente",
+    collectAddressDesc: "Mostra um campo de endereço na página de agendamento — útil para serviços móveis ou em domicílio.",
+    addressRequiredLabel: "Exigir o endereço",
+    addressRequiredDesc: "Quando ativado, os visitantes precisam preencher o endereço para agendar.",
     addServiceHint: "Adicione pelo menos um serviço para que os visitantes possam agendar.",
     servicePlaceholder: "Nome do serviço",
     minSuffix: "min",
@@ -4348,6 +4375,9 @@ const fr: Translations = {
     widgetUnavailable: "Ce widget ne peut pas encore être affiché.",
     back: "Retour",
     chooseService: "Choisissez un service",
+    selectServicesHint: "Sélectionnez-en un ou plusieurs — durées et prix s'additionnent.",
+    total: "Total",
+    continue: "Continuer",
     noServicesAvailable: "Aucun service disponible pour le moment.",
     durationMin: "{min} min",
     pickDateTime: "Choisissez une date et une heure · {service}",
@@ -4356,7 +4386,7 @@ const fr: Translations = {
     change: "Modifier",
     selectDateToSeeTimes: "Sélectionnez une date pour voir les horaires disponibles.",
     chooseSpecialist: "Choisissez votre spécialiste",
-    specialistSummary: "{service} · {date} à {time}",
+    specialistForService: "Pour {service}",
     summaryService: "Service",
     summaryWhen: "Quand",
     summarySpecialist: "Spécialiste",
@@ -4368,6 +4398,8 @@ const fr: Translations = {
     fullNamePlaceholder: "Nom complet",
     emailPlaceholder: "E-mail",
     phonePlaceholder: "Téléphone",
+    customerAddressPlaceholder: "Adresse",
+    customerAddressPlaceholderOptional: "Adresse (facultatif)",
     notesPlaceholder: "Notes (facultatif)",
     confirmBooking: "Confirmer la réservation",
     bookedTitle: "C'est réservé !",
@@ -4557,6 +4589,10 @@ const fr: Translations = {
     addButton: "Ajouter",
     showPricesLabel: "Afficher les prix sur la page de réservation",
     showPricesDesc: "Une fois désactivé, les visiteurs réservent sans voir les prix des services.",
+    collectAddressLabel: "Demander l'adresse du client",
+    collectAddressDesc: "Affiche un champ d'adresse sur la page de réservation — utile pour les services mobiles ou à domicile.",
+    addressRequiredLabel: "Rendre l'adresse obligatoire",
+    addressRequiredDesc: "Une fois activé, les visiteurs doivent saisir leur adresse pour réserver.",
     addServiceHint: "Ajoutez au moins un service pour permettre les réservations.",
     servicePlaceholder: "Nom du service",
     minSuffix: "min",
@@ -5522,6 +5558,9 @@ const es: Translations = {
     widgetUnavailable: "Este widget aún no se puede mostrar.",
     back: "Atrás",
     chooseService: "Elige un servicio",
+    selectServicesHint: "Elige uno o varios — la duración y el precio se suman.",
+    total: "Total",
+    continue: "Continuar",
     noServicesAvailable: "Aún no hay servicios disponibles.",
     durationMin: "{min} min",
     pickDateTime: "Elige fecha y hora · {service}",
@@ -5530,7 +5569,7 @@ const es: Translations = {
     change: "Cambiar",
     selectDateToSeeTimes: "Selecciona una fecha para ver los horarios disponibles.",
     chooseSpecialist: "Elige tu especialista",
-    specialistSummary: "{service} · {date} a las {time}",
+    specialistForService: "Para {service}",
     summaryService: "Servicio",
     summaryWhen: "Cuándo",
     summarySpecialist: "Especialista",
@@ -5542,6 +5581,8 @@ const es: Translations = {
     fullNamePlaceholder: "Nombre completo",
     emailPlaceholder: "Correo electrónico",
     phonePlaceholder: "Teléfono",
+    customerAddressPlaceholder: "Dirección",
+    customerAddressPlaceholderOptional: "Dirección (opcional)",
     notesPlaceholder: "Notas (opcional)",
     confirmBooking: "Confirmar reserva",
     bookedTitle: "¡Ya tienes tu reserva!",
@@ -5731,6 +5772,10 @@ const es: Translations = {
     addButton: "Añadir",
     showPricesLabel: "Mostrar precios en la página de reservas",
     showPricesDesc: "Cuando está desactivado, los visitantes reservan sin ver los precios de los servicios.",
+    collectAddressLabel: "Pedir la dirección del cliente",
+    collectAddressDesc: "Muestra un campo de dirección en la página de reservas — útil para servicios móviles o a domicilio.",
+    addressRequiredLabel: "Exigir la dirección",
+    addressRequiredDesc: "Cuando está activado, los visitantes deben rellenar su dirección para reservar.",
     addServiceHint: "Añade al menos un servicio para que los visitantes puedan reservar.",
     servicePlaceholder: "Nombre del servicio",
     minSuffix: "min",
@@ -6696,6 +6741,9 @@ const ja: Translations = {
     widgetUnavailable: "このウィジェットはまだ表示できません。",
     back: "戻る",
     chooseService: "サービスを選択",
+    selectServicesHint: "1つ以上選択してください — 時間と料金が加算されます。",
+    total: "合計",
+    continue: "続ける",
     noServicesAvailable: "利用可能なサービスはまだありません。",
     durationMin: "{min}分",
     pickDateTime: "日時を選択 · {service}",
@@ -6704,7 +6752,7 @@ const ja: Translations = {
     change: "変更",
     selectDateToSeeTimes: "日付を選択すると空き時間が表示されます。",
     chooseSpecialist: "担当者を選択",
-    specialistSummary: "{service} · {date} {time}",
+    specialistForService: "{service} の担当",
     summaryService: "サービス",
     summaryWhen: "日時",
     summarySpecialist: "担当",
@@ -6716,6 +6764,8 @@ const ja: Translations = {
     fullNamePlaceholder: "氏名",
     emailPlaceholder: "メールアドレス",
     phonePlaceholder: "電話番号",
+    customerAddressPlaceholder: "住所",
+    customerAddressPlaceholderOptional: "住所（任意）",
     notesPlaceholder: "メモ（任意）",
     confirmBooking: "予約を確定",
     bookedTitle: "予約が完了しました！",
@@ -6905,6 +6955,10 @@ const ja: Translations = {
     addButton: "追加",
     showPricesLabel: "予約ページに価格を表示",
     showPricesDesc: "オフにすると、訪問者はサービス価格を見ずに予約します。",
+    collectAddressLabel: "顧客の住所を尋ねる",
+    collectAddressDesc: "予約ページに住所欄を表示します。出張・訪問サービスに便利です。",
+    addressRequiredLabel: "住所を必須にする",
+    addressRequiredDesc: "オンにすると、訪問者は予約時に住所の入力が必要になります。",
     addServiceHint: "訪問者が予約できるように、少なくとも1つのサービスを追加してください。",
     servicePlaceholder: "サービス名",
     minSuffix: "分",
@@ -7870,6 +7924,9 @@ const de: Translations = {
     widgetUnavailable: "Dieses Widget kann noch nicht angezeigt werden.",
     back: "Zurück",
     chooseService: "Wähle eine Leistung",
+    selectServicesHint: "Wähle eine oder mehrere — Dauer und Preis addieren sich.",
+    total: "Gesamt",
+    continue: "Weiter",
     noServicesAvailable: "Noch keine Leistungen verfügbar.",
     durationMin: "{min} Min.",
     pickDateTime: "Datum & Uhrzeit wählen · {service}",
@@ -7878,7 +7935,7 @@ const de: Translations = {
     change: "Ändern",
     selectDateToSeeTimes: "Wähle ein Datum, um freie Zeiten zu sehen.",
     chooseSpecialist: "Wähle deine Fachkraft",
-    specialistSummary: "{service} · {date} um {time}",
+    specialistForService: "Für {service}",
     summaryService: "Leistung",
     summaryWhen: "Wann",
     summarySpecialist: "Fachkraft",
@@ -7890,6 +7947,8 @@ const de: Translations = {
     fullNamePlaceholder: "Vollständiger Name",
     emailPlaceholder: "E-Mail",
     phonePlaceholder: "Telefon",
+    customerAddressPlaceholder: "Adresse",
+    customerAddressPlaceholderOptional: "Adresse (optional)",
     notesPlaceholder: "Notizen (optional)",
     confirmBooking: "Buchung bestätigen",
     bookedTitle: "Du bist gebucht!",
@@ -8079,6 +8138,10 @@ const de: Translations = {
     addButton: "Hinzufügen",
     showPricesLabel: "Preise auf der Buchungsseite anzeigen",
     showPricesDesc: "Wenn deaktiviert, buchen Besucher ohne Preise zu sehen.",
+    collectAddressLabel: "Nach der Adresse des Kunden fragen",
+    collectAddressDesc: "Zeigt ein Adressfeld auf der Buchungsseite — nützlich für mobile oder Vor-Ort-Dienste.",
+    addressRequiredLabel: "Adresse verpflichtend machen",
+    addressRequiredDesc: "Wenn aktiviert, müssen Besucher ihre Adresse angeben, um zu buchen.",
     addServiceHint: "Füge mindestens eine Leistung hinzu, damit Besucher buchen können.",
     servicePlaceholder: "Name der Leistung",
     minSuffix: "Min.",
@@ -9044,6 +9107,9 @@ const it: Translations = {
     widgetUnavailable: "Questo widget non può ancora essere visualizzato.",
     back: "Indietro",
     chooseService: "Scegli un servizio",
+    selectServicesHint: "Seleziona uno o più — durata e prezzo si sommano.",
+    total: "Totale",
+    continue: "Continua",
     noServicesAvailable: "Nessun servizio disponibile al momento.",
     durationMin: "{min} min",
     pickDateTime: "Scegli data e ora · {service}",
@@ -9052,7 +9118,7 @@ const it: Translations = {
     change: "Cambia",
     selectDateToSeeTimes: "Seleziona una data per vedere gli orari disponibili.",
     chooseSpecialist: "Scegli il tuo specialista",
-    specialistSummary: "{service} · {date} alle {time}",
+    specialistForService: "Per {service}",
     summaryService: "Servizio",
     summaryWhen: "Quando",
     summarySpecialist: "Operatore",
@@ -9064,6 +9130,8 @@ const it: Translations = {
     fullNamePlaceholder: "Nome completo",
     emailPlaceholder: "E-mail",
     phonePlaceholder: "Telefono",
+    customerAddressPlaceholder: "Indirizzo",
+    customerAddressPlaceholderOptional: "Indirizzo (facoltativo)",
     notesPlaceholder: "Note (facoltativo)",
     confirmBooking: "Conferma prenotazione",
     bookedTitle: "Sei prenotato!",
@@ -9253,6 +9321,10 @@ const it: Translations = {
     addButton: "Aggiungi",
     showPricesLabel: "Mostra i prezzi nella pagina di prenotazione",
     showPricesDesc: "Se disattivato, i visitatori prenotano senza vedere i prezzi dei servizi.",
+    collectAddressLabel: "Chiedi l'indirizzo del cliente",
+    collectAddressDesc: "Mostra un campo indirizzo nella pagina di prenotazione — utile per servizi mobili o a domicilio.",
+    addressRequiredLabel: "Rendi l'indirizzo obbligatorio",
+    addressRequiredDesc: "Se attivo, i visitatori devono inserire il proprio indirizzo per prenotare.",
     addServiceHint: "Aggiungi almeno un servizio per permettere le prenotazioni.",
     servicePlaceholder: "Nome del servizio",
     minSuffix: "min",

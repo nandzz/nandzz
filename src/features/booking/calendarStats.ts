@@ -23,6 +23,7 @@ function toOverviewBooking(b: WidgetBooking): OverviewBooking {
     price_cents: b.price_cents,
     status: b.status,
     customer_phone: b.customer_phone,
+    customer_address: b.customer_address,
     manage_token: b.manage_token,
     staff_id: b.staff_id,
     staff_name: b.staff_name,

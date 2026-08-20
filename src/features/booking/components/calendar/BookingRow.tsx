@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, MessageCircle, Ban, CalendarClock, Clock, Loader2 } from "lucide-react";
+import { Mail, MessageCircle, Ban, CalendarClock, Clock, Loader2, MapPin } from "lucide-react";
 import { whatsappLink } from "@/lib/widgets/contact";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog } from "@/components/ui/dialog";
@@ -21,6 +21,7 @@ export type BookingRowData = {
   price_cents: number | null;
   status: "confirmed" | "cancelled";
   customer_phone: string | null;
+  customer_address?: string | null;
   staff_id: string | null;
   staff_name: string | null;
   location_id: string | null;
@@ -128,6 +129,12 @@ export function BookingRow({
               </AvatarFallback>
             </Avatar>
             {b.staff_name}
+          </span>
+        )}
+        {b.customer_address && (
+          <span className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+            <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+            <span className="break-words">{b.customer_address}</span>
           </span>
         )}
       </div>

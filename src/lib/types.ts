@@ -378,6 +378,8 @@ export type CalendarConfig = {
   timezone: string;
   buffer_min: number;
   show_prices: boolean; // whether service prices are shown on the public booking widget
+  collect_address: boolean; // whether the public booking widget asks the customer for an address
+  address_required: boolean; // whether that address field must be filled (only meaningful when collect_address)
   locations: Location[]; // empty ⇒ legacy single-location mode (read the top-level fields below)
   services: CalendarService[]; // legacy top-level (used only when locations is empty)
   availability: AvailabilityWindows;
@@ -439,6 +441,7 @@ export type WidgetBooking = {
   customer_name: string;
   customer_email: string;
   customer_phone: string | null;
+  customer_address: string | null; // optional mailing/service address (owner-controlled capture)
   notes: string | null;
   status: WidgetBookingStatus;
   manage_token: string;

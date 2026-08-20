@@ -81,6 +81,44 @@ export function ServicesManager({ controller, currentLocationId = null }: Props)
             className="h-5 w-5 shrink-0 accent-emerald-600"
           />
         </label>
+        {/* Address capture — only relevant for some businesses (e.g. mobile /
+            at-home services), so both showing the field and requiring it are
+            owner-controlled, mirroring the show_prices toggle above. Requiring
+            is nested under (and disabled without) collecting. */}
+        <label className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+          <div>
+            <p className="text-sm font-medium">{t.booking.collectAddressLabel}</p>
+            <p className="text-xs text-muted-foreground">{t.booking.collectAddressDesc}</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={config.collect_address}
+            onChange={(e) =>
+              setConfig((c) => ({
+                ...c,
+                collect_address: e.target.checked,
+                // Turning capture off also clears the "required" flag so a hidden
+                // field can never be marked required.
+                address_required: e.target.checked ? c.address_required : false,
+              }))
+            }
+            className="h-5 w-5 shrink-0 accent-emerald-600"
+          />
+        </label>
+        {config.collect_address && (
+          <label className="ml-4 flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+            <div>
+              <p className="text-sm font-medium">{t.booking.addressRequiredLabel}</p>
+              <p className="text-xs text-muted-foreground">{t.booking.addressRequiredDesc}</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={config.address_required}
+              onChange={(e) => setConfig((c) => ({ ...c, address_required: e.target.checked }))}
+              className="h-5 w-5 shrink-0 accent-emerald-600"
+            />
+          </label>
+        )}
         {scope.services.length === 0 && (
           <p className="text-sm text-muted-foreground">{t.booking.addServiceHint}</p>
         )}

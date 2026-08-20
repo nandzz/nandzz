@@ -37,6 +37,8 @@ export function defaultCalendarConfig(): CalendarConfig {
         : "UTC",
     buffer_min: 0,
     show_prices: true,
+    collect_address: false,
+    address_required: false,
     locations: [],
     services: [],
     availability: {
@@ -107,6 +109,8 @@ export function normalizeCalendarConfig(raw: unknown): CalendarConfig {
     timezone: typeof c.timezone === "string" && c.timezone ? c.timezone : base.timezone,
     buffer_min: Number.isFinite(c.buffer_min) ? Number(c.buffer_min) : 0,
     show_prices: typeof c.show_prices === "boolean" ? c.show_prices : true,
+    collect_address: typeof c.collect_address === "boolean" ? c.collect_address : false,
+    address_required: typeof c.address_required === "boolean" ? c.address_required : false,
     locations: Array.isArray(c.locations)
       ? (c.locations.map(normalizeLocation).filter(Boolean) as Location[])
       : [],
@@ -349,6 +353,58 @@ export function eligibleStaffForService(
   if (!ids || ids.length === 0) return staff;
   const set = new Set(ids);
   return staff.filter((s) => set.has(s.id));
+}
+
+// Staff members eligible to perform EVERY service in `services` (the
+// intersection of each service's eligible set). A service with no `staff_ids`
+// doesn't restrict; a staff member survives only if no selected service
+// excludes them. Empty `services` ⇒ behaves like the single-service helper on
+// nothing (returns [] when no staff, else all staff).
+export function eligibleStaffForServices(
+  staff: StaffMember[],
+  services: CalendarService[]
+): StaffMember[] {
+  if (staff.length === 0) return [];
+  return staff.filter((s) =>
+    services.every((svc) => {
+      const ids = svc.staff_ids;
+      if (!ids || ids.length === 0) return true; // service open to anyone
+      return ids.includes(s.id);
+    })
+  );
+}
+
+// Fold a set of selected services into one "combined" service the availability
+// engine can treat as a single bookable unit: durations and prices add up, and
+// the eligible-staff set is the intersection across all of them. `id`/`name`
+// carry the primary (first) service so downstream summaries stay readable.
+// Returns null when `services` is empty. When `allStaff` is provided and any
+// selected service restricts staff, `staff_ids` is set to the intersection so
+// availability only offers staff who can perform the whole booking.
+export function combineServices(
+  services: CalendarService[],
+  allStaff: StaffMember[] = []
+): CalendarService | null {
+  if (services.length === 0) return null;
+  const duration_min = services.reduce((sum, s) => sum + (s.duration_min || 0), 0);
+  const prices = services.map((s) => s.price_cents).filter((p): p is number => typeof p === "number");
+  const price_cents = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) : null;
+
+  // Only constrain staff when at least one service actually restricts; otherwise
+  // leave staff_ids undefined so "everyone is eligible" is preserved.
+  const restricts = services.some((s) => s.staff_ids && s.staff_ids.length > 0);
+  let staff_ids: string[] | undefined;
+  if (restricts && allStaff.length > 0) {
+    staff_ids = eligibleStaffForServices(allStaff, services).map((m) => m.id);
+  }
+
+  return {
+    id: services[0].id,
+    name: services.map((s) => s.name).join(" + "),
+    duration_min,
+    price_cents,
+    staff_ids,
+  };
 }
 
 // Whether a staff member is working a slot [startMin, endMin) (owner-local
