@@ -49,7 +49,7 @@ export function NewCollectionForm() {
       setError(
         result.error === "UNAUTHENTICATED"
           ? t.collections.mustBeLoggedIn
-          : result.message ?? t.collections.create
+          : t.collections.create
       );
       setLoading(false);
       return;

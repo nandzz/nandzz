@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Save, Loader2 } from "lucide-react";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { updateSpace } from "../actions/update-space";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MarkdownSpaceEditorProps {
   spaceId: string;
@@ -12,6 +13,7 @@ interface MarkdownSpaceEditorProps {
 }
 
 export function MarkdownSpaceEditor({ spaceId, initialContent }: MarkdownSpaceEditorProps) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"preview" | "edit">("preview");
   const [content, setContent] = useState(initialContent);
   const [draft, setDraft] = useState(initialContent);
@@ -54,12 +56,13 @@ export function MarkdownSpaceEditor({ spaceId, initialContent }: MarkdownSpaceEd
         id: spaceId,
         markdown_content: draft.trim() || null,
       });
-      if (!result.ok) throw new Error(result.message || result.error);
+      if (!result.ok) throw new Error(result.error);
       setContent(draft);
       setSaved(true);
       setMode("preview");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed. Please try again.");
+      console.error("[markdown-editor] save failed:", err);
+      setError(t.contentBuilder.genericError);
     } finally {
       setIsSaving(false);
     }

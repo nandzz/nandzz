@@ -5,6 +5,9 @@ import type { CalendarConfig } from "@/lib/types";
 const mockInstanceMaybeSingle = vi.fn();
 const mockHasAccessRpc = vi.fn();
 const mockBookingsResult = vi.fn();
+// The entitlement gate now goes through `getUserEntitlements` (which reads the
+// owner's plan), not an access RPC — mock it so tests control widget access.
+const mockGetEntitlements = vi.fn();
 let bookingsFilterCalls: { method: string; args: unknown[] }[] = [];
 
 // Chainable stand-in for the `widget_bookings` select builder: every filter
@@ -38,6 +41,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({ from: mockFrom, rpc: mockHasAccessRpc }),
 }));
 
+vi.mock("@/lib/plan", () => ({
+  getUserEntitlements: (...args: unknown[]) => mockGetEntitlements(...args),
+}));
+
 function makeReq(query: Record<string, string>) {
   const url = new URL("http://localhost/api/widgets/inst_1/availability");
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
@@ -50,6 +57,7 @@ function params(instanceId = "inst_1") {
 
 const config: CalendarConfig = {
   timezone: "UTC",
+  currency: "eur",
   buffer_min: 0,
   show_prices: true,
   collect_address: false,
@@ -62,14 +70,19 @@ const config: CalendarConfig = {
   messages: {
     confirmation: { channel: "off", subject: "", body: "" },
     cancellation: { channel: "off", subject: "", body: "" },
+    reschedule: { channel: "off", subject: "", body: "" },
+    reminder: { channel: "off", subject: "", body: "" },
   },
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   bookingsFilterCalls = [];
-  mockInstanceMaybeSingle.mockResolvedValue({ data: { id: "inst_1", enabled: true, config } });
+  mockInstanceMaybeSingle.mockResolvedValue({
+    data: { id: "inst_1", enabled: true, config, user_id: "owner_1" },
+  });
   mockHasAccessRpc.mockResolvedValue({ data: true });
+  mockGetEntitlements.mockResolvedValue({ hasWidgets: true });
   mockBookingsResult.mockReturnValue({ data: [] });
 });
 
@@ -92,7 +105,7 @@ describe("GET /api/widgets/[instanceId]/availability", () => {
   });
 
   it("returns an empty slot list without erroring when the instance lacks access (unpaid)", async () => {
-    mockHasAccessRpc.mockResolvedValue({ data: false });
+    mockGetEntitlements.mockResolvedValue({ hasWidgets: false });
     const res = await GET(makeReq({ service_id: "svc_1" }), params());
     const body = await res.json();
     expect(res.status).toBe(200);

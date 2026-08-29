@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Check, Search, Users, UserX } from "lucide-react";
+import { Plus, Search, Users, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
 import type { StaffMember, WeekdayKey } from "@/lib/types";
@@ -10,6 +10,7 @@ import { getLocationScope, withLocationScope } from "@/lib/widgets/calendar";
 import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
 import { StaffCard } from "@/features/booking/components/calendar/StaffCard";
 import { StaffEditor } from "@/features/booking/components/calendar/StaffEditor";
+import { SaveBar } from "@/features/booking/components/calendar/SaveBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Profile pictures must be under this size (mirrors ProfileHeader's uploader).
@@ -235,7 +236,8 @@ export function StaffManager({ controller, currentLocationId = null }: Props) {
       const photoUrl = await uploadStaffPhoto(ownerId, staffId, blob);
       updateStaff(staffId, { photo_url: photoUrl });
     } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : t.booking.errorUploadPhoto);
+      console.error("[staff] photo upload failed:", err);
+      setPhotoError(t.booking.errorUploadPhoto);
     } finally {
       setUploadingStaffId(null);
       setPhotoStaffId(null);
@@ -376,18 +378,7 @@ export function StaffManager({ controller, currentLocationId = null }: Props) {
 
       {/* Save bar — persists the whole shared config via the controller, so saving
           here also commits any Settings edits and vice versa. Present in both views. */}
-      <div className="sticky bottom-4 flex items-center justify-end gap-3 rounded-xl border border-border bg-background/90 p-3 backdrop-blur">
-        {status && (
-          <span className={`text-sm ${status.ok ? "text-emerald-600" : "text-red-600"}`}>
-            {status.ok && <Check className="mr-1 inline h-4 w-4" />}
-            {status.msg}
-          </span>
-        )}
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {t.booking.saveChanges}
-        </Button>
-      </div>
+      <SaveBar saving={saving} status={status} onSave={handleSave} />
     </div>
   );
 }

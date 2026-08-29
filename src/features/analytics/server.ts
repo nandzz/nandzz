@@ -7,4 +7,4 @@ export {
   type SpaceSummary,
   type DashboardAnalytics,
 } from "./data/analytics";
-export { getChromeProfileLite } from "./data/profiles";
+export { getChromeProfileLite, getChromeProfile } from "./data/profiles";

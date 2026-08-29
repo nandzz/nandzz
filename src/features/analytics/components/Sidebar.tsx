@@ -25,15 +25,14 @@ import {
   BarChart3,
   Briefcase,
 } from "lucide-react";
-import type { ProfileLite } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
-import { usePlanEntitlements } from "@/lib/plan-client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
-import { getSessionUser, onAuthChange, fetchProfileLite, setAccountType } from "../auth";
+import { setAccountType } from "../auth";
+import { useAuth } from "../AuthContext";
 
 type NavItem = {
   href: string;
@@ -51,16 +50,13 @@ type NavGroup = {
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
-  initialProfile?: ProfileLite | null;
 }
 
-export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
-  const entitlements = usePlanEntitlements();
-  const [user, setUser] = useState<{ id: string } | null>(null);
-  const [profile, setProfile] = useState<ProfileLite | null>(initialProfile);
+  const { userId, profile, entitlements } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
 
@@ -72,47 +68,14 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount flag to gate theme-dependent icon rendering (avoids hydration mismatch)
   useEffect(() => setMounted(true), []);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    const data = await fetchProfileLite(userId);
-    if (data) setProfile(data);
-  }, []);
-
-  useEffect(() => {
-    getSessionUser().then((u) => {
-      if (u) {
-        setUser(u);
-        fetchProfile(u.id);
-      }
-    });
-
-    return onAuthChange((u) => {
-      if (u) {
-        setUser(u);
-        fetchProfile(u.id);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-    });
-  }, [fetchProfile]);
-
-  useEffect(() => {
-    const handler = () => {
-      if (user) fetchProfile(user.id);
-    };
-    window.addEventListener("profile-updated", handler);
-    return () => window.removeEventListener("profile-updated", handler);
-  }, [user, fetchProfile]);
-
   const handleSwitchToBusiness = useCallback(async () => {
-    if (!user) return;
-    const ok = await setAccountType(user.id, "business");
+    if (!userId) return;
+    const ok = await setAccountType(userId, "business");
     if (ok) {
-      // Optimistically flip locally, then let the chrome re-read the row.
-      setProfile((prev) => (prev ? { ...prev, account_type: "business" } : prev));
+      // The provider's own `profile-updated` listener re-reads the row.
       window.dispatchEvent(new Event("profile-updated"));
     }
-  }, [user]);
+  }, [userId]);
 
   const handleLogout = () => {
     // Hand off to the server sign-out route: it clears the auth cookies on its
@@ -126,12 +89,18 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
   const navGroups: NavGroup[] = useMemo(() => {
     // Account
     const account: NavItem[] = [
-      {
-        href: "/dashboard/feed",
-        label: t.nav.feed,
-        icon: Rss,
-        isActive: (p) => p.startsWith("/dashboard/feed"),
-      },
+      // Feed is a personal-account capability: a business gets followed rather
+      // than following creators, so it has no feed.
+      ...(!isBusiness
+        ? [
+            {
+              href: "/dashboard/feed",
+              label: t.nav.feed,
+              icon: Rss,
+              isActive: (p: string) => p.startsWith("/dashboard/feed"),
+            },
+          ]
+        : []),
       {
         href: "/dashboard/contents",
         label: t.nav.mySpaces,
@@ -165,10 +134,26 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
       },
     ];
 
+    // Shortcuts — quick links to the tools a business runs day to day. Only
+    // shown for business accounts; the first shortcut is Bookings, which opens
+    // the calendar (booking) widget where received appointments are managed.
+    const shortcuts: NavItem[] = [];
+    if (isBusiness) {
+      shortcuts.push({
+        href: "/dashboard/bookings",
+        label: t.nav.bookings,
+        icon: Calendar,
+        isActive: (p) => p.startsWith("/dashboard/bookings"),
+      });
+    }
+
     // Business — only for business accounts. Personal accounts see the
     // "Switch to Business Account" CTA instead (rendered below the group).
     const business: NavItem[] = [];
-    if (isBusiness && FEATURES.widgets && entitlements.hasWidgets) {
+    // Widgets is shown to every business account regardless of plan. Accounts
+    // without the entitlement still see the entry; the page itself renders the
+    // catalog in a locked state and opens the subscription modal on tap.
+    if (isBusiness && FEATURES.widgets) {
       business.push({
         href: "/dashboard/widgets",
         label: "Widgets",
@@ -219,11 +204,16 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
       });
     }
 
-    return [
+    const groups: NavGroup[] = [
       { id: "account", label: t.nav.groupAccount, items: account },
-      { id: "business", label: t.nav.groupBusiness, items: business },
-      { id: "settings", label: t.nav.groupSettings, items: settings },
     ];
+    // Skip the Shortcuts header entirely for personal accounts (empty group).
+    if (shortcuts.length > 0) {
+      groups.push({ id: "shortcuts", label: t.nav.groupShortcuts, items: shortcuts });
+    }
+    groups.push({ id: "business", label: t.nav.groupBusiness, items: business });
+    groups.push({ id: "settings", label: t.nav.groupSettings, items: settings });
+    return groups;
   }, [t, entitlements, isBusiness]);
 
   return (
@@ -277,10 +267,10 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
                   <p className="text-xs text-muted-foreground mt-1 truncate">@{username}</p>
                 )}
               </div>
-              {user && (
+              {userId && (
                 <div className="flex items-center gap-0.5 shrink-0">
-                  <AiJobsIndicator userId={user.id} />
-                  <NotificationBell userId={user.id} />
+                  <AiJobsIndicator userId={userId} />
+                  <NotificationBell userId={userId} />
                 </div>
               )}
             </div>
@@ -343,7 +333,7 @@ export function Sidebar({ collapsed, onToggle, initialProfile = null }: SidebarP
 
             {/* Personal accounts see a CTA to upgrade into a Business account,
                 which reveals the Widgets / Brand tools and hides Bookings. */}
-            {group.id === "business" && user && !isBusiness && (
+            {group.id === "business" && userId && !isBusiness && (
               <button
                 type="button"
                 onClick={() => setSwitchOpen(true)}

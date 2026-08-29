@@ -248,11 +248,11 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
       htmlAtEditStartRef.current = await res.text();
       setIsEditing(true);
     } catch {
-      setError("Failed to load content for editing.");
+      setError(t.contentBuilder.genericError);
     } finally {
       setIsLoadingEdit(false);
     }
-  }, [spaceId]);
+  }, [spaceId, t.contentBuilder.genericError]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
@@ -298,11 +298,12 @@ export function HtmlSpaceEditor({ spaceId, htmlUrl, spaceTitle }: HtmlSpaceEdito
       setIframeVersion((v) => v + 1);
       setIsEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed. Please try again.");
+      console.error("[html-editor] save failed:", err);
+      setError(t.contentBuilder.genericError);
     } finally {
       setIsSaving(false);
     }
-  }, [htmlUrl, spaceId]);
+  }, [htmlUrl, spaceId, t.contentBuilder.genericError]);
 
   if (isEditing) {
     return (

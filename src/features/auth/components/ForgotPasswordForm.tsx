@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { sendPasswordResetEmail } from "../auth";
+import { mapAuthError } from "../error-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +37,7 @@ export function ForgotPasswordForm() {
       );
 
       if (error) {
-        setError(error.message);
+        setError(mapAuthError(error.message, t));
       } else {
         setSuccess(true);
       }

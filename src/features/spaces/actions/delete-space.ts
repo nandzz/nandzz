@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { spaceIdSchema } from "../schemas";
@@ -69,6 +70,12 @@ export async function deleteSpace(input: {
     .delete()
     .eq("id", parsed.data.id);
   if (error) return { ok: false, error: "FAILED", message: error.message };
+
+  // A deleted space appears on the owner's public profile and across the
+  // dashboard lists. Revalidating from the action invalidates both the
+  // server full-route cache AND the client Router Cache, so the subsequent
+  // client navigation lands on a fresh page instead of a stale cached one.
+  revalidatePath("/", "layout");
 
   return { ok: true };
 }

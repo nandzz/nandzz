@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Starts Stripe Checkout (mode: subscription) for a site-wide plan.
 export function PlanCheckoutButton({
@@ -14,6 +15,7 @@ export function PlanCheckoutButton({
   label: string;
   variant?: "default" | "outline";
 }) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,13 +30,16 @@ export function PlanCheckoutButton({
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
-        setError(data?.error ?? "Checkout failed");
+        // Never surface the raw API error body; show localized copy.
+        console.error("[plan] checkout failed:", data?.error);
+        setError(t.billing.checkoutFailed);
         setLoading(false);
         return;
       }
       window.location.href = data.url;
-    } catch {
-      setError("Network error — try again");
+    } catch (err) {
+      console.error("[plan] checkout network error:", err);
+      setError(t.billing.networkError);
       setLoading(false);
     }
   }

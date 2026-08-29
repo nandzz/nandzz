@@ -16,6 +16,23 @@ export function isImmersiveRoute(pathname: string): boolean {
   return IMMERSIVE_ROUTE_RE.test(pathname) || WIDGET_ROUTE_RE.test(pathname);
 }
 
+// Post-signup onboarding steps (e.g. choose-a-username). The user is technically
+// authenticated here but hasn't finished setup, so we suppress ALL app chrome
+// and show just the centered card — like the logged-out login page, not the
+// signed-in dashboard.
+const BARE_AUTH_ROUTE_RE = /^\/setup-username(?:\/|$)/;
+
+export function isBareAuthRoute(pathname: string): boolean {
+  return BARE_AUTH_ROUTE_RE.test(pathname);
+}
+
+// sessionStorage key holding the path to return to after an OAuth round trip.
+// Set by a flow (e.g. the booking widget) right before the Google redirect, and
+// read by the destination so the visitor lands back where they started even if
+// the `next` query param doesn't survive Supabase's redirect allowlist. Same-tab
+// OAuth keeps sessionStorage intact across the redirect.
+export const AUTH_RETURN_TO_KEY = "nandzz.auth.returnTo";
+
 // The public booking widget page owns its whole viewport — no app chrome.
 export function isWidgetRoute(pathname: string): boolean {
   return WIDGET_ROUTE_RE.test(pathname);

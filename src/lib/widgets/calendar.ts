@@ -5,6 +5,7 @@
 
 import type {
   AvailabilityWindows,
+  CalendarCategory,
   CalendarConfig,
   CalendarService,
   Location,
@@ -12,6 +13,7 @@ import type {
   WeekdayKey,
 } from "@/lib/types";
 import {
+  DEFAULT_WIDGET_CURRENCY,
   defaultCalendarMessages,
   normalizeCalendarMessages,
   validateMessageTemplate,
@@ -35,12 +37,14 @@ export function defaultCalendarConfig(): CalendarConfig {
       typeof Intl !== "undefined"
         ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
         : "UTC",
+    currency: DEFAULT_WIDGET_CURRENCY,
     buffer_min: 0,
     show_prices: true,
     collect_address: false,
     address_required: false,
     locations: [],
     services: [],
+    categories: [],
     availability: {
       mon: [["09:00", "17:00"]],
       tue: [["09:00", "17:00"]],
@@ -73,6 +77,15 @@ function normalizeStaffMember(raw: unknown): StaffMember | null {
   };
 }
 
+// Fill any missing keys on a raw category so downstream code can trust the
+// shape. Returns null for entries without a usable id (dropped on normalize).
+function normalizeCategory(raw: unknown): CalendarCategory | null {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Partial<CalendarCategory>;
+  if (typeof c.id !== "string" || !c.id) return null;
+  return { id: c.id, name: typeof c.name === "string" ? c.name : "" };
+}
+
 // Fill any missing keys on a raw location so downstream code can trust the
 // shape, mirroring normalizeStaffMember. Returns null for entries without a
 // usable id (dropped on normalize). Nested staff is normalized the same way
@@ -89,6 +102,9 @@ export function normalizeLocation(raw: unknown): Location | null {
     photo_url: typeof l.photo_url === "string" ? l.photo_url : undefined,
     timezone: typeof l.timezone === "string" && l.timezone ? l.timezone : undefined,
     services: Array.isArray(l.services) ? (l.services as CalendarService[]) : [],
+    categories: Array.isArray(l.categories)
+      ? (l.categories.map(normalizeCategory).filter(Boolean) as CalendarCategory[])
+      : [],
     staff: Array.isArray(l.staff)
       ? (l.staff.map(normalizeStaffMember).filter(Boolean) as StaffMember[])
       : [],
@@ -107,6 +123,7 @@ export function normalizeCalendarConfig(raw: unknown): CalendarConfig {
   const c = raw as Partial<CalendarConfig>;
   return {
     timezone: typeof c.timezone === "string" && c.timezone ? c.timezone : base.timezone,
+    currency: typeof c.currency === "string" && c.currency ? c.currency.toLowerCase() : base.currency,
     buffer_min: Number.isFinite(c.buffer_min) ? Number(c.buffer_min) : 0,
     show_prices: typeof c.show_prices === "boolean" ? c.show_prices : true,
     collect_address: typeof c.collect_address === "boolean" ? c.collect_address : false,
@@ -115,6 +132,9 @@ export function normalizeCalendarConfig(raw: unknown): CalendarConfig {
       ? (c.locations.map(normalizeLocation).filter(Boolean) as Location[])
       : [],
     services: Array.isArray(c.services) ? c.services : [],
+    categories: Array.isArray(c.categories)
+      ? (c.categories.map(normalizeCategory).filter(Boolean) as CalendarCategory[])
+      : [],
     availability: (c.availability && typeof c.availability === "object" ? c.availability : {}) as CalendarConfig["availability"],
     blackout_dates: Array.isArray(c.blackout_dates) ? c.blackout_dates : [],
     staff: Array.isArray(c.staff)
@@ -133,6 +153,7 @@ export function normalizeCalendarConfig(raw: unknown): CalendarConfig {
 // they're pointed at the legacy top level or a location.
 export type LocationScope = {
   services: CalendarService[];
+  categories: CalendarCategory[];
   staff: StaffMember[];
   availability: AvailabilityWindows;
   blackout_dates: string[];
@@ -143,15 +164,17 @@ export function getLocationScope(config: CalendarConfig, locationId?: string | n
   if (!locationId) {
     return {
       services: config.services,
+      categories: config.categories ?? [],
       staff: config.staff,
       availability: config.availability,
       blackout_dates: config.blackout_dates,
     };
   }
   const loc = config.locations.find((l) => l.id === locationId);
-  if (!loc) return { services: [], staff: [], availability: {}, blackout_dates: [] };
+  if (!loc) return { services: [], categories: [], staff: [], availability: {}, blackout_dates: [] };
   return {
     services: loc.services,
+    categories: loc.categories ?? [],
     staff: loc.staff,
     availability: loc.availability,
     blackout_dates: loc.blackout_dates ?? [],
@@ -200,7 +223,12 @@ function validateAvailabilityWindows(windows: AvailabilityWindows, label: string
 // Validate a set of services against a known staff-id set. `label` prefixes
 // every message (e.g. `Location "Downtown"`) — pass "" for the top-level call
 // to keep its messages byte-for-byte identical to before this was extracted.
-function validateServices(services: CalendarService[], staffIds: Set<string>, label: string): string[] {
+function validateServices(
+  services: CalendarService[],
+  staffIds: Set<string>,
+  categoryIds: Set<string>,
+  label: string
+): string[] {
   const p = label ? `${label}: ` : "";
   const errors: string[] = [];
   const ids = new Set<string>();
@@ -215,6 +243,24 @@ function validateServices(services: CalendarService[], staffIds: Set<string>, la
       if (!staffIds.has(sid))
         errors.push(`${p}Service "${s.name}" references an unknown staff member.`);
     }
+    if (s.category_id && !categoryIds.has(s.category_id))
+      errors.push(`${p}Service "${s.name}" references an unknown category.`);
+  }
+  return errors;
+}
+
+// Validate a set of categories (id/name/uniqueness). Same `label` convention as
+// validateServices. Returns the set of valid ids so services can be checked
+// against it.
+function validateCategories(categories: CalendarCategory[], label: string): string[] {
+  const p = label ? `${label}: ` : "";
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  for (const cat of categories) {
+    if (!cat.id) errors.push(`${p}Category "${cat.name || "?"}" is missing an id.`);
+    if (seen.has(cat.id)) errors.push(`${p}Duplicate category id "${cat.id}".`);
+    seen.add(cat.id);
+    if (!cat.name?.trim()) errors.push(`${p}Every category needs a name.`);
   }
   return errors;
 }
@@ -247,7 +293,9 @@ export function validateCalendarConfig(config: CalendarConfig): string[] {
   if (config.buffer_min < 0) errors.push("Buffer cannot be negative.");
 
   const staffIds = new Set((config.staff ?? []).map((s) => s.id));
-  errors.push(...validateServices(config.services, staffIds, ""));
+  const categoryIds = new Set((config.categories ?? []).map((c) => c.id));
+  errors.push(...validateCategories(config.categories ?? [], ""));
+  errors.push(...validateServices(config.services, staffIds, categoryIds, ""));
   errors.push(...validateStaff(config.staff ?? [], ""));
 
   errors.push(...validateAvailabilityWindows(config.availability, "Availability"));
@@ -267,7 +315,9 @@ export function validateCalendarConfig(config: CalendarConfig): string[] {
     if (!loc.name?.trim()) errors.push("Every location needs a name.");
 
     const locStaffIds = new Set((loc.staff ?? []).map((s) => s.id));
-    errors.push(...validateServices(loc.services ?? [], locStaffIds, label));
+    const locCategoryIds = new Set((loc.categories ?? []).map((c) => c.id));
+    errors.push(...validateCategories(loc.categories ?? [], label));
+    errors.push(...validateServices(loc.services ?? [], locStaffIds, locCategoryIds, label));
     errors.push(...validateStaff(loc.staff ?? [], label));
     errors.push(...validateAvailabilityWindows(loc.availability ?? {}, `${label} availability`));
     for (const d of loc.blackout_dates ?? []) {
@@ -279,6 +329,8 @@ export function validateCalendarConfig(config: CalendarConfig): string[] {
 
   errors.push(...validateMessageTemplate(config.messages.confirmation, "Confirmation message"));
   errors.push(...validateMessageTemplate(config.messages.cancellation, "Cancellation message"));
+  errors.push(...validateMessageTemplate(config.messages.reschedule, "Reschedule message"));
+  errors.push(...validateMessageTemplate(config.messages.reminder, "Reminder message"));
 
   return errors;
 }

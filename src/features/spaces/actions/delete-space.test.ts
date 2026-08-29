@@ -19,6 +19,10 @@ function spacesBuilder() {
   return b;
 }
 
+// `deleteSpace` revalidates the layout after a successful delete; there's no
+// Next request context under vitest, so stub it to a no-op.
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user: mockUser } }) },

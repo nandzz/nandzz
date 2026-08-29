@@ -1,7 +1,7 @@
 "use client";
 
-import { Loader2, Plus, Trash2, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Trash2 } from "lucide-react";
+import { SaveBar } from "@/features/booking/components/calendar/SaveBar";
 import type { CalendarConfig, WeekdayKey } from "@/lib/types";
 import { WEEKDAYS, getLocationScope, withLocationScope } from "@/lib/widgets/calendar";
 import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
@@ -177,18 +177,7 @@ export function AvailabilityManager({ controller, currentLocationId = null }: Pr
 
       {/* Save bar — persists the whole shared config via the controller, so
           saving here also commits Services/Notifications edits and vice versa. */}
-      <div className="sticky bottom-4 flex flex-wrap items-center justify-end gap-3 rounded-xl border border-border bg-background/90 p-3 backdrop-blur">
-        {status && (
-          <span className={`text-sm ${status.ok ? "text-emerald-600" : "text-red-600"}`}>
-            {status.ok && <Check className="mr-1 inline h-4 w-4" />}
-            {status.msg}
-          </span>
-        )}
-        <Button onClick={save} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {t.booking.saveChanges}
-        </Button>
-      </div>
+      <SaveBar saving={saving} status={status} onSave={save} />
     </div>
   );
 }

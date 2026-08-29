@@ -17,6 +17,7 @@ import {
   updateBackgroundPosition,
 } from "../actions/update-background";
 import type { Profile } from "@/lib/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const MAX_BG_SIZE = 1.5 * 1024 * 1024;
 
@@ -45,6 +46,7 @@ export function ProfileBackground({
   displayName,
   profile,
 }: ProfileBackgroundProps) {
+  const { t } = useLanguage();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -132,7 +134,8 @@ export function ProfileBackground({
       });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      console.error("[profile] background upload failed:", err);
+      setError(t.common.error);
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -166,7 +169,8 @@ export function ProfileBackground({
       });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove background");
+      console.error("[profile] background remove failed:", err);
+      setError(t.common.error);
     } finally {
       setUploading(false);
     }
@@ -216,7 +220,8 @@ export function ProfileBackground({
       });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save position");
+      console.error("[profile] background position save failed:", err);
+      setError(t.common.error);
     }
   };
 

@@ -196,7 +196,7 @@ export function AgentStudio({ profile }: AgentStudioProps) {
         setDraft(null);
         embedAgentDocument(saved.id).catch(() => {});
       } else {
-        setSaveError(result.message ?? t.agent.failedSave);
+        setSaveError(t.agent.failedSave);
       }
     } catch {
       setSaveError(t.agent.networkError);

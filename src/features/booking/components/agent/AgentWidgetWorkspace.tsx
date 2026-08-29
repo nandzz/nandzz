@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, CircleAlert, Gauge, ArrowUpRight } from "lucide-react";
+import { Gauge, ArrowUpRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { updateWidgetInstance } from "@/features/booking/actions/update-widget-instance";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,7 +46,7 @@ export function AgentWidgetWorkspace({
       const res = await updateWidgetInstance({ instanceId, enabled: next });
       if (!res.ok) {
         setEnabled(prev);
-        setError(res.message ?? t.booking.errorCouldNotSave);
+        setError(t.booking.errorCouldNotSave);
         return;
       }
     } catch {
@@ -63,35 +63,6 @@ export function AgentWidgetWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* Billing */}
-      <section className="rounded-2xl border border-border bg-background p-5">
-        {hasAccess ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-              <Check className="h-4 w-4" /> {t.booking.billingActive}
-            </span>
-            {/* POST → Stripe billing portal (303 redirect). */}
-            <form action="/api/stripe/portal" method="post">
-              <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
-                {t.booking.manageSubscription}
-              </button>
-            </form>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 dark:text-orange-300">
-              <CircleAlert className="h-4 w-4" /> {t.plan.widgetsLocked}
-            </span>
-            <Link
-              href="/dashboard/credits"
-              className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-            >
-              {t.plan.upgradeToStarter}
-            </Link>
-          </div>
-        )}
-      </section>
-
       {/* Visibility */}
       <section className="rounded-2xl border border-border bg-background p-5">
         <div className="flex items-center justify-between gap-4">

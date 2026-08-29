@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   currencySymbol,
   defaultCalendarMessages,
+  localizedTemplate,
   normalizeCalendarMessages,
   renderTemplate,
   validateMessageTemplate,
@@ -19,9 +20,9 @@ describe("currencySymbol", () => {
     expect(currencySymbol("chf")).toBe("CHF");
   });
 
-  it("defaults to $ when no code is given", () => {
-    expect(currencySymbol(null)).toBe("$");
-    expect(currencySymbol(undefined)).toBe("$");
+  it("defaults to the platform currency (€) when no code is given", () => {
+    expect(currencySymbol(null)).toBe("€");
+    expect(currencySymbol(undefined)).toBe("€");
   });
 });
 
@@ -104,5 +105,98 @@ describe("normalizeCalendarMessages", () => {
     expect(result.confirmation.channel).toBe(defaultCalendarMessages().confirmation.channel);
     // Non-channel fields on the same partial template are still honored.
     expect(result.confirmation.subject).toBe("S");
+  });
+
+  it("supplies defaults for the reschedule and reminder templates when absent", () => {
+    const base = defaultCalendarMessages();
+    // A legacy config carrying only the two original templates (no reschedule /
+    // reminder / i18n) must still normalize cleanly to the new defaults.
+    const result = normalizeCalendarMessages({
+      confirmation: { channel: "email", subject: "Hi", body: "Body" },
+      cancellation: { channel: "off", subject: "", body: "" },
+    });
+    expect(result.reschedule).toEqual(base.reschedule);
+    expect(result.reminder).toEqual(base.reminder);
+    // Original two are preserved, and no stray i18n is introduced.
+    expect(result.confirmation).toEqual({ channel: "email", subject: "Hi", body: "Body" });
+    expect(result.confirmation.i18n).toBeUndefined();
+  });
+
+  it("keeps valid per-locale overrides and drops empty / unknown ones", () => {
+    const result = normalizeCalendarMessages({
+      confirmation: {
+        channel: "both",
+        subject: "S",
+        body: "B",
+        i18n: {
+          pt: { subject: "Assunto", body: "Corpo" },
+          de: { body: "Nur Text" }, // partial override (body only) → kept
+          fr: { subject: "   " }, // whitespace-only → treated as empty, dropped
+          es: { subject: 5, body: null }, // non-string → dropped entirely
+          xx: { subject: "nope" }, // unknown locale → ignored
+        },
+      },
+    });
+    expect(result.confirmation.i18n).toEqual({
+      pt: { subject: "Assunto", body: "Corpo" },
+      de: { body: "Nur Text" },
+    });
+  });
+
+  it("omits i18n entirely when no valid override survives", () => {
+    const result = normalizeCalendarMessages({
+      confirmation: {
+        channel: "both",
+        subject: "S",
+        body: "B",
+        i18n: { es: { subject: 5 }, xx: { body: "x" } },
+      },
+    });
+    expect(result.confirmation.i18n).toBeUndefined();
+  });
+});
+
+describe("defaultCalendarMessages", () => {
+  it("includes all four templates with sensible reschedule/reminder defaults", () => {
+    const d = defaultCalendarMessages();
+    expect(Object.keys(d).sort()).toEqual(["cancellation", "confirmation", "reminder", "reschedule"]);
+    for (const key of ["reschedule", "reminder"] as const) {
+      expect(d[key].channel).toBe("both");
+      expect(d[key].subject).toContain("{{business}}");
+      expect(d[key].body).toContain("{{customer_first_name}}");
+      expect(d[key].body).toContain("{{date_time}}");
+    }
+    expect(d.reschedule.body).toContain("{{manage_url}}");
+    expect(d.reminder.body).toContain("{{manage_url}}");
+  });
+});
+
+describe("localizedTemplate", () => {
+  const tpl: MessageTemplate = {
+    channel: "both",
+    subject: "Base subject",
+    body: "Base body",
+    i18n: {
+      pt: { subject: "Assunto PT", body: "Corpo PT" },
+      fr: { subject: "Sujet FR" }, // body override missing
+    },
+  };
+
+  it("returns the per-locale override when present", () => {
+    expect(localizedTemplate(tpl, "pt")).toEqual({ subject: "Assunto PT", body: "Corpo PT" });
+  });
+
+  it("falls back field-by-field to the base text", () => {
+    // fr overrides subject only → body falls back to base.
+    expect(localizedTemplate(tpl, "fr")).toEqual({ subject: "Sujet FR", body: "Base body" });
+  });
+
+  it("falls back to the base text for a locale with no override", () => {
+    expect(localizedTemplate(tpl, "de")).toEqual({ subject: "Base subject", body: "Base body" });
+  });
+
+  it("falls back to the base text when there is no i18n map at all", () => {
+    const plain: MessageTemplate = { channel: "email", subject: "S", body: "B" };
+    expect(localizedTemplate(plain, "ja")).toEqual({ subject: "S", body: "B" });
   });
 });

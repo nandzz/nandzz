@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Check, CircleAlert } from "lucide-react";
+import { Check } from "lucide-react";
 import { updateWidgetInstance } from "@/features/booking/actions/update-widget-instance";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -32,7 +31,7 @@ export function WidgetInstanceSettings({ instanceId, hasAccess, initialEnabled }
       const res = await updateWidgetInstance({ instanceId, enabled: next });
       if (!res.ok) {
         setEnabled(prev);
-        setStatus({ ok: false, msg: res.message ?? t.booking.errorCouldNotSave });
+        setStatus({ ok: false, msg: t.booking.errorCouldNotSave });
         return;
       }
       setStatus({ ok: true, msg: t.booking.savedMsg });
@@ -46,43 +45,6 @@ export function WidgetInstanceSettings({ instanceId, hasAccess, initialEnabled }
 
   return (
     <div className="space-y-6">
-      {/* ══ Billing ══ */}
-      <div className="space-y-4">
-        <div className="border-b border-border pb-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {t.booking.sectionBilling}
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">{t.booking.billingHint}</p>
-        </div>
-        <section className="rounded-2xl border border-border bg-background p-5">
-          {hasAccess ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                <Check className="h-4 w-4" /> {t.booking.billingActive}
-              </span>
-              {/* POST → Stripe billing portal (303 redirect). */}
-              <form action="/api/stripe/portal" method="post">
-                <button className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
-                  {t.booking.manageSubscription}
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 dark:text-orange-300">
-                <CircleAlert className="h-4 w-4" /> {t.plan.widgetsLocked}
-              </span>
-              <Link
-                href="/dashboard/credits"
-                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-              >
-                {t.plan.upgradeToStarter}
-              </Link>
-            </div>
-          )}
-        </section>
-      </div>
-
       {/* ══ Visibility ══ */}
       <div className="space-y-4">
         <div className="border-b border-border pb-2">

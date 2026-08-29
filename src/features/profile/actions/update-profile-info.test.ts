@@ -33,6 +33,7 @@ const valid = {
   bio: "hi",
   websiteUrl: "https://ada.dev",
   socialLinks: { github: "ada" },
+  address: null,
 };
 
 beforeEach(() => {
@@ -63,6 +64,7 @@ describe("updateProfileInfo", () => {
       bio: "hi",
       website_url: "https://ada.dev",
       social_links: { github: "ada" },
+      address: null,
     });
     expect(updateFilter).toEqual({ column: "id", value: "user_1" });
   });

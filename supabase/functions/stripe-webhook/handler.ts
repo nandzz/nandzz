@@ -9,6 +9,13 @@
 // Plan events map the subscription's Stripe price id → subscription_plans.slug
 // (looked up in the DB) and then drive the profile's plan state via set_user_plan
 // (+ refill_plan_credits when a billing period advances / an invoice is paid).
+//
+// NOTE: widget access is now gated by the site plan — the old per-instance widget
+// subscription model is gone. Legacy per-instance subscriptions can still exist
+// in Stripe and fire events; they carry an `instance_id` in their metadata, so we
+// detect that marker and IGNORE them. Without this guard a legacy widget
+// `subscription.deleted` would run the plan-downgrade path and wrongly knock the
+// owner's site plan back to Free.
 
 import type Stripe from "https://esm.sh/stripe@17?target=denonext";
 
@@ -61,14 +68,46 @@ export async function handleStripeEvent(
       return handleChargeRefunded(event, admin, logger);
     case "customer.subscription.created":
     case "customer.subscription.updated":
-    case "customer.subscription.deleted":
+    case "customer.subscription.deleted": {
+      // deno-lint-ignore no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sub = event.data.object as any;
+      if (sub.metadata?.instance_id) {
+        logger.info(`subscription=${sub.id} is a legacy per-instance widget sub — ignoring`);
+        return { status: 200, body: { received: true, skipped: "legacy_widget" } };
+      }
       return handlePlanSubscription(event, admin, logger);
-    case "invoice.paid":
+    }
+    case "invoice.paid": {
+      // deno-lint-ignore no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const inv = event.data.object as any;
+      if (invoiceSubscriptionMetadata(inv).instance_id) {
+        logger.info(`invoice=${inv.id} is a legacy per-instance widget invoice — ignoring`);
+        return { status: 200, body: { received: true, skipped: "legacy_widget" } };
+      }
       return handleInvoicePaid(event, admin, logger);
+    }
     default:
       logger.info(`event.type=${event.type} not handled — acking`);
       return { status: 200, body: { received: true, ignored: event.type } };
   }
+}
+
+// ── Shared helpers ───────────────────────────────────────────────────────────
+
+// Under the current Stripe API version the subscription metadata that used to
+// live on `invoice.subscription_details` moved to `invoice.parent`. Read every
+// known location so we work across API versions.
+// deno-lint-ignore no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function invoiceSubscriptionMetadata(inv: any): Record<string, string> {
+  return (
+    inv.parent?.subscription_details?.metadata ??
+    inv.subscription_details?.metadata ??
+    inv.metadata ??
+    {}
+  );
 }
 
 // ── Plan lookups ─────────────────────────────────────────────────────────────
@@ -208,8 +247,7 @@ async function handleInvoicePaid(
   }
 
   const userId: string | null =
-    inv.subscription_details?.metadata?.user_id ??
-    inv.metadata?.user_id ??
+    invoiceSubscriptionMetadata(inv).user_id ??
     (await lookupUserBySubId(admin, subId));
   if (!userId) {
     logger.warn(`invoice=${inv.id} sub=${subId} has no resolvable user — skipping`);

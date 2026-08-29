@@ -16,6 +16,8 @@ export type Translations = {
     upgradeCta: string;
     upgradeToStarter: string;
     upgradeToPro: string;
+    includedIn: string;
+    subscribe: string;
     widgetsLockedTitle: string;
     widgetsLocked: string;
     mcpLockedTitle: string;
@@ -50,6 +52,7 @@ export type Translations = {
     analytics: string;
     groupAccount: string;
     groupBusiness: string;
+    groupShortcuts: string;
     groupSettings: string;
     switchToBusiness: string;
     switchToBusinessTitle: string;
@@ -179,6 +182,10 @@ export type Translations = {
     displayName: string;
     email: string;
     password: string;
+    confirmPassword: string;
+    passwordMismatch: string;
+    checkEmailTitle: string;
+    checkEmailDesc: string;
     forgotPassword: string;
     login: string;
     signup: string;
@@ -189,6 +196,18 @@ export type Translations = {
     hasAccount: string;
     usernameRequired: string;
     usernameInvalid: string;
+  };
+  // User-facing copy for backend/auth failures. Raw Supabase/API error messages
+  // must NEVER be shown to users — they are mapped to these keys via mapAuthError.
+  authErrors: {
+    generic: string;
+    rateLimit: string;
+    invalidCredentials: string;
+    emailInUse: string;
+    emailNotConfirmed: string;
+    otpInvalid: string;
+    weakPassword: string;
+    network: string;
   };
   settings: {
     tabProfile: string;
@@ -206,6 +225,9 @@ export type Translations = {
     bio: string;
     bioHint: string;
     websiteUrl: string;
+    address: string;
+    addressPlaceholder: string;
+    addressHint: string;
     socialLinks: string;
     saveChanges: string;
     saving: string;
@@ -245,6 +267,8 @@ export type Translations = {
     periodWeek: string;
     periodMonth: string;
     period6Months: string;
+    showPassword: string;
+    hidePassword: string;
   };
   space: {
     public: string;
@@ -355,6 +379,9 @@ export type Translations = {
     successMsg: string;
     canceledMsg: string;
     save27: string;
+    checkoutFailed: string;
+    billingFailed: string;
+    networkError: string;
   };
   contact: {
     title: string;
@@ -849,6 +876,17 @@ export type Translations = {
     fullNamePlaceholder: string;
     emailPlaceholder: string;
     phonePlaceholder: string;
+    phoneCountryAria: string;
+    invalidEmail: string;
+    invalidPhone: string;
+    bookingAs: string;
+    notYou: string;
+    signInFasterTitle: string;
+    signInFaster: string;
+    signInCta: string;
+    signInModalSubtitle: string;
+    viewMyBookings: string;
+    continueBooking: string;
     customerAddressPlaceholder: string;
     customerAddressPlaceholderOptional: string;
     notesPlaceholder: string;
@@ -885,6 +923,14 @@ export type Translations = {
     errorCancelThis: string;
     confirmCancelThis: string;
     cancelledBadge: string;
+    tagCancelled: string;
+    tagCompleted: string;
+    tagInProgress: string;
+    tagToday: string;
+    tagTomorrow: string;
+    tagInMinutes: string;
+    tagInHour: string;
+    tagInHours: string;
     whatsappAria: string;
     whatsappTitle: string;
     whatsappGreeting: string;
@@ -995,6 +1041,7 @@ export type Translations = {
     locationTimezoneLabel: string;
     locationTimezoneHint: string;
     deleteLocation: string;
+    deleteLocationConfirm: string;
     editLocationAria: string;
     newLocationDefaultName: string;
     unnamedLocation: string;
@@ -1037,9 +1084,24 @@ export type Translations = {
     timezoneLabel: string;
     bufferLabel: string;
     servicesSection: string;
+    servicesSectionDesc: string;
+    bookingOptionsSection: string;
+    durationLabel: string;
+    priceLabel: string;
+    freePlaceholder: string;
+    newService: string;
+    backToServices: string;
+    editServiceAria: string;
+    noServicesTitle: string;
+    noServicesDesc: string;
+    createFirstService: string;
+    deleteService: string;
+    anyoneCanPerform: string;
     addButton: string;
     showPricesLabel: string;
     showPricesDesc: string;
+    currencyLabel: string;
+    currencyDesc: string;
     collectAddressLabel: string;
     collectAddressDesc: string;
     addressRequiredLabel: string;
@@ -1059,6 +1121,13 @@ export type Translations = {
     confirmationMsgDesc: string;
     cancellationMsgTitle: string;
     cancellationMsgDesc: string;
+    rescheduleMsgTitle: string;
+    rescheduleMsgDesc: string;
+    reminderMsgTitle: string;
+    reminderMsgDesc: string;
+    defaultLocaleTab: string;
+    addTranslation: string;
+    translationFallbackNote: string;
     messageOffNotice: string;
     emailSubjectLabel: string;
     emailSubjectPlaceholder: string;
@@ -1085,6 +1154,15 @@ export type Translations = {
     previousMonthAria: string;
     nextMonthAria: string;
     noBookingsOnDay: string;
+    newBooking: string;
+    newBookingHint: string;
+    manualCustomerHeading: string;
+    manualEmailOptionalPlaceholder: string;
+    manualCreateBooking: string;
+    manualBookingCreatedTitle: string;
+    manualBookingCreatedDesc: string;
+    manualAddOnDay: string;
+    manualDone: string;
     chooseDateAria: string;
     timeSingular: string;
     timePlural: string;
@@ -1093,6 +1171,18 @@ export type Translations = {
     savedMsg: string;
     errorCouldNotSave: string;
     newServiceDefaultName: string;
+    categoriesSection: string;
+    categoriesSectionDesc: string;
+    newCategory: string;
+    newCategoryDefaultName: string;
+    categoryNamePlaceholder: string;
+    removeCategoryAria: string;
+    uncategorized: string;
+    categoryLabel: string;
+    noCategoryOption: string;
+    manageCategories: string;
+    allFilter: string;
+    noCategoriesYet: string;
     whatsappSimpleGreeting: string;
     widgetsPageTitle: string;
     widgetsPageSubtitle: string;
@@ -1182,6 +1272,8 @@ const en: Translations = {
     upgradeCta: "See plans",
     upgradeToStarter: "Upgrade to Starter",
     upgradeToPro: "Upgrade to Pro",
+    includedIn: "Included in",
+    subscribe: "Subscribe",
     widgetsLockedTitle: "Widgets are a paid feature",
     widgetsLocked: "Widgets are available on the Starter and Pro plans. Upgrade to add booking and AI widgets to your profile.",
     mcpLockedTitle: "MCP is a paid feature",
@@ -1216,6 +1308,7 @@ const en: Translations = {
     analytics: "Analytics",
     groupAccount: "Account",
     groupBusiness: "Business",
+    groupShortcuts: "Shortcuts",
     groupSettings: "Settings",
     switchToBusiness: "Switch to Business Account",
     switchToBusinessTitle: "Switch to a Business Account?",
@@ -1362,6 +1455,10 @@ const en: Translations = {
     displayName: "Display Name",
     email: "Email",
     password: "Password",
+    confirmPassword: "Confirm password",
+    passwordMismatch: "Passwords do not match",
+    checkEmailTitle: "Check your email",
+    checkEmailDesc: "We sent a confirmation link to {email}. Click it to activate your account and finish signing up.",
     forgotPassword: "Forgot password?",
     login: "Log in",
     signup: "Sign up",
@@ -1372,6 +1469,16 @@ const en: Translations = {
     hasAccount: "Already have an account?",
     usernameRequired: "Username is required",
     usernameInvalid: "Username must be 3–30 characters and can only contain lowercase letters, numbers, hyphens, and underscores",
+  },
+  authErrors: {
+    generic: "Something went wrong. Please try again.",
+    rateLimit: "Too many attempts. Please wait a moment and try again.",
+    invalidCredentials: "Incorrect email or password.",
+    emailInUse: "An account with this email already exists.",
+    emailNotConfirmed: "Please confirm your email before signing in.",
+    otpInvalid: "That code is invalid or has expired. Please request a new one.",
+    weakPassword: "Please choose a stronger password (at least 6 characters).",
+    network: "Connection problem. Please check your network and try again.",
   },
   settings: {
     tabProfile: "Profile",
@@ -1389,6 +1496,9 @@ const en: Translations = {
     bio: "Bio",
     bioHint: "Max {bio} characters, {lines} lines",
     websiteUrl: "Website URL",
+    address: "Address",
+    addressPlaceholder: "Search for an address…",
+    addressHint: "Shown on your public page — tap opens Google Maps",
     socialLinks: "Social Links",
     saveChanges: "Save Changes",
     saving: "Saving...",
@@ -1428,6 +1538,8 @@ const en: Translations = {
     periodWeek: "Week",
     periodMonth: "Month",
     period6Months: "6 Months",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
   },
   space: {
     public: "Public",
@@ -1538,6 +1650,9 @@ const en: Translations = {
     successMsg: "You're now on Pro! Welcome to the club.",
     canceledMsg: "Checkout was canceled. Your plan has not changed.",
     save27: "Save 27%",
+    checkoutFailed: "Couldn't start checkout. Please try again.",
+    billingFailed: "Couldn't open billing. Please try again.",
+    networkError: "Connection problem. Please check your network and try again.",
   },
   contact: {
     title: "Contact Us",
@@ -2032,6 +2147,17 @@ const en: Translations = {
     fullNamePlaceholder: "Full name",
     emailPlaceholder: "Email",
     phonePlaceholder: "Phone",
+    phoneCountryAria: "Country code",
+    invalidEmail: "Enter a valid email address.",
+    invalidPhone: "Enter a valid phone number.",
+    bookingAs: "Booking as {name}",
+    notYou: "Not you?",
+    signInFasterTitle: "Book faster",
+    signInFaster: "Log in or sign up to autofill your details.",
+    signInCta: "Log in / Sign up",
+    signInModalSubtitle: "Sign in and we'll fill in your details automatically.",
+    viewMyBookings: "View my bookings",
+    continueBooking: "Continue booking",
     customerAddressPlaceholder: "Address",
     customerAddressPlaceholderOptional: "Address (optional)",
     notesPlaceholder: "Notes (optional)",
@@ -2068,6 +2194,14 @@ const en: Translations = {
     errorCancelThis: "Could not cancel this booking.",
     confirmCancelThis: "Cancel {name}'s {service} booking on {when}?",
     cancelledBadge: "Cancelled",
+    tagCancelled: "Cancelled",
+    tagCompleted: "Completed",
+    tagInProgress: "In progress",
+    tagToday: "Today",
+    tagTomorrow: "Tomorrow",
+    tagInMinutes: "in {n} min",
+    tagInHour: "in 1 hour",
+    tagInHours: "in {n} hours",
     whatsappAria: "WhatsApp {name}",
     whatsappTitle: "Message on WhatsApp",
     whatsappGreeting: "Hi {name} 👋 — about your {service} booking on {when}:",
@@ -2178,6 +2312,7 @@ const en: Translations = {
     locationTimezoneLabel: "Timezone",
     locationTimezoneHint: "Leave blank to use the business default timezone.",
     deleteLocation: "Delete location",
+    deleteLocationConfirm: "This removes the location and everything scoped to it. This can't be undone.",
     editLocationAria: "Edit {name}",
     newLocationDefaultName: "New location",
     unnamedLocation: "Unnamed location",
@@ -2220,9 +2355,24 @@ const en: Translations = {
     timezoneLabel: "Timezone (IANA)",
     bufferLabel: "Buffer between bookings (min)",
     servicesSection: "Services",
+    servicesSectionDesc: "The offerings customers can book, with their duration and price.",
+    bookingOptionsSection: "Booking page options",
+    durationLabel: "Duration",
+    priceLabel: "Price",
+    freePlaceholder: "Free",
+    newService: "New service",
+    backToServices: "Back to services",
+    editServiceAria: "Edit {name}",
+    noServicesTitle: "No services yet",
+    noServicesDesc: "Add the services customers can book — each with a duration and an optional price.",
+    createFirstService: "Add your first service",
+    deleteService: "Delete service",
+    anyoneCanPerform: "Anyone on the team",
     addButton: "Add",
     showPricesLabel: "Show prices on the booking page",
     showPricesDesc: "When off, visitors book without seeing service prices.",
+    currencyLabel: "Currency",
+    currencyDesc: "The currency all service prices are shown in.",
     collectAddressLabel: "Ask for the customer's address",
     collectAddressDesc: "Show an address field on the booking page — useful for mobile or at-home services.",
     addressRequiredLabel: "Require the address",
@@ -2242,6 +2392,13 @@ const en: Translations = {
     confirmationMsgDesc: "Sent when a customer books an appointment.",
     cancellationMsgTitle: "Cancellation",
     cancellationMsgDesc: "Sent when a booking is cancelled (by you or the customer).",
+    rescheduleMsgTitle: "Reschedule",
+    rescheduleMsgDesc: "Sent to the customer when a booking is moved to a new time.",
+    reminderMsgTitle: "Reminder",
+    reminderMsgDesc: "Sent to the customer about 24 hours before the appointment.",
+    defaultLocaleTab: "Default",
+    addTranslation: "Add language",
+    translationFallbackNote: "Leave a field empty to fall back to the Default text.",
     messageOffNotice: "This message is turned off — customers won't receive it.",
     emailSubjectLabel: "Email subject",
     emailSubjectPlaceholder: "Booking confirmed",
@@ -2268,6 +2425,15 @@ const en: Translations = {
     previousMonthAria: "Previous month",
     nextMonthAria: "Next month",
     noBookingsOnDay: "No bookings on this day.",
+    newBooking: "New booking",
+    newBookingHint: "Add an appointment for a client — e.g. someone who booked over the phone.",
+    manualCustomerHeading: "Customer details",
+    manualEmailOptionalPlaceholder: "Email (optional)",
+    manualCreateBooking: "Create booking",
+    manualBookingCreatedTitle: "Booking created",
+    manualBookingCreatedDesc: "The appointment has been added to your calendar.",
+    manualAddOnDay: "Add booking",
+    manualDone: "Done",
     chooseDateAria: "Choose a date",
     timeSingular: "time",
     timePlural: "times",
@@ -2276,6 +2442,18 @@ const en: Translations = {
     savedMsg: "Saved.",
     errorCouldNotSave: "Could not save.",
     newServiceDefaultName: "New service",
+    categoriesSection: "Categories",
+    categoriesSectionDesc: "Group your services so customers can browse them by type.",
+    newCategory: "New category",
+    newCategoryDefaultName: "New category",
+    categoryNamePlaceholder: "Category name",
+    removeCategoryAria: "Remove category",
+    uncategorized: "Other services",
+    categoryLabel: "Category",
+    noCategoryOption: "Other services",
+    manageCategories: "Manage",
+    allFilter: "All",
+    noCategoriesYet: "No categories yet. Add one to group your services.",
     whatsappSimpleGreeting: "Hi {name} 👋",
     widgetsPageTitle: "Widgets",
     widgetsPageSubtitle: "Interactive tools that live on top of your profile.",
@@ -2365,6 +2543,8 @@ const pt: Translations = {
     upgradeCta: "Ver planos",
     upgradeToStarter: "Assinar o Starter",
     upgradeToPro: "Assinar o Pro",
+    includedIn: "Incluído em",
+    subscribe: "Assinar",
     widgetsLockedTitle: "Widgets são um recurso pago",
     widgetsLocked: "Widgets estão disponíveis nos planos Starter e Pro. Faça upgrade para adicionar widgets de agendamento e IA ao seu perfil.",
     mcpLockedTitle: "MCP é um recurso pago",
@@ -2399,6 +2579,7 @@ const pt: Translations = {
     analytics: "Análises",
     groupAccount: "Conta",
     groupBusiness: "Negócio",
+    groupShortcuts: "Atalhos",
     groupSettings: "Configurações",
     switchToBusiness: "Mudar para Conta Empresarial",
     switchToBusinessTitle: "Mudar para uma Conta Empresarial?",
@@ -2545,6 +2726,10 @@ const pt: Translations = {
     displayName: "Nome de Exibição",
     email: "E-mail",
     password: "Senha",
+    confirmPassword: "Confirmar senha",
+    passwordMismatch: "As senhas não coincidem",
+    checkEmailTitle: "Verifique seu e-mail",
+    checkEmailDesc: "Enviamos um link de confirmação para {email}. Clique nele para ativar sua conta e concluir o cadastro.",
     forgotPassword: "Esqueceu a senha?",
     login: "Entrar",
     signup: "Cadastrar",
@@ -2555,6 +2740,16 @@ const pt: Translations = {
     hasAccount: "Já tem uma conta?",
     usernameRequired: "Nome de usuário é obrigatório",
     usernameInvalid: "O nome de usuário deve ter 3–30 caracteres e conter apenas letras minúsculas, números, hífens e underscores",
+  },
+  authErrors: {
+    generic: "Algo deu errado. Por favor, tente novamente.",
+    rateLimit: "Muitas tentativas. Aguarde um momento e tente novamente.",
+    invalidCredentials: "E-mail ou senha incorretos.",
+    emailInUse: "Já existe uma conta com este e-mail.",
+    emailNotConfirmed: "Confirme seu e-mail antes de entrar.",
+    otpInvalid: "Este código é inválido ou expirou. Solicite um novo.",
+    weakPassword: "Escolha uma senha mais forte (pelo menos 6 caracteres).",
+    network: "Problema de conexão. Verifique sua rede e tente novamente.",
   },
   settings: {
     tabProfile: "Perfil",
@@ -2572,6 +2767,9 @@ const pt: Translations = {
     bio: "Bio",
     bioHint: "Máx. {bio} caracteres, {lines} linhas",
     websiteUrl: "URL do Site",
+    address: "Endereço",
+    addressPlaceholder: "Buscar um endereço…",
+    addressHint: "Exibido na sua página pública — tocar abre o Google Maps",
     socialLinks: "Redes Sociais",
     saveChanges: "Salvar Alterações",
     saving: "Salvando...",
@@ -2611,6 +2809,8 @@ const pt: Translations = {
     periodWeek: "Semana",
     periodMonth: "Mês",
     period6Months: "6 meses",
+    showPassword: "Mostrar senha",
+    hidePassword: "Ocultar senha",
   },
   space: {
     public: "Público",
@@ -2721,6 +2921,9 @@ const pt: Translations = {
     successMsg: "Você agora é Pro! Bem-vindo ao clube.",
     canceledMsg: "Checkout cancelado. Seu plano não foi alterado.",
     save27: "Economize 27%",
+    checkoutFailed: "Não foi possível iniciar o checkout. Tente novamente.",
+    billingFailed: "Não foi possível abrir a cobrança. Tente novamente.",
+    networkError: "Problema de conexão. Verifique sua rede e tente novamente.",
   },
   contact: {
     title: "Contato",
@@ -3215,6 +3418,17 @@ const pt: Translations = {
     fullNamePlaceholder: "Nome completo",
     emailPlaceholder: "E-mail",
     phonePlaceholder: "Telefone",
+    phoneCountryAria: "Código do país",
+    invalidEmail: "Digite um e-mail válido.",
+    invalidPhone: "Digite um telefone válido.",
+    bookingAs: "Agendando como {name}",
+    notYou: "Não é você?",
+    signInFasterTitle: "Agende mais rápido",
+    signInFaster: "Entre ou cadastre-se para preencher automaticamente.",
+    signInCta: "Entrar / Cadastrar",
+    signInModalSubtitle: "Entre e preencheremos seus dados automaticamente.",
+    viewMyBookings: "Ver minhas reservas",
+    continueBooking: "Continuar reserva",
     customerAddressPlaceholder: "Endereço",
     customerAddressPlaceholderOptional: "Endereço (opcional)",
     notesPlaceholder: "Observações (opcional)",
@@ -3251,6 +3465,14 @@ const pt: Translations = {
     errorCancelThis: "Não foi possível cancelar este agendamento.",
     confirmCancelThis: "Cancelar o agendamento de {service} de {name} em {when}?",
     cancelledBadge: "Cancelado",
+    tagCancelled: "Cancelada",
+    tagCompleted: "Completada",
+    tagInProgress: "En curso",
+    tagToday: "Hoy",
+    tagTomorrow: "Mañana",
+    tagInMinutes: "en {n} min",
+    tagInHour: "en 1 hora",
+    tagInHours: "en {n} horas",
     whatsappAria: "WhatsApp de {name}",
     whatsappTitle: "Enviar mensagem no WhatsApp",
     whatsappGreeting: "Oi {name} 👋 — sobre seu agendamento de {service} em {when}:",
@@ -3361,6 +3583,7 @@ const pt: Translations = {
     locationTimezoneLabel: "Fuso horário",
     locationTimezoneHint: "Deixe em branco para usar o fuso horário padrão do negócio.",
     deleteLocation: "Excluir local",
+    deleteLocationConfirm: "Isto remove o local e tudo o que está associado a ele. Não pode ser desfeito.",
     editLocationAria: "Editar {name}",
     newLocationDefaultName: "Novo local",
     unnamedLocation: "Local sem nome",
@@ -3403,9 +3626,24 @@ const pt: Translations = {
     timezoneLabel: "Fuso horário (IANA)",
     bufferLabel: "Intervalo entre agendamentos (min)",
     servicesSection: "Serviços",
+    servicesSectionDesc: "As prestações que os clientes podem agendar, com duração e preço.",
+    bookingOptionsSection: "Opções da página de agendamento",
+    durationLabel: "Duração",
+    priceLabel: "Preço",
+    freePlaceholder: "Grátis",
+    newService: "Novo serviço",
+    backToServices: "Voltar para serviços",
+    editServiceAria: "Editar {name}",
+    noServicesTitle: "Nenhum serviço ainda",
+    noServicesDesc: "Adicione os serviços que os clientes podem agendar — cada um com duração e preço opcional.",
+    createFirstService: "Adicionar seu primeiro serviço",
+    deleteService: "Excluir serviço",
+    anyoneCanPerform: "Qualquer pessoa da equipe",
     addButton: "Adicionar",
     showPricesLabel: "Mostrar preços na página de agendamento",
     showPricesDesc: "Quando desativado, os visitantes agendam sem ver os preços dos serviços.",
+    currencyLabel: "Moeda",
+    currencyDesc: "A moeda em que todos os preços dos serviços são exibidos.",
     collectAddressLabel: "Pedir o endereço do cliente",
     collectAddressDesc: "Mostra um campo de endereço na página de agendamento — útil para serviços móveis ou em domicílio.",
     addressRequiredLabel: "Exigir o endereço",
@@ -3425,6 +3663,13 @@ const pt: Translations = {
     confirmationMsgDesc: "Enviada quando um cliente agenda um horário.",
     cancellationMsgTitle: "Cancelamento",
     cancellationMsgDesc: "Enviada quando um agendamento é cancelado (por você ou pelo cliente).",
+    rescheduleMsgTitle: "Remarcação",
+    rescheduleMsgDesc: "Enviada ao cliente quando um agendamento é movido para um novo horário.",
+    reminderMsgTitle: "Lembrete",
+    reminderMsgDesc: "Enviada ao cliente cerca de 24 horas antes do horário.",
+    defaultLocaleTab: "Padrão",
+    addTranslation: "Adicionar idioma",
+    translationFallbackNote: "Deixe um campo vazio para usar o texto padrão.",
     messageOffNotice: "Esta mensagem está desativada — os clientes não a receberão.",
     emailSubjectLabel: "Assunto do e-mail",
     emailSubjectPlaceholder: "Agendamento confirmado",
@@ -3451,6 +3696,15 @@ const pt: Translations = {
     previousMonthAria: "Mês anterior",
     nextMonthAria: "Próximo mês",
     noBookingsOnDay: "Nenhum agendamento neste dia.",
+    newBooking: "Novo agendamento",
+    newBookingHint: "Adicione um agendamento para um cliente — por exemplo, alguém que ligou.",
+    manualCustomerHeading: "Dados do cliente",
+    manualEmailOptionalPlaceholder: "E-mail (opcional)",
+    manualCreateBooking: "Criar agendamento",
+    manualBookingCreatedTitle: "Agendamento criado",
+    manualBookingCreatedDesc: "O agendamento foi adicionado à sua agenda.",
+    manualAddOnDay: "Adicionar",
+    manualDone: "Concluído",
     chooseDateAria: "Escolher uma data",
     timeSingular: "horário",
     timePlural: "horários",
@@ -3459,6 +3713,18 @@ const pt: Translations = {
     savedMsg: "Salvo.",
     errorCouldNotSave: "Não foi possível salvar.",
     newServiceDefaultName: "Novo serviço",
+    categoriesSection: "Categorias",
+    categoriesSectionDesc: "Agrupe os seus serviços para os clientes os explorarem por tipo.",
+    newCategory: "Nova categoria",
+    newCategoryDefaultName: "Nova categoria",
+    categoryNamePlaceholder: "Nome da categoria",
+    removeCategoryAria: "Remover categoria",
+    uncategorized: "Outros serviços",
+    categoryLabel: "Categoria",
+    noCategoryOption: "Outros serviços",
+    manageCategories: "Gerir",
+    allFilter: "Todos",
+    noCategoriesYet: "Ainda não há categorias. Adicione uma para agrupar os seus serviços.",
     whatsappSimpleGreeting: "Oi {name} 👋",
     widgetsPageTitle: "Widgets",
     widgetsPageSubtitle: "Ferramentas interativas que ficam no topo do seu perfil.",
@@ -3548,6 +3814,8 @@ const fr: Translations = {
     upgradeCta: "Voir les offres",
     upgradeToStarter: "Passer à Starter",
     upgradeToPro: "Passer à Pro",
+    includedIn: "Inclus dans",
+    subscribe: "S'abonner",
     widgetsLockedTitle: "Les widgets sont une fonctionnalité payante",
     widgetsLocked: "Les widgets sont disponibles avec les offres Starter et Pro. Améliorez votre offre pour ajouter des widgets de réservation et d'IA à votre profil.",
     mcpLockedTitle: "MCP est une fonctionnalité payante",
@@ -3582,6 +3850,7 @@ const fr: Translations = {
     analytics: "Statistiques",
     groupAccount: "Compte",
     groupBusiness: "Entreprise",
+    groupShortcuts: "Raccourcis",
     groupSettings: "Paramètres",
     switchToBusiness: "Passer en compte professionnel",
     switchToBusinessTitle: "Passer en compte professionnel ?",
@@ -3728,6 +3997,10 @@ const fr: Translations = {
     displayName: "Nom Affiché",
     email: "E-mail",
     password: "Mot de passe",
+    confirmPassword: "Confirmer le mot de passe",
+    passwordMismatch: "Les mots de passe ne correspondent pas",
+    checkEmailTitle: "Vérifiez votre e-mail",
+    checkEmailDesc: "Nous avons envoyé un lien de confirmation à {email}. Cliquez dessus pour activer votre compte et terminer l'inscription.",
     forgotPassword: "Mot de passe oublié ?",
     login: "Connexion",
     signup: "S'inscrire",
@@ -3738,6 +4011,16 @@ const fr: Translations = {
     hasAccount: "Déjà un compte ?",
     usernameRequired: "Le nom d'utilisateur est requis",
     usernameInvalid: "Le nom d'utilisateur doit contenir 3 à 30 caractères (lettres minuscules, chiffres, tirets, underscores)",
+  },
+  authErrors: {
+    generic: "Une erreur s'est produite. Veuillez réessayer.",
+    rateLimit: "Trop de tentatives. Veuillez patienter un instant et réessayer.",
+    invalidCredentials: "E-mail ou mot de passe incorrect.",
+    emailInUse: "Un compte avec cet e-mail existe déjà.",
+    emailNotConfirmed: "Veuillez confirmer votre e-mail avant de vous connecter.",
+    otpInvalid: "Ce code est invalide ou a expiré. Veuillez en demander un nouveau.",
+    weakPassword: "Veuillez choisir un mot de passe plus fort (au moins 6 caractères).",
+    network: "Problème de connexion. Vérifiez votre réseau et réessayez.",
   },
   settings: {
     tabProfile: "Profil",
@@ -3755,6 +4038,9 @@ const fr: Translations = {
     bio: "Bio",
     bioHint: "Max. {bio} caractères, {lines} lignes",
     websiteUrl: "URL du Site Web",
+    address: "Adresse",
+    addressPlaceholder: "Rechercher une adresse…",
+    addressHint: "Affichée sur votre page publique — appuyez pour ouvrir Google Maps",
     socialLinks: "Liens Sociaux",
     saveChanges: "Enregistrer",
     saving: "Enregistrement...",
@@ -3794,6 +4080,8 @@ const fr: Translations = {
     periodWeek: "Semaine",
     periodMonth: "Mois",
     period6Months: "6 mois",
+    showPassword: "Afficher le mot de passe",
+    hidePassword: "Masquer le mot de passe",
   },
   space: {
     public: "Public",
@@ -3904,6 +4192,9 @@ const fr: Translations = {
     successMsg: "Vous êtes maintenant sur Pro ! Bienvenue dans le club.",
     canceledMsg: "Le paiement a été annulé. Votre plan n'a pas changé.",
     save27: "Économisez 27 %",
+    checkoutFailed: "Impossible de démarrer le paiement. Veuillez réessayer.",
+    billingFailed: "Impossible d'ouvrir la facturation. Veuillez réessayer.",
+    networkError: "Problème de connexion. Vérifiez votre réseau et réessayez.",
   },
   contact: {
     title: "Nous Contacter",
@@ -4398,6 +4689,17 @@ const fr: Translations = {
     fullNamePlaceholder: "Nom complet",
     emailPlaceholder: "E-mail",
     phonePlaceholder: "Téléphone",
+    phoneCountryAria: "Indicatif du pays",
+    invalidEmail: "Saisissez une adresse e-mail valide.",
+    invalidPhone: "Saisissez un numéro de téléphone valide.",
+    bookingAs: "Réservation en tant que {name}",
+    notYou: "Ce n'est pas vous ?",
+    signInFasterTitle: "Réservez plus vite",
+    signInFaster: "Connectez-vous ou inscrivez-vous pour remplir automatiquement.",
+    signInCta: "Connexion / Inscription",
+    signInModalSubtitle: "Connectez-vous et nous remplirons vos informations automatiquement.",
+    viewMyBookings: "Voir mes réservations",
+    continueBooking: "Continuer la réservation",
     customerAddressPlaceholder: "Adresse",
     customerAddressPlaceholderOptional: "Adresse (facultatif)",
     notesPlaceholder: "Notes (facultatif)",
@@ -4434,6 +4736,14 @@ const fr: Translations = {
     errorCancelThis: "Impossible d'annuler cette réservation.",
     confirmCancelThis: "Annuler la réservation de {service} de {name} le {when} ?",
     cancelledBadge: "Annulée",
+    tagCancelled: "Annulé",
+    tagCompleted: "Terminé",
+    tagInProgress: "En cours",
+    tagToday: "Aujourd'hui",
+    tagTomorrow: "Demain",
+    tagInMinutes: "dans {n} min",
+    tagInHour: "dans 1 heure",
+    tagInHours: "dans {n} heures",
     whatsappAria: "WhatsApp de {name}",
     whatsappTitle: "Envoyer un message sur WhatsApp",
     whatsappGreeting: "Salut {name} 👋 — à propos de votre réservation {service} le {when} :",
@@ -4544,6 +4854,7 @@ const fr: Translations = {
     locationTimezoneLabel: "Fuseau horaire",
     locationTimezoneHint: "Laissez vide pour utiliser le fuseau horaire par défaut de l'entreprise.",
     deleteLocation: "Supprimer l'établissement",
+    deleteLocationConfirm: "Cela supprime l'établissement et tout ce qui lui est rattaché. Action irréversible.",
     editLocationAria: "Modifier {name}",
     newLocationDefaultName: "Nouvel établissement",
     unnamedLocation: "Établissement sans nom",
@@ -4586,9 +4897,24 @@ const fr: Translations = {
     timezoneLabel: "Fuseau horaire (IANA)",
     bufferLabel: "Intervalle entre les réservations (min)",
     servicesSection: "Services",
+    servicesSectionDesc: "Les prestations que les clients peuvent réserver, avec durée et prix.",
+    bookingOptionsSection: "Options de la page de réservation",
+    durationLabel: "Durée",
+    priceLabel: "Prix",
+    freePlaceholder: "Gratuit",
+    newService: "Nouveau service",
+    backToServices: "Retour aux services",
+    editServiceAria: "Modifier {name}",
+    noServicesTitle: "Aucun service pour le moment",
+    noServicesDesc: "Ajoutez les prestations que les clients peuvent réserver — chacune avec une durée et un prix facultatif.",
+    createFirstService: "Ajouter votre premier service",
+    deleteService: "Supprimer le service",
+    anyoneCanPerform: "N'importe qui dans l'équipe",
     addButton: "Ajouter",
     showPricesLabel: "Afficher les prix sur la page de réservation",
     showPricesDesc: "Une fois désactivé, les visiteurs réservent sans voir les prix des services.",
+    currencyLabel: "Devise",
+    currencyDesc: "La devise dans laquelle tous les prix des services sont affichés.",
     collectAddressLabel: "Demander l'adresse du client",
     collectAddressDesc: "Affiche un champ d'adresse sur la page de réservation — utile pour les services mobiles ou à domicile.",
     addressRequiredLabel: "Rendre l'adresse obligatoire",
@@ -4608,6 +4934,13 @@ const fr: Translations = {
     confirmationMsgDesc: "Envoyé quand un client réserve un rendez-vous.",
     cancellationMsgTitle: "Annulation",
     cancellationMsgDesc: "Envoyé quand une réservation est annulée (par vous ou le client).",
+    rescheduleMsgTitle: "Report",
+    rescheduleMsgDesc: "Envoyé au client quand une réservation est déplacée à un nouvel horaire.",
+    reminderMsgTitle: "Rappel",
+    reminderMsgDesc: "Envoyé au client environ 24 heures avant le rendez-vous.",
+    defaultLocaleTab: "Par défaut",
+    addTranslation: "Ajouter une langue",
+    translationFallbackNote: "Laissez un champ vide pour utiliser le texte par défaut.",
     messageOffNotice: "Ce message est désactivé — les clients ne le recevront pas.",
     emailSubjectLabel: "Objet de l'e-mail",
     emailSubjectPlaceholder: "Réservation confirmée",
@@ -4634,6 +4967,15 @@ const fr: Translations = {
     previousMonthAria: "Mois précédent",
     nextMonthAria: "Mois suivant",
     noBookingsOnDay: "Aucune réservation ce jour-là.",
+    newBooking: "Nouvelle réservation",
+    newBookingHint: "Ajoutez un rendez-vous pour un client — par exemple, quelqu'un qui a appelé.",
+    manualCustomerHeading: "Coordonnées du client",
+    manualEmailOptionalPlaceholder: "E-mail (facultatif)",
+    manualCreateBooking: "Créer la réservation",
+    manualBookingCreatedTitle: "Réservation créée",
+    manualBookingCreatedDesc: "Le rendez-vous a été ajouté à votre calendrier.",
+    manualAddOnDay: "Ajouter",
+    manualDone: "Terminé",
     chooseDateAria: "Choisir une date",
     timeSingular: "horaire",
     timePlural: "horaires",
@@ -4642,6 +4984,18 @@ const fr: Translations = {
     savedMsg: "Enregistré.",
     errorCouldNotSave: "Impossible d'enregistrer.",
     newServiceDefaultName: "Nouveau service",
+    categoriesSection: "Catégories",
+    categoriesSectionDesc: "Regroupez vos services pour que les clients les parcourent par type.",
+    newCategory: "Nouvelle catégorie",
+    newCategoryDefaultName: "Nouvelle catégorie",
+    categoryNamePlaceholder: "Nom de la catégorie",
+    removeCategoryAria: "Supprimer la catégorie",
+    uncategorized: "Autres services",
+    categoryLabel: "Catégorie",
+    noCategoryOption: "Autres services",
+    manageCategories: "Gérer",
+    allFilter: "Tous",
+    noCategoriesYet: "Aucune catégorie pour l'instant. Ajoutez-en une pour regrouper vos services.",
     whatsappSimpleGreeting: "Salut {name} 👋",
     widgetsPageTitle: "Widgets",
     widgetsPageSubtitle: "Des outils interactifs qui vivent au-dessus de votre profil.",
@@ -4731,6 +5085,8 @@ const es: Translations = {
     upgradeCta: "Ver planes",
     upgradeToStarter: "Cambiar a Starter",
     upgradeToPro: "Cambiar a Pro",
+    includedIn: "Incluido en",
+    subscribe: "Suscribirse",
     widgetsLockedTitle: "Los widgets son una función de pago",
     widgetsLocked: "Los widgets están disponibles en los planes Starter y Pro. Mejora tu plan para añadir widgets de reservas e IA a tu perfil.",
     mcpLockedTitle: "MCP es una función de pago",
@@ -4765,6 +5121,7 @@ const es: Translations = {
     analytics: "Analítica",
     groupAccount: "Cuenta",
     groupBusiness: "Negocio",
+    groupShortcuts: "Accesos directos",
     groupSettings: "Configuración",
     switchToBusiness: "Cambiar a Cuenta de Empresa",
     switchToBusinessTitle: "¿Cambiar a una Cuenta de Empresa?",
@@ -4911,6 +5268,10 @@ const es: Translations = {
     displayName: "Nombre Visible",
     email: "Correo electrónico",
     password: "Contraseña",
+    confirmPassword: "Confirmar contraseña",
+    passwordMismatch: "Las contraseñas no coinciden",
+    checkEmailTitle: "Revisa tu correo",
+    checkEmailDesc: "Enviamos un enlace de confirmación a {email}. Haz clic en él para activar tu cuenta y completar el registro.",
     forgotPassword: "¿Olvidaste tu contraseña?",
     login: "Iniciar sesión",
     signup: "Registrarse",
@@ -4921,6 +5282,16 @@ const es: Translations = {
     hasAccount: "¿Ya tienes cuenta?",
     usernameRequired: "El nombre de usuario es obligatorio",
     usernameInvalid: "El nombre de usuario debe tener 3–30 caracteres (letras minúsculas, números, guiones, guiones bajos)",
+  },
+  authErrors: {
+    generic: "Algo salió mal. Por favor, inténtalo de nuevo.",
+    rateLimit: "Demasiados intentos. Espera un momento e inténtalo de nuevo.",
+    invalidCredentials: "Correo o contraseña incorrectos.",
+    emailInUse: "Ya existe una cuenta con este correo.",
+    emailNotConfirmed: "Confirma tu correo antes de iniciar sesión.",
+    otpInvalid: "Ese código no es válido o ha expirado. Solicita uno nuevo.",
+    weakPassword: "Elige una contraseña más segura (al menos 6 caracteres).",
+    network: "Problema de conexión. Comprueba tu red e inténtalo de nuevo.",
   },
   settings: {
     tabProfile: "Perfil",
@@ -4938,6 +5309,9 @@ const es: Translations = {
     bio: "Bio",
     bioHint: "Máx. {bio} caracteres, {lines} líneas",
     websiteUrl: "URL del Sitio Web",
+    address: "Dirección",
+    addressPlaceholder: "Buscar una dirección…",
+    addressHint: "Se muestra en tu página pública — al tocar abre Google Maps",
     socialLinks: "Redes Sociales",
     saveChanges: "Guardar Cambios",
     saving: "Guardando...",
@@ -4977,6 +5351,8 @@ const es: Translations = {
     periodWeek: "Semana",
     periodMonth: "Mes",
     period6Months: "6 meses",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
   },
   space: {
     public: "Público",
@@ -5087,6 +5463,9 @@ const es: Translations = {
     successMsg: "¡Ahora estás en Pro! Bienvenido al club.",
     canceledMsg: "El pago fue cancelado. Tu plan no ha cambiado.",
     save27: "Ahorra 27%",
+    checkoutFailed: "No se pudo iniciar el pago. Inténtalo de nuevo.",
+    billingFailed: "No se pudo abrir la facturación. Inténtalo de nuevo.",
+    networkError: "Problema de conexión. Comprueba tu red e inténtalo de nuevo.",
   },
   contact: {
     title: "Contáctanos",
@@ -5581,6 +5960,17 @@ const es: Translations = {
     fullNamePlaceholder: "Nombre completo",
     emailPlaceholder: "Correo electrónico",
     phonePlaceholder: "Teléfono",
+    phoneCountryAria: "Código de país",
+    invalidEmail: "Introduce un correo electrónico válido.",
+    invalidPhone: "Introduce un número de teléfono válido.",
+    bookingAs: "Reservando como {name}",
+    notYou: "¿No eres tú?",
+    signInFasterTitle: "Reserva más rápido",
+    signInFaster: "Inicia sesión o regístrate para autocompletar tus datos.",
+    signInCta: "Iniciar sesión / Registrarse",
+    signInModalSubtitle: "Inicia sesión y rellenaremos tus datos automáticamente.",
+    viewMyBookings: "Ver mis reservas",
+    continueBooking: "Continuar la reserva",
     customerAddressPlaceholder: "Dirección",
     customerAddressPlaceholderOptional: "Dirección (opcional)",
     notesPlaceholder: "Notas (opcional)",
@@ -5617,6 +6007,14 @@ const es: Translations = {
     errorCancelThis: "No se pudo cancelar esta reserva.",
     confirmCancelThis: "¿Cancelar la reserva de {service} de {name} el {when}?",
     cancelledBadge: "Cancelada",
+    tagCancelled: "Cancelada",
+    tagCompleted: "Concluída",
+    tagInProgress: "Em andamento",
+    tagToday: "Hoje",
+    tagTomorrow: "Amanhã",
+    tagInMinutes: "em {n} min",
+    tagInHour: "em 1 hora",
+    tagInHours: "em {n} horas",
     whatsappAria: "WhatsApp de {name}",
     whatsappTitle: "Enviar mensaje por WhatsApp",
     whatsappGreeting: "Hola {name} 👋 — sobre tu reserva de {service} el {when}:",
@@ -5727,6 +6125,7 @@ const es: Translations = {
     locationTimezoneLabel: "Zona horaria",
     locationTimezoneHint: "Déjalo en blanco para usar la zona horaria predeterminada del negocio.",
     deleteLocation: "Eliminar ubicación",
+    deleteLocationConfirm: "Esto elimina la ubicación y todo lo asociado a ella. No se puede deshacer.",
     editLocationAria: "Editar {name}",
     newLocationDefaultName: "Nueva ubicación",
     unnamedLocation: "Ubicación sin nombre",
@@ -5769,9 +6168,24 @@ const es: Translations = {
     timezoneLabel: "Zona horaria (IANA)",
     bufferLabel: "Intervalo entre reservas (min)",
     servicesSection: "Servicios",
+    servicesSectionDesc: "Los servicios que los clientes pueden reservar, con duración y precio.",
+    bookingOptionsSection: "Opciones de la página de reserva",
+    durationLabel: "Duración",
+    priceLabel: "Precio",
+    freePlaceholder: "Gratis",
+    newService: "Nuevo servicio",
+    backToServices: "Volver a servicios",
+    editServiceAria: "Editar {name}",
+    noServicesTitle: "Aún no hay servicios",
+    noServicesDesc: "Añade los servicios que los clientes pueden reservar — cada uno con una duración y un precio opcional.",
+    createFirstService: "Añadir tu primer servicio",
+    deleteService: "Eliminar servicio",
+    anyoneCanPerform: "Cualquiera del equipo",
     addButton: "Añadir",
     showPricesLabel: "Mostrar precios en la página de reservas",
     showPricesDesc: "Cuando está desactivado, los visitantes reservan sin ver los precios de los servicios.",
+    currencyLabel: "Moneda",
+    currencyDesc: "La moneda en la que se muestran todos los precios de los servicios.",
     collectAddressLabel: "Pedir la dirección del cliente",
     collectAddressDesc: "Muestra un campo de dirección en la página de reservas — útil para servicios móviles o a domicilio.",
     addressRequiredLabel: "Exigir la dirección",
@@ -5791,6 +6205,13 @@ const es: Translations = {
     confirmationMsgDesc: "Se envía cuando un cliente reserva una cita.",
     cancellationMsgTitle: "Cancelación",
     cancellationMsgDesc: "Se envía cuando se cancela una reserva (por ti o por el cliente).",
+    rescheduleMsgTitle: "Reprogramación",
+    rescheduleMsgDesc: "Se envía al cliente cuando una reserva se mueve a un nuevo horario.",
+    reminderMsgTitle: "Recordatorio",
+    reminderMsgDesc: "Se envía al cliente unas 24 horas antes de la cita.",
+    defaultLocaleTab: "Predeterminado",
+    addTranslation: "Añadir idioma",
+    translationFallbackNote: "Deja un campo vacío para usar el texto predeterminado.",
     messageOffNotice: "Este mensaje está desactivado — los clientes no lo recibirán.",
     emailSubjectLabel: "Asunto del correo",
     emailSubjectPlaceholder: "Reserva confirmada",
@@ -5817,6 +6238,15 @@ const es: Translations = {
     previousMonthAria: "Mes anterior",
     nextMonthAria: "Mes siguiente",
     noBookingsOnDay: "No hay reservas ese día.",
+    newBooking: "Nueva reserva",
+    newBookingHint: "Añade una cita para un cliente — por ejemplo, alguien que llamó por teléfono.",
+    manualCustomerHeading: "Datos del cliente",
+    manualEmailOptionalPlaceholder: "Correo electrónico (opcional)",
+    manualCreateBooking: "Crear reserva",
+    manualBookingCreatedTitle: "Reserva creada",
+    manualBookingCreatedDesc: "La cita se ha añadido a tu calendario.",
+    manualAddOnDay: "Añadir",
+    manualDone: "Listo",
     chooseDateAria: "Elegir una fecha",
     timeSingular: "horario",
     timePlural: "horarios",
@@ -5825,6 +6255,18 @@ const es: Translations = {
     savedMsg: "Guardado.",
     errorCouldNotSave: "No se pudo guardar.",
     newServiceDefaultName: "Nuevo servicio",
+    categoriesSection: "Categorías",
+    categoriesSectionDesc: "Agrupa tus servicios para que los clientes los exploren por tipo.",
+    newCategory: "Nueva categoría",
+    newCategoryDefaultName: "Nueva categoría",
+    categoryNamePlaceholder: "Nombre de la categoría",
+    removeCategoryAria: "Eliminar categoría",
+    uncategorized: "Otros servicios",
+    categoryLabel: "Categoría",
+    noCategoryOption: "Otros servicios",
+    manageCategories: "Gestionar",
+    allFilter: "Todos",
+    noCategoriesYet: "Aún no hay categorías. Añade una para agrupar tus servicios.",
     whatsappSimpleGreeting: "Hola {name} 👋",
     widgetsPageTitle: "Widgets",
     widgetsPageSubtitle: "Herramientas interactivas que aparecen encima de tu perfil.",
@@ -5914,6 +6356,8 @@ const ja: Translations = {
     upgradeCta: "プランを見る",
     upgradeToStarter: "Starterにアップグレード",
     upgradeToPro: "Proにアップグレード",
+    includedIn: "対象プラン：",
+    subscribe: "登録する",
     widgetsLockedTitle: "ウィジェットは有料機能です",
     widgetsLocked: "ウィジェットはStarterおよびProプランで利用できます。アップグレードすると、予約やAIのウィジェットをプロフィールに追加できます。",
     mcpLockedTitle: "MCPは有料機能です",
@@ -5948,6 +6392,7 @@ const ja: Translations = {
     analytics: "アナリティクス",
     groupAccount: "アカウント",
     groupBusiness: "ビジネス",
+    groupShortcuts: "ショートカット",
     groupSettings: "設定",
     switchToBusiness: "ビジネスアカウントに切り替える",
     switchToBusinessTitle: "ビジネスアカウントに切り替えますか？",
@@ -6094,6 +6539,10 @@ const ja: Translations = {
     displayName: "表示名",
     email: "メールアドレス",
     password: "パスワード",
+    confirmPassword: "パスワードを確認",
+    passwordMismatch: "パスワードが一致しません",
+    checkEmailTitle: "メールを確認してください",
+    checkEmailDesc: "{email} に確認リンクを送信しました。リンクをクリックしてアカウントを有効化し、登録を完了してください。",
     forgotPassword: "パスワードを忘れた？",
     login: "ログイン",
     signup: "登録",
@@ -6104,6 +6553,16 @@ const ja: Translations = {
     hasAccount: "すでにアカウントをお持ちですか？",
     usernameRequired: "ユーザー名は必須です",
     usernameInvalid: "ユーザー名は3〜30文字で、小文字、数字、ハイフン、アンダースコアのみ使用できます",
+  },
+  authErrors: {
+    generic: "エラーが発生しました。もう一度お試しください。",
+    rateLimit: "試行回数が多すぎます。しばらくしてからもう一度お試しください。",
+    invalidCredentials: "メールアドレスまたはパスワードが正しくありません。",
+    emailInUse: "このメールアドレスのアカウントはすでに存在します。",
+    emailNotConfirmed: "ログインする前にメールアドレスを確認してください。",
+    otpInvalid: "コードが無効または期限切れです。新しいコードをリクエストしてください。",
+    weakPassword: "より強力なパスワードを選択してください（6文字以上）。",
+    network: "接続に問題があります。ネットワークを確認してもう一度お試しください。",
   },
   settings: {
     tabProfile: "プロフィール",
@@ -6121,6 +6580,9 @@ const ja: Translations = {
     bio: "自己紹介",
     bioHint: "最大{bio}文字、{lines}行",
     websiteUrl: "ウェブサイトURL",
+    address: "住所",
+    addressPlaceholder: "住所を検索…",
+    addressHint: "公開ページに表示されます — タップで Google マップを開きます",
     socialLinks: "ソーシャルリンク",
     saveChanges: "変更を保存",
     saving: "保存中...",
@@ -6160,6 +6622,8 @@ const ja: Translations = {
     periodWeek: "週",
     periodMonth: "月",
     period6Months: "6ヶ月",
+    showPassword: "パスワードを表示",
+    hidePassword: "パスワードを非表示",
   },
   space: {
     public: "公開",
@@ -6270,6 +6734,9 @@ const ja: Translations = {
     successMsg: "Proにアップグレードしました！ようこそ。",
     canceledMsg: "チェックアウトがキャンセルされました。プランは変更されていません。",
     save27: "27%お得",
+    checkoutFailed: "決済を開始できませんでした。もう一度お試しください。",
+    billingFailed: "請求ページを開けませんでした。もう一度お試しください。",
+    networkError: "接続に問題があります。ネットワークを確認してもう一度お試しください。",
   },
   contact: {
     title: "お問い合わせ",
@@ -6764,6 +7231,17 @@ const ja: Translations = {
     fullNamePlaceholder: "氏名",
     emailPlaceholder: "メールアドレス",
     phonePlaceholder: "電話番号",
+    phoneCountryAria: "国番号",
+    invalidEmail: "有効なメールアドレスを入力してください。",
+    invalidPhone: "有効な電話番号を入力してください。",
+    bookingAs: "{name} として予約",
+    notYou: "別のお客様ですか？",
+    signInFasterTitle: "すばやく予約",
+    signInFaster: "ログインまたは登録して情報を自動入力しましょう。",
+    signInCta: "ログイン / 新規登録",
+    signInModalSubtitle: "ログインすると、お客様の情報を自動で入力します。",
+    viewMyBookings: "予約を見る",
+    continueBooking: "予約を続ける",
     customerAddressPlaceholder: "住所",
     customerAddressPlaceholderOptional: "住所（任意）",
     notesPlaceholder: "メモ（任意）",
@@ -6800,6 +7278,14 @@ const ja: Translations = {
     errorCancelThis: "この予約をキャンセルできませんでした。",
     confirmCancelThis: "{when}の{name}様の{service}予約をキャンセルしますか？",
     cancelledBadge: "キャンセル済み",
+    tagCancelled: "キャンセル済み",
+    tagCompleted: "完了",
+    tagInProgress: "進行中",
+    tagToday: "今日",
+    tagTomorrow: "明日",
+    tagInMinutes: "{n}分後",
+    tagInHour: "1時間後",
+    tagInHours: "{n}時間後",
     whatsappAria: "{name}にWhatsAppで連絡",
     whatsappTitle: "WhatsAppでメッセージを送る",
     whatsappGreeting: "{name}さん 👋 — {when}の{service}のご予約について：",
@@ -6910,6 +7396,7 @@ const ja: Translations = {
     locationTimezoneLabel: "タイムゾーン",
     locationTimezoneHint: "空欄の場合はビジネスの既定タイムゾーンを使用します。",
     deleteLocation: "店舗を削除",
+    deleteLocationConfirm: "この店舗と、それに紐づくすべてが削除されます。元に戻せません。",
     editLocationAria: "{name}を編集",
     newLocationDefaultName: "新しい店舗",
     unnamedLocation: "名前未設定の店舗",
@@ -6952,9 +7439,24 @@ const ja: Translations = {
     timezoneLabel: "タイムゾーン（IANA）",
     bufferLabel: "予約間の間隔（分）",
     servicesSection: "サービス",
+    servicesSectionDesc: "お客様が予約できるサービス。所要時間と料金を設定します。",
+    bookingOptionsSection: "予約ページのオプション",
+    durationLabel: "所要時間",
+    priceLabel: "料金",
+    freePlaceholder: "無料",
+    newService: "新規サービス",
+    backToServices: "サービス一覧に戻る",
+    editServiceAria: "{name}を編集",
+    noServicesTitle: "サービスがまだありません",
+    noServicesDesc: "お客様が予約できるサービスを追加します。それぞれに所要時間と任意の料金を設定できます。",
+    createFirstService: "最初のサービスを追加",
+    deleteService: "サービスを削除",
+    anyoneCanPerform: "チームの誰でも",
     addButton: "追加",
     showPricesLabel: "予約ページに価格を表示",
     showPricesDesc: "オフにすると、訪問者はサービス価格を見ずに予約します。",
+    currencyLabel: "通貨",
+    currencyDesc: "すべてのサービス価格を表示する通貨。",
     collectAddressLabel: "顧客の住所を尋ねる",
     collectAddressDesc: "予約ページに住所欄を表示します。出張・訪問サービスに便利です。",
     addressRequiredLabel: "住所を必須にする",
@@ -6974,6 +7476,13 @@ const ja: Translations = {
     confirmationMsgDesc: "顧客が予約したときに送信されます。",
     cancellationMsgTitle: "キャンセル",
     cancellationMsgDesc: "予約がキャンセルされたとき（あなたまたは顧客により）に送信されます。",
+    rescheduleMsgTitle: "予約変更",
+    rescheduleMsgDesc: "予約が新しい時間に変更されたときに顧客へ送信されます。",
+    reminderMsgTitle: "リマインダー",
+    reminderMsgDesc: "予約の約24時間前に顧客へ送信されます。",
+    defaultLocaleTab: "デフォルト",
+    addTranslation: "言語を追加",
+    translationFallbackNote: "空欄のままにするとデフォルトのテキストが使われます。",
     messageOffNotice: "このメッセージはオフになっています — 顧客には届きません。",
     emailSubjectLabel: "メールの件名",
     emailSubjectPlaceholder: "予約が確定しました",
@@ -7000,6 +7509,15 @@ const ja: Translations = {
     previousMonthAria: "前の月",
     nextMonthAria: "次の月",
     noBookingsOnDay: "この日の予約はありません。",
+    newBooking: "新規予約",
+    newBookingHint: "お客様の予約を追加します（電話で予約された方など）。",
+    manualCustomerHeading: "お客様情報",
+    manualEmailOptionalPlaceholder: "メールアドレス（任意）",
+    manualCreateBooking: "予約を作成",
+    manualBookingCreatedTitle: "予約を作成しました",
+    manualBookingCreatedDesc: "予約がカレンダーに追加されました。",
+    manualAddOnDay: "追加",
+    manualDone: "完了",
     chooseDateAria: "日付を選択",
     timeSingular: "件の空き時間",
     timePlural: "件の空き時間",
@@ -7008,6 +7526,18 @@ const ja: Translations = {
     savedMsg: "保存しました。",
     errorCouldNotSave: "保存できませんでした。",
     newServiceDefaultName: "新しいサービス",
+    categoriesSection: "カテゴリー",
+    categoriesSectionDesc: "サービスをタイプ別にまとめて、お客様が探しやすくします。",
+    newCategory: "新しいカテゴリー",
+    newCategoryDefaultName: "新しいカテゴリー",
+    categoryNamePlaceholder: "カテゴリー名",
+    removeCategoryAria: "カテゴリーを削除",
+    uncategorized: "その他のサービス",
+    categoryLabel: "カテゴリー",
+    noCategoryOption: "その他のサービス",
+    manageCategories: "管理",
+    allFilter: "すべて",
+    noCategoriesYet: "カテゴリーがまだありません。追加してサービスをまとめましょう。",
     whatsappSimpleGreeting: "{name}さん 👋",
     widgetsPageTitle: "ウィジェット",
     widgetsPageSubtitle: "プロフィール上に表示されるインタラクティブなツール。",
@@ -7097,6 +7627,8 @@ const de: Translations = {
     upgradeCta: "Tarife ansehen",
     upgradeToStarter: "Auf Starter upgraden",
     upgradeToPro: "Auf Pro upgraden",
+    includedIn: "Enthalten in",
+    subscribe: "Abonnieren",
     widgetsLockedTitle: "Widgets sind eine kostenpflichtige Funktion",
     widgetsLocked: "Widgets sind in den Tarifen Starter und Pro verfügbar. Upgrade, um Buchungs- und KI-Widgets zu deinem Profil hinzuzufügen.",
     mcpLockedTitle: "MCP ist eine kostenpflichtige Funktion",
@@ -7131,6 +7663,7 @@ const de: Translations = {
     analytics: "Statistiken",
     groupAccount: "Konto",
     groupBusiness: "Business",
+    groupShortcuts: "Verknüpfungen",
     groupSettings: "Einstellungen",
     switchToBusiness: "Zu Geschäftskonto wechseln",
     switchToBusinessTitle: "Zu einem Geschäftskonto wechseln?",
@@ -7277,6 +7810,10 @@ const de: Translations = {
     displayName: "Anzeigename",
     email: "E-Mail",
     password: "Passwort",
+    confirmPassword: "Passwort bestätigen",
+    passwordMismatch: "Die Passwörter stimmen nicht überein",
+    checkEmailTitle: "Überprüfe deine E-Mails",
+    checkEmailDesc: "Wir haben einen Bestätigungslink an {email} gesendet. Klicke darauf, um dein Konto zu aktivieren und die Registrierung abzuschließen.",
     forgotPassword: "Passwort vergessen?",
     login: "Anmelden",
     signup: "Registrieren",
@@ -7287,6 +7824,16 @@ const de: Translations = {
     hasAccount: "Bereits ein Konto?",
     usernameRequired: "Benutzername ist erforderlich",
     usernameInvalid: "Benutzername muss 3–30 Zeichen haben (Kleinbuchstaben, Zahlen, Bindestriche, Unterstriche)",
+  },
+  authErrors: {
+    generic: "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    rateLimit: "Zu viele Versuche. Bitte warte einen Moment und versuche es erneut.",
+    invalidCredentials: "E-Mail oder Passwort ist falsch.",
+    emailInUse: "Ein Konto mit dieser E-Mail existiert bereits.",
+    emailNotConfirmed: "Bitte bestätige deine E-Mail, bevor du dich anmeldest.",
+    otpInvalid: "Dieser Code ist ungültig oder abgelaufen. Bitte fordere einen neuen an.",
+    weakPassword: "Bitte wähle ein stärkeres Passwort (mindestens 6 Zeichen).",
+    network: "Verbindungsproblem. Bitte überprüfe dein Netzwerk und versuche es erneut.",
   },
   settings: {
     tabProfile: "Profil",
@@ -7304,6 +7851,9 @@ const de: Translations = {
     bio: "Bio",
     bioHint: "Max. {bio} Zeichen, {lines} Zeilen",
     websiteUrl: "Website-URL",
+    address: "Adresse",
+    addressPlaceholder: "Adresse suchen…",
+    addressHint: "Wird auf deiner öffentlichen Seite angezeigt — Tippen öffnet Google Maps",
     socialLinks: "Soziale Links",
     saveChanges: "Änderungen speichern",
     saving: "Speichern...",
@@ -7343,6 +7893,8 @@ const de: Translations = {
     periodWeek: "Woche",
     periodMonth: "Monat",
     period6Months: "6 Monate",
+    showPassword: "Passwort anzeigen",
+    hidePassword: "Passwort verbergen",
   },
   space: {
     public: "Öffentlich",
@@ -7453,6 +8005,9 @@ const de: Translations = {
     successMsg: "Du bist jetzt auf Pro! Willkommen im Club.",
     canceledMsg: "Der Checkout wurde abgebrochen. Dein Plan wurde nicht geändert.",
     save27: "27 % sparen",
+    checkoutFailed: "Zahlung konnte nicht gestartet werden. Bitte versuche es erneut.",
+    billingFailed: "Abrechnung konnte nicht geöffnet werden. Bitte versuche es erneut.",
+    networkError: "Verbindungsproblem. Bitte überprüfe dein Netzwerk und versuche es erneut.",
   },
   contact: {
     title: "Kontakt",
@@ -7947,6 +8502,17 @@ const de: Translations = {
     fullNamePlaceholder: "Vollständiger Name",
     emailPlaceholder: "E-Mail",
     phonePlaceholder: "Telefon",
+    phoneCountryAria: "Ländervorwahl",
+    invalidEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
+    invalidPhone: "Bitte gib eine gültige Telefonnummer ein.",
+    bookingAs: "Buchung als {name}",
+    notYou: "Nicht du?",
+    signInFasterTitle: "Schneller buchen",
+    signInFaster: "Melde dich an oder registriere dich zum automatischen Ausfüllen.",
+    signInCta: "Anmelden / Registrieren",
+    signInModalSubtitle: "Melde dich an und wir füllen deine Daten automatisch aus.",
+    viewMyBookings: "Meine Buchungen ansehen",
+    continueBooking: "Buchung fortsetzen",
     customerAddressPlaceholder: "Adresse",
     customerAddressPlaceholderOptional: "Adresse (optional)",
     notesPlaceholder: "Notizen (optional)",
@@ -7983,6 +8549,14 @@ const de: Translations = {
     errorCancelThis: "Diese Buchung konnte nicht storniert werden.",
     confirmCancelThis: "{name}s {service}-Termin am {when} stornieren?",
     cancelledBadge: "Storniert",
+    tagCancelled: "Storniert",
+    tagCompleted: "Abgeschlossen",
+    tagInProgress: "Läuft",
+    tagToday: "Heute",
+    tagTomorrow: "Morgen",
+    tagInMinutes: "in {n} Min.",
+    tagInHour: "in 1 Stunde",
+    tagInHours: "in {n} Stunden",
     whatsappAria: "WhatsApp an {name}",
     whatsappTitle: "Über WhatsApp schreiben",
     whatsappGreeting: "Hallo {name} 👋 — zu deinem {service}-Termin am {when}:",
@@ -8093,6 +8667,7 @@ const de: Translations = {
     locationTimezoneLabel: "Zeitzone",
     locationTimezoneHint: "Leer lassen, um die Standard-Zeitzone des Unternehmens zu verwenden.",
     deleteLocation: "Standort löschen",
+    deleteLocationConfirm: "Dies entfernt den Standort und alles, was ihm zugeordnet ist. Kann nicht rückgängig gemacht werden.",
     editLocationAria: "{name} bearbeiten",
     newLocationDefaultName: "Neuer Standort",
     unnamedLocation: "Unbenannter Standort",
@@ -8135,9 +8710,24 @@ const de: Translations = {
     timezoneLabel: "Zeitzone (IANA)",
     bufferLabel: "Puffer zwischen Buchungen (Min.)",
     servicesSection: "Leistungen",
+    servicesSectionDesc: "Die Leistungen, die Kunden buchen können – mit Dauer und Preis.",
+    bookingOptionsSection: "Optionen der Buchungsseite",
+    durationLabel: "Dauer",
+    priceLabel: "Preis",
+    freePlaceholder: "Kostenlos",
+    newService: "Neue Leistung",
+    backToServices: "Zurück zu den Leistungen",
+    editServiceAria: "{name} bearbeiten",
+    noServicesTitle: "Noch keine Leistungen",
+    noServicesDesc: "Füge die Leistungen hinzu, die Kunden buchen können – jede mit Dauer und optionalem Preis.",
+    createFirstService: "Erste Leistung hinzufügen",
+    deleteService: "Leistung löschen",
+    anyoneCanPerform: "Jeder im Team",
     addButton: "Hinzufügen",
     showPricesLabel: "Preise auf der Buchungsseite anzeigen",
     showPricesDesc: "Wenn deaktiviert, buchen Besucher ohne Preise zu sehen.",
+    currencyLabel: "Währung",
+    currencyDesc: "Die Währung, in der alle Servicepreise angezeigt werden.",
     collectAddressLabel: "Nach der Adresse des Kunden fragen",
     collectAddressDesc: "Zeigt ein Adressfeld auf der Buchungsseite — nützlich für mobile oder Vor-Ort-Dienste.",
     addressRequiredLabel: "Adresse verpflichtend machen",
@@ -8157,6 +8747,13 @@ const de: Translations = {
     confirmationMsgDesc: "Wird gesendet, wenn ein Kunde einen Termin bucht.",
     cancellationMsgTitle: "Stornierung",
     cancellationMsgDesc: "Wird gesendet, wenn eine Buchung storniert wird (von dir oder dem Kunden).",
+    rescheduleMsgTitle: "Umbuchung",
+    rescheduleMsgDesc: "Wird an den Kunden gesendet, wenn eine Buchung auf eine neue Zeit verschoben wird.",
+    reminderMsgTitle: "Erinnerung",
+    reminderMsgDesc: "Wird etwa 24 Stunden vor dem Termin an den Kunden gesendet.",
+    defaultLocaleTab: "Standard",
+    addTranslation: "Sprache hinzufügen",
+    translationFallbackNote: "Lass ein Feld leer, um den Standardtext zu verwenden.",
     messageOffNotice: "Diese Nachricht ist ausgeschaltet — Kunden erhalten sie nicht.",
     emailSubjectLabel: "E-Mail-Betreff",
     emailSubjectPlaceholder: "Buchung bestätigt",
@@ -8183,6 +8780,15 @@ const de: Translations = {
     previousMonthAria: "Vorheriger Monat",
     nextMonthAria: "Nächster Monat",
     noBookingsOnDay: "Keine Buchungen an diesem Tag.",
+    newBooking: "Neue Buchung",
+    newBookingHint: "Fügen Sie einen Termin für einen Kunden hinzu — z. B. für jemanden, der telefonisch gebucht hat.",
+    manualCustomerHeading: "Kundendaten",
+    manualEmailOptionalPlaceholder: "E-Mail (optional)",
+    manualCreateBooking: "Buchung erstellen",
+    manualBookingCreatedTitle: "Buchung erstellt",
+    manualBookingCreatedDesc: "Der Termin wurde zu Ihrem Kalender hinzugefügt.",
+    manualAddOnDay: "Hinzufügen",
+    manualDone: "Fertig",
     chooseDateAria: "Datum wählen",
     timeSingular: "Zeit",
     timePlural: "Zeiten",
@@ -8191,6 +8797,18 @@ const de: Translations = {
     savedMsg: "Gespeichert.",
     errorCouldNotSave: "Konnte nicht gespeichert werden.",
     newServiceDefaultName: "Neue Leistung",
+    categoriesSection: "Kategorien",
+    categoriesSectionDesc: "Gruppieren Sie Ihre Leistungen, damit Kunden sie nach Art durchsuchen können.",
+    newCategory: "Neue Kategorie",
+    newCategoryDefaultName: "Neue Kategorie",
+    categoryNamePlaceholder: "Name der Kategorie",
+    removeCategoryAria: "Kategorie entfernen",
+    uncategorized: "Weitere Leistungen",
+    categoryLabel: "Kategorie",
+    noCategoryOption: "Weitere Leistungen",
+    manageCategories: "Verwalten",
+    allFilter: "Alle",
+    noCategoriesYet: "Noch keine Kategorien. Fügen Sie eine hinzu, um Ihre Leistungen zu gruppieren.",
     whatsappSimpleGreeting: "Hallo {name} 👋",
     widgetsPageTitle: "Widgets",
     widgetsPageSubtitle: "Interaktive Tools, die oben auf deinem Profil erscheinen.",
@@ -8280,6 +8898,8 @@ const it: Translations = {
     upgradeCta: "Vedi i piani",
     upgradeToStarter: "Passa a Starter",
     upgradeToPro: "Passa a Pro",
+    includedIn: "Incluso in",
+    subscribe: "Abbonati",
     widgetsLockedTitle: "I widget sono una funzione a pagamento",
     widgetsLocked: "I widget sono disponibili nei piani Starter e Pro. Esegui l'upgrade per aggiungere widget di prenotazione e IA al tuo profilo.",
     mcpLockedTitle: "MCP è una funzione a pagamento",
@@ -8314,6 +8934,7 @@ const it: Translations = {
     analytics: "Statistiche",
     groupAccount: "Account",
     groupBusiness: "Business",
+    groupShortcuts: "Scorciatoie",
     groupSettings: "Impostazioni",
     switchToBusiness: "Passa a un account Business",
     switchToBusinessTitle: "Passare a un account Business?",
@@ -8460,6 +9081,10 @@ const it: Translations = {
     displayName: "Nome Visualizzato",
     email: "E-mail",
     password: "Password",
+    confirmPassword: "Conferma password",
+    passwordMismatch: "Le password non corrispondono",
+    checkEmailTitle: "Controlla la tua email",
+    checkEmailDesc: "Abbiamo inviato un link di conferma a {email}. Cliccalo per attivare il tuo account e completare la registrazione.",
     forgotPassword: "Password dimenticata?",
     login: "Accedi",
     signup: "Registrati",
@@ -8470,6 +9095,16 @@ const it: Translations = {
     hasAccount: "Hai già un account?",
     usernameRequired: "Il nome utente è obbligatorio",
     usernameInvalid: "Il nome utente deve avere 3–30 caratteri (lettere minuscole, numeri, trattini, underscore)",
+  },
+  authErrors: {
+    generic: "Qualcosa è andato storto. Riprova.",
+    rateLimit: "Troppi tentativi. Attendi un momento e riprova.",
+    invalidCredentials: "E-mail o password non corretti.",
+    emailInUse: "Esiste già un account con questa e-mail.",
+    emailNotConfirmed: "Conferma la tua e-mail prima di accedere.",
+    otpInvalid: "Il codice non è valido o è scaduto. Richiedine uno nuovo.",
+    weakPassword: "Scegli una password più forte (almeno 6 caratteri).",
+    network: "Problema di connessione. Controlla la rete e riprova.",
   },
   settings: {
     tabProfile: "Profilo",
@@ -8487,6 +9122,9 @@ const it: Translations = {
     bio: "Bio",
     bioHint: "Max {bio} caratteri, {lines} righe",
     websiteUrl: "URL Sito Web",
+    address: "Indirizzo",
+    addressPlaceholder: "Cerca un indirizzo…",
+    addressHint: "Mostrato sulla tua pagina pubblica — tocca per aprire Google Maps",
     socialLinks: "Link Social",
     saveChanges: "Salva Modifiche",
     saving: "Salvataggio...",
@@ -8526,6 +9164,8 @@ const it: Translations = {
     periodWeek: "Settimana",
     periodMonth: "Mese",
     period6Months: "6 mesi",
+    showPassword: "Mostra password",
+    hidePassword: "Nascondi password",
   },
   space: {
     public: "Pubblico",
@@ -8636,6 +9276,9 @@ const it: Translations = {
     successMsg: "Sei ora su Pro! Benvenuto nel club.",
     canceledMsg: "Il checkout è stato annullato. Il tuo piano non è cambiato.",
     save27: "Risparmia il 27%",
+    checkoutFailed: "Impossibile avviare il pagamento. Riprova.",
+    billingFailed: "Impossibile aprire la fatturazione. Riprova.",
+    networkError: "Problema di connessione. Controlla la rete e riprova.",
   },
   contact: {
     title: "Contattaci",
@@ -9130,6 +9773,17 @@ const it: Translations = {
     fullNamePlaceholder: "Nome completo",
     emailPlaceholder: "E-mail",
     phonePlaceholder: "Telefono",
+    phoneCountryAria: "Prefisso internazionale",
+    invalidEmail: "Inserisci un indirizzo e-mail valido.",
+    invalidPhone: "Inserisci un numero di telefono valido.",
+    bookingAs: "Prenotazione come {name}",
+    notYou: "Non sei tu?",
+    signInFasterTitle: "Prenota più veloce",
+    signInFaster: "Accedi o registrati per compilare automaticamente.",
+    signInCta: "Accedi / Registrati",
+    signInModalSubtitle: "Accedi e compileremo i tuoi dati automaticamente.",
+    viewMyBookings: "Vedi le mie prenotazioni",
+    continueBooking: "Continua la prenotazione",
     customerAddressPlaceholder: "Indirizzo",
     customerAddressPlaceholderOptional: "Indirizzo (facoltativo)",
     notesPlaceholder: "Note (facoltativo)",
@@ -9166,6 +9820,14 @@ const it: Translations = {
     errorCancelThis: "Impossibile annullare questa prenotazione.",
     confirmCancelThis: "Annullare la prenotazione di {service} di {name} il {when}?",
     cancelledBadge: "Annullata",
+    tagCancelled: "Annullato",
+    tagCompleted: "Completato",
+    tagInProgress: "In corso",
+    tagToday: "Oggi",
+    tagTomorrow: "Domani",
+    tagInMinutes: "tra {n} min",
+    tagInHour: "tra 1 ora",
+    tagInHours: "tra {n} ore",
     whatsappAria: "WhatsApp di {name}",
     whatsappTitle: "Scrivi su WhatsApp",
     whatsappGreeting: "Ciao {name} 👋 — riguardo alla tua prenotazione di {service} il {when}:",
@@ -9276,6 +9938,7 @@ const it: Translations = {
     locationTimezoneLabel: "Fuso orario",
     locationTimezoneHint: "Lascia vuoto per usare il fuso orario predefinito dell'attività.",
     deleteLocation: "Elimina sede",
+    deleteLocationConfirm: "Rimuove la sede e tutto ciò che è collegato ad essa. L'azione non è reversibile.",
     editLocationAria: "Modifica {name}",
     newLocationDefaultName: "Nuova sede",
     unnamedLocation: "Sede senza nome",
@@ -9318,9 +9981,24 @@ const it: Translations = {
     timezoneLabel: "Fuso orario (IANA)",
     bufferLabel: "Intervallo tra prenotazioni (min)",
     servicesSection: "Servizi",
+    servicesSectionDesc: "Le prestazioni che i clienti possono prenotare, con durata e prezzo.",
+    bookingOptionsSection: "Opzioni della pagina di prenotazione",
+    durationLabel: "Durata",
+    priceLabel: "Prezzo",
+    freePlaceholder: "Gratis",
+    newService: "Nuovo servizio",
+    backToServices: "Torna ai servizi",
+    editServiceAria: "Modifica {name}",
+    noServicesTitle: "Ancora nessun servizio",
+    noServicesDesc: "Aggiungi le prestazioni che i clienti possono prenotare — ciascuna con durata e prezzo facoltativo.",
+    createFirstService: "Aggiungi il tuo primo servizio",
+    deleteService: "Elimina servizio",
+    anyoneCanPerform: "Chiunque nel team",
     addButton: "Aggiungi",
     showPricesLabel: "Mostra i prezzi nella pagina di prenotazione",
     showPricesDesc: "Se disattivato, i visitatori prenotano senza vedere i prezzi dei servizi.",
+    currencyLabel: "Valuta",
+    currencyDesc: "La valuta in cui vengono mostrati tutti i prezzi dei servizi.",
     collectAddressLabel: "Chiedi l'indirizzo del cliente",
     collectAddressDesc: "Mostra un campo indirizzo nella pagina di prenotazione — utile per servizi mobili o a domicilio.",
     addressRequiredLabel: "Rendi l'indirizzo obbligatorio",
@@ -9340,6 +10018,13 @@ const it: Translations = {
     confirmationMsgDesc: "Inviato quando un cliente prenota un appuntamento.",
     cancellationMsgTitle: "Cancellazione",
     cancellationMsgDesc: "Inviato quando una prenotazione viene annullata (da te o dal cliente).",
+    rescheduleMsgTitle: "Riprogrammazione",
+    rescheduleMsgDesc: "Inviato al cliente quando una prenotazione viene spostata a un nuovo orario.",
+    reminderMsgTitle: "Promemoria",
+    reminderMsgDesc: "Inviato al cliente circa 24 ore prima dell'appuntamento.",
+    defaultLocaleTab: "Predefinito",
+    addTranslation: "Aggiungi lingua",
+    translationFallbackNote: "Lascia un campo vuoto per usare il testo predefinito.",
     messageOffNotice: "Questo messaggio è disattivato — i clienti non lo riceveranno.",
     emailSubjectLabel: "Oggetto e-mail",
     emailSubjectPlaceholder: "Prenotazione confermata",
@@ -9366,6 +10051,15 @@ const it: Translations = {
     previousMonthAria: "Mese precedente",
     nextMonthAria: "Mese successivo",
     noBookingsOnDay: "Nessuna prenotazione in questo giorno.",
+    newBooking: "Nuova prenotazione",
+    newBookingHint: "Aggiungi un appuntamento per un cliente — ad esempio chi ha prenotato al telefono.",
+    manualCustomerHeading: "Dati del cliente",
+    manualEmailOptionalPlaceholder: "Email (facoltativa)",
+    manualCreateBooking: "Crea prenotazione",
+    manualBookingCreatedTitle: "Prenotazione creata",
+    manualBookingCreatedDesc: "L'appuntamento è stato aggiunto al tuo calendario.",
+    manualAddOnDay: "Aggiungi",
+    manualDone: "Fatto",
     chooseDateAria: "Scegli una data",
     timeSingular: "orario",
     timePlural: "orari",
@@ -9374,6 +10068,18 @@ const it: Translations = {
     savedMsg: "Salvato.",
     errorCouldNotSave: "Impossibile salvare.",
     newServiceDefaultName: "Nuovo servizio",
+    categoriesSection: "Categorie",
+    categoriesSectionDesc: "Raggruppa i tuoi servizi così i clienti possono sfogliarli per tipo.",
+    newCategory: "Nuova categoria",
+    newCategoryDefaultName: "Nuova categoria",
+    categoryNamePlaceholder: "Nome della categoria",
+    removeCategoryAria: "Rimuovi categoria",
+    uncategorized: "Altri servizi",
+    categoryLabel: "Categoria",
+    noCategoryOption: "Altri servizi",
+    manageCategories: "Gestisci",
+    allFilter: "Tutti",
+    noCategoriesYet: "Nessuna categoria ancora. Aggiungine una per raggruppare i tuoi servizi.",
     whatsappSimpleGreeting: "Ciao {name} 👋",
     widgetsPageTitle: "Widget",
     widgetsPageSubtitle: "Strumenti interattivi che vivono sopra il tuo profilo.",

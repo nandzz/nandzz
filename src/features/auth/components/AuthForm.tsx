@@ -5,12 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   signInWithPassword,
-  signUpWithMetadata,
+  signUpWithEmail,
   signInWithGoogle,
 } from "../auth";
+import { claimSignupProfile } from "../actions/claim-signup-profile";
+import { mapAuthError } from "../error-messages";
 import { safeNextPath } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -19,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+import { Sparkles, MailCheck } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 function GoogleIcon() {
@@ -45,38 +48,162 @@ function GoogleIcon() {
   );
 }
 
-export function AuthForm() {
+// The outcome of a successful email/password auth, handed to `onSuccess` so an
+// embedded caller (e.g. the booking widget) can react in place instead of
+// navigating away. Google is a full-page redirect and cannot report here.
+export type AuthResult = {
+  mode: "login" | "signup";
+  email: string;
+  displayName: string;
+};
+
+/**
+ * The single sign-in / sign-up form used across the app — full-page on
+ * `/login`, and embedded inside a modal wherever auth is asked for mid-flow
+ * (see `AuthModal`). One component so every entry point stays identical:
+ * same fields, same Google button, same validation.
+ *
+ * - `variant="page"` (default): renders inside a Card and, on success,
+ *   navigates to `next` — today's behavior, unchanged.
+ * - `variant="embedded"`: drops the Card chrome (the modal supplies the shell)
+ *   and, when `onSuccess` is given, reports the result instead of navigating.
+ * - `googleRedirectTo`: where Google returns to (defaults to
+ *   `/auth/callback?next=…`); embedded callers point it back at their own page.
+ */
+// The three views this form can show. "setup" is the choose-a-username step an
+// OAuth signup lands on once it has a session but no profile row yet — kept here
+// (not on a separate page) so callers can complete onboarding in place.
+type Mode = "login" | "signup" | "setup";
+
+export function AuthForm({
+  variant = "page",
+  onSuccess,
+  onGoogleRedirect,
+  googleRedirectTo,
+  subtitle,
+  defaultMode,
+  ctaLabel,
+  initialDisplayName,
+}: {
+  variant?: "page" | "embedded";
+  onSuccess?: (result: AuthResult) => void;
+  // Fired right before Google navigates away — a chance for embedded callers to
+  // persist in-progress state (e.g. a booking) so it survives the OAuth round
+  // trip and can be restored when the visitor returns.
+  onGoogleRedirect?: () => void;
+  googleRedirectTo?: string;
+  subtitle?: string;
+  defaultMode?: Mode;
+  // Overrides the primary button label in the "setup" step, so the CTA can read
+  // in the caller's terms (e.g. "Continue booking" instead of "Get started").
+  ctaLabel?: string;
+  // Seeds the display-name field (e.g. the name Google returned) so the setup
+  // step arrives pre-filled.
+  initialDisplayName?: string;
+} = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
+  const initialMode: Mode =
+    defaultMode ?? (searchParams.get("tab") === "signup" ? "signup" : "login");
   // Restrict to a same-origin path — this value is echoed back through
   // Supabase's OAuth redirectTo and could otherwise be used for an open
   // redirect (see safeNextPath).
   const next = safeNextPath(searchParams.get("next"), "/dashboard/contents");
 
-  const [mode, setMode] = useState<"login" | "signup">(defaultTab);
+  const [mode, setMode] = useState<Mode>(initialMode);
   const { t } = useLanguage();
 
   useEffect(() => {
+    // Page mode syncs to the ?tab= URL param; embedded/explicit-mode callers own
+    // their default and shouldn't be overridden by the host page's query string.
+    if (defaultMode) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sync the mode to the ?tab= URL param when the query string changes (external-state sync, not derived render state)
     setMode(searchParams.get("tab") === "signup" ? "signup" : "login");
-  }, [searchParams]);
+  }, [searchParams, defaultMode]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(initialDisplayName ?? "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Set when email-confirmation is on and signup returns no session: the form is
+  // replaced by a "check your email" panel. Confirming the link returns via
+  // `emailRedirectTo` → /auth/callback → the username setup step.
+  const [confirmSent, setConfirmSent] = useState(false);
+
+  // Where Google returns after OAuth. Embedded callers override this to come
+  // back to their own page; page mode keeps the /auth/callback → next flow.
+  const googleTarget = () =>
+    googleRedirectTo ??
+    `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
+  // Navigate (page mode) or hand the result back (embedded with onSuccess).
+  // `destination` overrides where page mode lands — a fresh signup goes to the
+  // new user's profile ("/<username>"), while login falls back to `next`. The
+  // profile destination uses a full-page navigation so the browser re-runs
+  // middleware with the just-created profile + session and server-renders it
+  // cleanly; a client-side transition to a brand-new profile route can stall on
+  // its first RSC fetch and never commit.
+  const finishSuccess = (result: AuthResult, destination?: string) => {
+    if (onSuccess) {
+      onSuccess(result);
+      return;
+    }
+    if (destination) {
+      window.location.assign(destination);
+      return;
+    }
+    router.push(next);
+    router.refresh();
+  };
 
   const handleGoogleSignIn = async () => {
     setError("");
     setLoading(true);
-    const { error } = await signInWithGoogle(
-      `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-    );
+    onGoogleRedirect?.();
+    const { error } = await signInWithGoogle(googleTarget());
     if (error) {
-      setError(error.message);
+      setError(mapAuthError(error.message, t));
+      setLoading(false);
+    }
+  };
+
+  // Completes an OAuth signup: claims the chosen username/profile, then reports
+  // success so an embedded caller can carry on (page mode navigates to `next`).
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const trimmed = username.trim().toLowerCase();
+    if (!/^[a-z0-9_-]{3,30}$/.test(trimmed)) {
+      setError(t.setup.usernameInvalid);
+      setLoading(false);
+      return;
+    }
+    try {
+      const result = await claimSignupProfile({
+        username: trimmed,
+        displayName: displayName.trim() || null,
+      });
+      if (!result.ok) {
+        if (result.error === "USERNAME_TAKEN") setError(t.setup.usernameTaken);
+        else if (result.error === "INVALID_USERNAME") setError(t.setup.usernameInvalid);
+        else if (result.error === "UNAUTHENTICATED") setError(t.common.error);
+        // Never surface the raw server message; map to safe localized copy.
+        else setError(mapAuthError(result.message, t));
+        return;
+      }
+      // A fresh signup lands on the new user's own profile page; embedded callers
+      // (booking) ignore the destination and continue in place via onSuccess.
+      finishSuccess(
+        { mode: "signup", email, displayName: displayName.trim() },
+        `/${trimmed}`
+      );
+    } catch {
+      setError(t.common.error);
+    } finally {
       setLoading(false);
     }
   };
@@ -88,47 +215,272 @@ export function AuthForm() {
 
     try {
       if (mode === "signup") {
-        const trimmedUsername = username.trim().toLowerCase();
-        if (!trimmedUsername) {
-          setError(t.auth.usernameRequired);
+        // Confirm the two password entries match before creating the account —
+        // email signup only (Google never reaches this branch).
+        if (password !== confirmPassword) {
+          setError(t.auth.passwordMismatch);
           setLoading(false);
           return;
         }
-        if (!/^[a-z0-9_-]{3,30}$/.test(trimmedUsername)) {
-          setError(t.auth.usernameInvalid);
-          setLoading(false);
-          return;
-        }
-
-        const { error } = await signUpWithMetadata({
+        // Step 1 of signup: create the account with email + password only. The
+        // username is chosen next, in the shared "setup" step — the same step
+        // Google signups complete — so both methods finish onboarding identically
+        // and (in a modal) never leave it.
+        const { error, hasSession } = await signUpWithEmail({
           email,
           password,
-          username: username.trim().toLowerCase(),
-          displayName: displayName.trim() || username.trim(),
+          // Where the confirmation link returns — same target Google uses, so
+          // /auth/callback picks up the session and routes to the username step.
+          emailRedirectTo: googleTarget(),
         });
 
         if (error) {
-          setError(error.message);
+          setError(mapAuthError(error.message, t));
+        } else if (hasSession) {
+          setMode("setup");
         } else {
-          router.push(next);
-          router.refresh();
+          // No session means email confirmation is enabled: the account exists
+          // but must be confirmed before a session (and the username step) can
+          // follow. Show the "check your email" panel instead of stalling.
+          setConfirmSent(true);
         }
       } else {
         const { error } = await signInWithPassword(email, password);
 
         if (error) {
-          setError(error.message);
+          setError(mapAuthError(error.message, t));
         } else {
-          router.push(next);
-          router.refresh();
+          finishSuccess({ mode: "login", email, displayName: "" });
         }
       }
     } catch {
-      setError("An unexpected error occurred");
+      setError(t.authErrors.generic);
     } finally {
       setLoading(false);
     }
   };
+
+  const title = confirmSent
+    ? t.auth.checkEmailTitle
+    : mode === "setup"
+    ? t.setup.title
+    : mode === "login"
+    ? t.auth.welcomeBack
+    : t.auth.createAccount;
+  const description = confirmSent
+    ? t.auth.checkEmailDesc.replace("{email}", email)
+    : mode === "setup"
+    ? t.setup.desc
+    : subtitle ??
+      (mode === "login" ? t.auth.loginDesc : t.auth.signupDesc);
+
+  // The choose-a-username step (OAuth signup completion). No Google button, no
+  // login/signup toggle — the visitor is already authenticated and only needs a
+  // username to finish. The primary CTA label is overridable (`ctaLabel`) so it
+  // can speak the caller's flow (e.g. "Continue booking").
+  const setupBody = (
+    <form onSubmit={handleSetup} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="setup-username">{t.setup.usernameLabel}</Label>
+        <Input
+          id="setup-username"
+          placeholder="johndoe"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          autoFocus
+          className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+        />
+        <p className="text-xs text-muted-foreground">{t.setup.usernameHint}</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="setup-displayName">
+          {t.setup.displayNameLabel}{" "}
+          <span className="text-muted-foreground font-normal">
+            {t.setup.displayNameOptional}
+          </span>
+        </Label>
+        <Input
+          id="setup-displayName"
+          placeholder="John Doe"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+        />
+      </div>
+
+      {error && (
+        <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? t.setup.settingUp : ctaLabel ?? t.setup.getStarted}
+      </Button>
+    </form>
+  );
+
+  // Shown after an email signup when confirmation is required: the account
+  // exists but is inactive until the link is clicked. No form to submit here —
+  // confirming returns via emailRedirectTo → /auth/callback → username setup.
+  const confirmBody = (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-4 py-3">
+        <MailCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+        <p className="text-sm text-green-700 dark:text-green-400">
+          {t.auth.checkEmailDesc.replace("{email}", email)}
+        </p>
+      </div>
+      <div className="text-center text-sm text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => {
+            setConfirmSent(false);
+            setMode("login");
+            setError("");
+          }}
+          className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline font-medium transition-colors"
+        >
+          {t.auth.login}
+        </button>
+      </div>
+    </div>
+  );
+
+  const formBody = (
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Signup collects only email + password here; the username is chosen in
+            the following "setup" step (shared with Google signups). */}
+        <div className="space-y-2">
+          <Label htmlFor="email">{t.auth.email}</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">{t.auth.password}</Label>
+            {mode === "login" && (
+              <Link
+                href="/forgot-password"
+                className="text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline transition-colors"
+              >
+                {t.auth.forgotPassword}
+              </Link>
+            )}
+          </div>
+          <PasswordInput
+            id="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+          />
+        </div>
+        {/* Confirm-password only on signup; login and OAuth never need it. */}
+        {mode === "signup" && (
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">{t.auth.confirmPassword}</Label>
+            <PasswordInput
+              id="confirmPassword"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
+            />
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? t.auth.loading : mode === "login" ? t.auth.login : t.auth.signup}
+        </Button>
+      </form>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border/60" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">{t.auth.or}</span>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full border-border/60 bg-muted/30 hover:bg-muted/60 transition-colors"
+        onClick={handleGoogleSignIn}
+        disabled={loading}
+      >
+        <GoogleIcon />
+        <span className="ml-2">{t.auth.continueGoogle}</span>
+      </Button>
+
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        {mode === "login" ? (
+          <>
+            {t.auth.noAccount}{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setMode("signup");
+                setError("");
+              }}
+              className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline font-medium transition-colors"
+            >
+              {t.auth.signup}
+            </button>
+          </>
+        ) : (
+          <>
+            {t.auth.hasAccount}{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
+              className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline font-medium transition-colors"
+            >
+              {t.auth.login}
+            </button>
+          </>
+        )}
+      </div>
+    </>
+  );
+
+  // Embedded: no Card chrome — the modal (or host) supplies the shell. A compact
+  // heading still renders here so it tracks the login/signup toggle.
+  if (variant === "embedded") {
+    return (
+      <div className="w-full">
+        <div className="mb-4 space-y-1">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        {confirmSent ? confirmBody : mode === "setup" ? setupBody : formBody}
+      </div>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md shadow-xl shadow-black/5 dark:shadow-black/20 border-border/60">
@@ -136,140 +488,11 @@ export function AuthForm() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
           <Sparkles className="h-6 w-6 text-violet-600 dark:text-violet-400" />
         </div>
-        <CardTitle className="text-2xl font-bold">
-          {mode === "login" ? t.auth.welcomeBack : t.auth.createAccount}
-        </CardTitle>
-        <CardDescription className="text-base">
-          {mode === "login" ? t.auth.loginDesc : t.auth.signupDesc}
-        </CardDescription>
+        <CardTitle className="text-2xl font-bold">{title}</CardTitle>
+        <CardDescription className="text-base">{description}</CardDescription>
       </CardHeader>
       <CardContent className="pt-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="username">{t.auth.username}</Label>
-                <Input
-                  id="username"
-                  placeholder="johndoe"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="displayName">{t.auth.displayName}</Label>
-                <Input
-                  id="displayName"
-                  placeholder="John Doe"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
-                />
-              </div>
-            </>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">{t.auth.email}</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">{t.auth.password}</Label>
-              {mode === "login" && (
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline transition-colors"
-                >
-                  {t.auth.forgotPassword}
-                </Link>
-              )}
-            </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="bg-muted/50 border-border/60 focus:border-violet-500/50 focus:bg-background transition-colors"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? t.auth.loading : mode === "login" ? t.auth.login : t.auth.signup}
-          </Button>
-        </form>
-
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border/60" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">{t.auth.or}</span>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full border-border/60 bg-muted/30 hover:bg-muted/60 transition-colors"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-        >
-          <GoogleIcon />
-          <span className="ml-2">{t.auth.continueGoogle}</span>
-        </Button>
-
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          {mode === "login" ? (
-            <>
-              {t.auth.noAccount}{" "}
-              <button
-                onClick={() => {
-                  setMode("signup");
-                  setError("");
-                }}
-                className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline font-medium transition-colors"
-              >
-                {t.auth.signup}
-              </button>
-            </>
-          ) : (
-            <>
-              {t.auth.hasAccount}{" "}
-              <button
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                }}
-                className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:underline font-medium transition-colors"
-              >
-                {t.auth.login}
-              </button>
-            </>
-          )}
-        </div>
+        {confirmSent ? confirmBody : mode === "setup" ? setupBody : formBody}
       </CardContent>
     </Card>
   );

@@ -1,14 +1,15 @@
 import "server-only";
 
 // Server-side dispatch of an owner-configured booking message. Renders the
-// template's variables, then fans out to the channel(s) the owner chose. Every
-// send is best-effort (Promise.allSettled) — messaging must never fail the
-// caller's request (the booking row is already committed).
+// template's variables, then sends over WhatsApp when the owner's channel
+// wants it. Booking EMAIL is no longer sent here — it goes through the Supabase
+// `booking-notifications` edge function (localized SES), the only send path
+// reachable in both environments. Every send is best-effort (Promise.allSettled)
+// — messaging must never fail the caller's request (the booking is committed).
 
-import { sendEmail } from "@/lib/email";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderTemplate } from "@/lib/widgets/messages";
-import { formatBookingTime, simpleEmailHtml } from "@/lib/widgets/emails";
+import { formatBookingTime } from "@/lib/widgets/emails";
 import type { MessageTemplate } from "@/lib/types";
 
 export type BookingMessageContext = {
@@ -54,19 +55,9 @@ export async function dispatchBookingMessage(
 
   const vars = bookingMessageVars(ctx);
   const body = renderTemplate(tpl.body, vars);
-  const wantEmail = tpl.channel === "email" || tpl.channel === "both";
   const wantWa = tpl.channel === "whatsapp" || tpl.channel === "both";
 
   const jobs: Promise<unknown>[] = [];
-  if (wantEmail && ctx.customerEmail) {
-    jobs.push(
-      sendEmail({
-        to: ctx.customerEmail,
-        subject: renderTemplate(tpl.subject, vars),
-        html: simpleEmailHtml(body),
-      })
-    );
-  }
   if (wantWa && ctx.customerPhone) {
     jobs.push(sendWhatsApp({ to: ctx.customerPhone, body }));
   }

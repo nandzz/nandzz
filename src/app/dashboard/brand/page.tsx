@@ -129,10 +129,8 @@ export default function BrandPage() {
           const publicUrl = await uploadBrandLogo(profile.id, logoFile);
           logo_url = `${publicUrl}?t=${Date.now()}`;
         } catch (uploadErr) {
-          setError(
-            t.brand.uploadLogoFailedPrefix +
-              (uploadErr instanceof Error ? uploadErr.message : "")
-          );
+          console.error("[brand] logo upload failed:", uploadErr);
+          setError(t.common.error);
           setLoading(false);
           return;
         }
@@ -145,7 +143,7 @@ export default function BrandPage() {
         brandDescription: brandDescription || null,
       });
 
-      if (!result.ok) throw new Error(result.message || t.common.error);
+      if (!result.ok) throw new Error(result.error || "brand_update_failed");
 
       await fetch("/api/profile/revalidate", {
         method: "POST",
@@ -157,8 +155,8 @@ export default function BrandPage() {
       window.dispatchEvent(new CustomEvent("profile-updated"));
       router.refresh();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t.common.error;
-      setError(message);
+      console.error("[brand] save failed:", err);
+      setError(t.common.error);
     } finally {
       setLoading(false);
     }

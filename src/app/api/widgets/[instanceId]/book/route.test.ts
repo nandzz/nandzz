@@ -83,8 +83,8 @@ beforeEach(() => {
 });
 
 describe("POST /api/widgets/[instanceId]/book", () => {
-  it("400s when a required field is missing", async () => {
-    const res = await POST(makeReq({ ...validBody, customer_email: undefined }), params());
+  it("400s when a required field (customer_name) is missing", async () => {
+    const res = await POST(makeReq({ ...validBody, customer_name: undefined }), params());
     expect(res.status).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
   });
@@ -92,6 +92,18 @@ describe("POST /api/widgets/[instanceId]/book", () => {
   it("400s when customer_phone is present but blank", async () => {
     const res = await POST(makeReq({ ...validBody, customer_phone: "   " }), params());
     expect(res.status).toBe(400);
+  });
+
+  it("allows a booking with no email (owner manual / phone-in), passing null email through", async () => {
+    mockRpcSingle.mockResolvedValue({ data: bookingRow({ customer_email: "" }), error: null });
+
+    const res = await POST(makeReq({ ...validBody, customer_email: undefined }), params());
+
+    expect(res.status).toBe(201);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "create_booking_tx",
+      expect.objectContaining({ p_customer_email: null })
+    );
   });
 
   it("creates the booking and returns 201 with a manage_url on success", async () => {

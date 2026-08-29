@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Check, History, LayoutGrid, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { BuyCreditsButton } from "./BuyCreditsButton";
 import { PlanCheckoutButton } from "./PlanCheckoutButton";
+import { ManageBillingButton } from "./ManageBillingButton";
 import type { CreditPack, CreditLedgerEntry, SubscriptionPlan } from "@/lib/types";
 import { getUserPlan } from "@/lib/plan";
 import { PageShell } from "@/components/layout/PageShell";
@@ -142,82 +143,108 @@ export default async function SubscriptionPage({
               )}
             </div>
             {isPaid && (
-              <form action="/api/stripe/portal" method="POST">
-                <Button type="submit" variant="outline" size="sm">Manage / cancel</Button>
-              </form>
+              <ManageBillingButton>Manage / cancel</ManageBillingButton>
             )}
           </div>
         </div>
 
-        {/* Plan chooser */}
-        {subscriptionPlans.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-lg font-semibold mb-4">Plans</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {subscriptionPlans.map((p) => {
-                const isCurrent = p.slug === plan.slug;
-                const highlighted = p.slug === "starter";
-                return (
-                  <div
-                    key={p.id}
-                    className={`relative rounded-2xl border p-6 flex flex-col ${
-                      isCurrent
-                        ? "border-violet-500 bg-card shadow-lg shadow-violet-500/10"
-                        : "border-border/60 bg-card"
-                    }`}
-                  >
-                    {highlighted && !isCurrent && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-0.5 text-[10px] font-semibold text-white">
-                          <Sparkles className="h-2.5 w-2.5" />
-                          POPULAR
-                        </span>
-                      </div>
-                    )}
-                    <p className="font-semibold">{p.name}</p>
-                    <div className="mt-2 flex items-baseline gap-1.5">
-                      <span className="text-3xl font-bold">
-                        {p.price_cents === 0 ? "Free" : formatPrice(p.price_cents, p.currency)}
-                      </span>
-                      {p.price_cents > 0 && (
-                        <span className="text-sm font-medium text-muted-foreground">/{p.billing_interval}</span>
-                      )}
-                    </div>
-                    <ul className="mt-4 mb-6 space-y-2 text-sm flex-1">
-                      <PlanFeature ok>{p.space_limit === null ? "Unlimited spaces" : `${p.space_limit} spaces`}</PlanFeature>
-                      <PlanFeature ok={p.has_widgets}>Widgets</PlanFeature>
-                      <PlanFeature ok={p.monthly_credits > 0}>
-                        {p.monthly_credits > 0 ? `${p.monthly_credits.toLocaleString()} AI credits/mo` : "No AI credits"}
-                      </PlanFeature>
-                      <PlanFeature ok={p.has_mcp}>MCP access</PlanFeature>
-                      <PlanFeature ok={p.has_analytics}>Analytics</PlanFeature>
-                    </ul>
-                    <div className="mt-auto">
-                      {isCurrent ? (
-                        <Button type="button" variant="outline" className="w-full" disabled>
-                          Current plan
-                        </Button>
-                      ) : p.slug === "free" ? (
-                        // Leaving a paid plan for Free = cancel via the portal.
-                        <form action="/api/stripe/portal" method="POST">
-                          <Button type="submit" variant="outline" className="w-full">
-                            Cancel plan
-                          </Button>
-                        </form>
-                      ) : (
-                        <PlanCheckoutButton
-                          planSlug={p.slug}
-                          label={p.sort_order > currentSort ? "Upgrade" : "Downgrade"}
-                          variant={highlighted ? "default" : "outline"}
-                        />
-                      )}
-                    </div>
+        {/* Plan chooser — only ever surfaces plans *above* the current tier.
+            Downgrading or cancelling is handled through the Stripe portal
+            ("Manage / cancel" on the current-plan card), so we never re-list the
+            active plan or lower tiers here. A paid user on the top tier sees a
+            "top plan" state instead of an empty grid. */}
+        {subscriptionPlans.length > 0 && (() => {
+          const upgradePlans = subscriptionPlans.filter(
+            (p) => p.slug !== "free" && p.sort_order > currentSort,
+          );
+          return (
+            <div className="mb-10">
+              <h2 className="text-lg font-semibold mb-4">
+                {isPaid ? "Upgrade your plan" : "Plans"}
+              </h2>
+              {upgradePlans.length === 0 ? (
+                <div className="rounded-2xl border border-border/60 bg-card p-6 flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 dark:bg-violet-900/40">
+                    <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                   </div>
-                );
-              })}
+                  <div>
+                    <p className="font-semibold">You&apos;re on our top plan</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      You have access to every feature. Need more AI credits? Grab a credit pack below.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`grid gap-4 ${
+                    upgradePlans.length === 1 ? "sm:max-w-md" : "sm:grid-cols-2"
+                  }`}
+                >
+                  {upgradePlans.map((p, idx) => {
+                    // Draw the eye to the immediate next tier.
+                    const recommended = idx === 0;
+                    return (
+                      <div
+                        key={p.id}
+                        className={`relative rounded-2xl border p-6 flex flex-col ${
+                          recommended
+                            ? "border-violet-500 bg-card shadow-lg shadow-violet-500/10"
+                            : "border-border/60 bg-card"
+                        }`}
+                      >
+                        {p.slug === "starter" && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-0.5 text-[10px] font-semibold text-white">
+                              <Sparkles className="h-2.5 w-2.5" />
+                              POPULAR
+                            </span>
+                          </div>
+                        )}
+                        <p className="font-semibold">{p.name}</p>
+                        <div className="mt-2 flex items-baseline gap-1.5">
+                          <span className="text-3xl font-bold">
+                            {p.price_cents === 0 ? "Free" : formatPrice(p.price_cents, p.currency)}
+                          </span>
+                          {p.price_cents > 0 && (
+                            <span className="text-sm font-medium text-muted-foreground">/{p.billing_interval}</span>
+                          )}
+                        </div>
+                        {p.price_cents > 0 && p.trial_days > 0 && (
+                          <p className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+                            <Sparkles className="h-2.5 w-2.5" />
+                            {p.trial_days}-day free trial
+                          </p>
+                        )}
+                        <ul className="mt-4 mb-6 space-y-2 text-sm flex-1">
+                          <PlanFeature ok>{p.space_limit === null ? "Unlimited spaces" : `${p.space_limit} spaces`}</PlanFeature>
+                          <PlanFeature ok={p.has_widgets}>Widgets</PlanFeature>
+                          <PlanFeature ok={p.monthly_credits > 0}>
+                            {p.monthly_credits > 0 ? `${p.monthly_credits.toLocaleString()} AI credits/mo` : "No AI credits"}
+                          </PlanFeature>
+                          <PlanFeature ok={p.has_mcp}>MCP access</PlanFeature>
+                          <PlanFeature ok={p.has_analytics}>Analytics</PlanFeature>
+                        </ul>
+                        <div className="mt-auto">
+                          <PlanCheckoutButton
+                            planSlug={p.slug}
+                            label={
+                              // Trials only apply to a first paid subscription;
+                              // an already-paying user upgrading just "Upgrade"s.
+                              !isPaid && p.trial_days > 0
+                                ? `Start ${p.trial_days}-day free trial`
+                                : "Upgrade"
+                            }
+                            variant={recommended ? "default" : "outline"}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Credit balances */}
         <div className="rounded-2xl border border-border/60 bg-card p-6 mb-8">
@@ -396,11 +423,7 @@ export default async function SubscriptionPage({
           {isPaid && (
             <>
               {" · "}
-              <form action="/api/stripe/portal" method="POST" className="inline">
-                <button type="submit" className="underline underline-offset-2 hover:text-foreground">
-                  View invoices →
-                </button>
-              </form>
+              <ManageBillingButton variant="link">View invoices →</ManageBillingButton>
             </>
           )}
         </div>

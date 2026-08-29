@@ -7,7 +7,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import type { Translations } from "@/lib/i18n/translations";
 
 export type CustomerSummary = {
-  email: string;
+  // Stable rollup key: the lowercased email, or `phone:<phone>` for a phone-in
+  // (email-less) customer. Used as the React key since `email` may be empty.
+  id: string;
+  email: string; // may be "" for a phone-only customer
   name: string;
   phone: string | null;
   bookings: number; // confirmed, all time
@@ -88,7 +91,7 @@ export function WidgetCustomers({ data }: { data: WidgetCustomersData }) {
         <div className="divide-y divide-border">
           {filtered.map((c) => (
             <CustomerRow
-              key={c.email}
+              key={c.id}
               c={c}
               money={money}
               fmtDay={(iso) => fmtDay.format(new Date(iso))}
@@ -143,7 +146,7 @@ function CustomerRow({
             </span>
           )}
         </div>
-        <p className="truncate text-sm text-muted-foreground">{c.email}</p>
+        <p className="truncate text-sm text-muted-foreground">{c.email || c.phone || "—"}</p>
       </div>
 
       <div className="hidden text-right sm:block">
@@ -179,14 +182,16 @@ function CustomerRow({
             <MessageCircle className="h-4 w-4" />
           </a>
         )}
-        <a
-          href={`mailto:${c.email}`}
-          className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          aria-label={t.booking.emailAria.replace("{name}", c.name)}
-          title={t.booking.emailTitle}
-        >
-          <Mail className="h-4 w-4" />
-        </a>
+        {c.email && (
+          <a
+            href={`mailto:${c.email}`}
+            className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            aria-label={t.booking.emailAria.replace("{name}", c.name)}
+            title={t.booking.emailTitle}
+          >
+            <Mail className="h-4 w-4" />
+          </a>
+        )}
       </div>
     </div>
   );

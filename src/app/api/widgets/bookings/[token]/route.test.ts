@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET, DELETE, PATCH } from "./route";
 import type { CalendarConfig, WidgetBooking } from "@/lib/types";
 
@@ -8,6 +8,7 @@ const mockOthersResult = vi.fn();
 const mockRescheduleUpdateResults: { data: unknown; error: unknown }[] = [];
 let rescheduleCallIndex = 0;
 const mockDispatch = vi.fn();
+const mockUpdatePatch = vi.fn();
 
 // `widget_bookings` is queried three shapes in this route:
 //  1. loadBooking: select(...).eq("manage_token", token).maybeSingle()
@@ -35,6 +36,7 @@ const mockFrom = vi.fn(() => ({
     return chainable(mockOthersResult);
   },
   update: (patch: Record<string, unknown>) => {
+    mockUpdatePatch(patch);
     if ("status" in patch && patch.status === "cancelled") {
       // DELETE: update(...).eq("manage_token", token) -> {error}
       return { eq: () => Promise.resolve(mockUpdateStatusResult()) };
@@ -60,6 +62,14 @@ vi.mock("@/lib/widgets/notify", () => ({
   dispatchBookingMessage: (...args: unknown[]) => mockDispatch(...args),
 }));
 
+// Cancel/reschedule email now flows from a DB trigger; Next only records who
+// acted via `notify_actor` in the UPDATE. resolveActor() reads the SSR session —
+// default it to "no user" so the resolved actor is "customer".
+const mockGetUser = vi.fn(async () => ({ data: { user: null } }));
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({ auth: { getUser: mockGetUser } }),
+}));
+
 function params(token = "tok_1") {
   return { params: Promise.resolve({ token }) };
 }
@@ -73,6 +83,7 @@ function patchReq(body: unknown) {
 
 const config: CalendarConfig = {
   timezone: "UTC",
+  currency: "eur",
   buffer_min: 0,
   show_prices: true,
   collect_address: false,
@@ -85,6 +96,8 @@ const config: CalendarConfig = {
   messages: {
     confirmation: { channel: "off", subject: "", body: "" },
     cancellation: { channel: "both", subject: "Cancelled", body: "Sorry {{customer_first_name}}" },
+    reschedule: { channel: "off", subject: "", body: "" },
+    reminder: { channel: "off", subject: "", body: "" },
   },
 };
 
@@ -181,6 +194,10 @@ describe("DELETE /api/widgets/bookings/[token]", () => {
     expect(res.status).toBe(200);
     expect(body).toEqual({ ok: true, status: "cancelled" });
     expect(mockDispatch).toHaveBeenCalledTimes(1);
+    // Email is fired by the DB trigger off notify_actor written into the UPDATE.
+    expect(mockUpdatePatch).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cancelled", notify_actor: "customer" })
+    );
   });
 
   it("does not re-send the cancellation message on a double-cancel", async () => {
@@ -206,6 +223,17 @@ describe("DELETE /api/widgets/bookings/[token]", () => {
 });
 
 describe("PATCH /api/widgets/bookings/[token] (reschedule)", () => {
+  // The fixtures target Aug 2026 slots; freeze "now" just before them so the
+  // reschedule's lead-time filter treats those slots as bookable regardless of
+  // the wall clock (otherwise the suite rots once real time passes the dates).
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-08-05T00:00:00.000Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("400s when starts_at is missing", async () => {
     const res = await PATCH(patchReq({}), params());
     expect(res.status).toBe(400);
@@ -256,6 +284,10 @@ describe("PATCH /api/widgets/bookings/[token] (reschedule)", () => {
 
     expect(res.status).toBe(200);
     expect(body).toMatchObject({ ok: true, starts_at: "2026-08-11T09:00:00.000Z" });
+    // Email is fired by the DB trigger off notify_actor written into the UPDATE.
+    expect(mockUpdatePatch).toHaveBeenCalledWith(
+      expect.objectContaining({ notify_actor: "customer" })
+    );
   });
 
   it("409s with 'just taken' when every update attempt hits the exclusion constraint", async () => {

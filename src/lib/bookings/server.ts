@@ -38,8 +38,6 @@ type OwnerRow = {
 type InstanceRow = {
   id: string;
   config: Record<string, unknown> | null;
-  // Embedded to-one catalog; PostgREST may hand it back as an object or array.
-  catalog: { currency: string | null } | { currency: string | null }[] | null;
 };
 
 export function normalizeFilter(value: string | null | undefined): BookingFilter {
@@ -95,7 +93,7 @@ export async function fetchBookerBookings(
     instanceIds.length
       ? admin
           .from("widget_instances")
-          .select("id, config, catalog:widget_catalog(currency)")
+          .select("id, config")
           .in("id", instanceIds)
       : Promise.resolve({ data: [] as InstanceRow[] }),
   ]);
@@ -108,7 +106,8 @@ export async function fetchBookerBookings(
   const bookings: BookerBooking[] = rows.map((b) => {
     const owner = ownerMap.get(b.owner_user_id);
     const instance = instanceMap.get(b.instance_id);
-    const catalog = Array.isArray(instance?.catalog) ? instance?.catalog[0] : instance?.catalog;
+    // Currency lives on the calendar config (owner-selected), not the catalog.
+    const config = normalizeCalendarConfig(instance?.config);
     return {
       ...b,
       business: owner
@@ -118,8 +117,8 @@ export async function fetchBookerBookings(
             avatar_url: owner.avatar_url ?? null,
           }
         : null,
-      currencySymbol: currencySymbol(catalog?.currency),
-      timezone: normalizeCalendarConfig(instance?.config).timezone,
+      currencySymbol: currencySymbol(config.currency),
+      timezone: config.timezone,
     };
   });
 

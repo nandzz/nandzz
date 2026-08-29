@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { updateUserPassword } from "../auth";
+import { mapAuthError } from "../error-messages";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -33,7 +34,7 @@ export function ChangePasswordForm() {
     try {
       const { error } = await updateUserPassword(newPassword);
       if (error) {
-        setError(error.message);
+        setError(mapAuthError(error.message, t));
       } else {
         setSuccess(true);
         setNewPassword("");
@@ -50,9 +51,8 @@ export function ChangePasswordForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="newPassword">{t.passwordForm.newPassword}</Label>
-        <Input
+        <PasswordInput
           id="newPassword"
-          type="password"
           placeholder="••••••••"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
@@ -63,9 +63,8 @@ export function ChangePasswordForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">{t.passwordForm.confirmPassword}</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           placeholder="••••••••"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}

@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { Home, Plus, LayoutGrid, User, LogIn, Rss } from "lucide-react";
-import type { ProfileLite } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Home, Plus, LayoutGrid, User, LogIn, Rss } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChrome } from "@/contexts/ChromeContext";
-import { getSessionUser, onAuthChange, fetchProfileLite } from "../auth";
+import { useAuth } from "../AuthContext";
 
 type TabDef = {
   href: string;
@@ -23,9 +21,12 @@ const UNAUTH_TAB_DEFS: TabDef[] = [
   { href: "/login", labelKey: "signIn", icon: LogIn, isActive: (p) => p.startsWith("/login") },
 ];
 
-function getAuthTabDefs(username: string | null): TabDef[] {
+function getAuthTabDefs(username: string | null, isBusiness: boolean): TabDef[] {
   return [
-    { href: "/dashboard/feed", labelKey: "feed", icon: Rss, isActive: (p) => p.startsWith("/dashboard/feed") },
+    // Feed is personal-only; a business leads with Home instead.
+    isBusiness
+      ? { href: "/", labelKey: "home", icon: Home, isActive: (p) => p === "/" }
+      : { href: "/dashboard/feed", labelKey: "feed", icon: Rss, isActive: (p) => p.startsWith("/dashboard/feed") },
     { href: "/dashboard/contents/create-space", labelKey: "create", icon: Plus, isActive: (p) => p.startsWith("/dashboard/contents/create-space"), highlight: true },
     { href: "/dashboard/contents", labelKey: "spaces", icon: LayoutGrid, isActive: (p) => p === "/dashboard/contents" || (p.startsWith("/dashboard/contents") && !p.startsWith("/dashboard/contents/create-space")) },
     { href: username ? `/${username}` : "/dashboard/settings", labelKey: "profile", icon: User, isActive: (p) => username ? p === `/${username}` : false },
@@ -36,34 +37,11 @@ export function MobileTabBar() {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { isHidden } = useChrome();
-  const [user, setUser] = useState<{ id: string } | null>(null);
-  const [profile, setProfile] = useState<ProfileLite | null>(null);
+  const { userId, profile } = useAuth();
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    const data = await fetchProfileLite(userId);
-    if (data) setProfile(data);
-  }, []);
-
-  useEffect(() => {
-    getSessionUser().then((u) => {
-      if (u) {
-        setUser(u);
-        fetchProfile(u.id);
-      }
-    });
-
-    return onAuthChange((u) => {
-      if (u) {
-        setUser(u);
-        fetchProfile(u.id);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-    });
-  }, [fetchProfile]);
-
-  const tabDefs = user ? getAuthTabDefs(profile?.username ?? null) : UNAUTH_TAB_DEFS;
+  const tabDefs = userId
+    ? getAuthTabDefs(profile?.username ?? null, profile?.account_type === "business")
+    : UNAUTH_TAB_DEFS;
 
   return (
     <nav

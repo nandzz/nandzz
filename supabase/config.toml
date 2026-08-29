@@ -5,6 +5,32 @@ project_id = "nandzz"
 # below is only what `supabase functions deploy` and `supabase db push` use
 # when targeting the cloud project.
 
+# Phone verification (Settings → "Numero di telefono") uses Supabase Auth's
+# built-in phone OTP via Twilio Verify — Twilio generates/validates the code.
+# This is configured in the Supabase DASHBOARD (Authentication → Sign In /
+# Providers → Phone → enable → Twilio Verify), NOT via `supabase config push`:
+# pushing the block below would reconcile the WHOLE [auth] config and, since this
+# file declares no site_url / redirect URLs / external providers, could reset the
+# dashboard-managed Google OAuth + redirect URLs to CLI defaults. Kept commented
+# out for that reason — it documents the exact provider setup, nothing more.
+#
+# Dashboard fields:
+#   Account SID          = Twilio Account SID (AC…) — same account as WhatsApp
+#   Auth Token           = Twilio Auth Token (the TWILIO_AUTH_TOKEN secret)
+#   Message Service SID  = Twilio *Verify Service* SID (VA…), created in
+#                          Twilio Console → Verify → Services (NOT the WhatsApp/
+#                          Messaging sender — that one can't send auth SMS).
+#
+# [auth.sms]
+# enable_signup = true
+# enable_confirmations = true
+#
+# [auth.sms.twilio_verify]
+# enabled = true
+# account_sid = "AC…"                 # Twilio Account SID
+# message_service_sid = "VA…"         # Twilio Verify Service SID
+# auth_token = "env(TWILIO_AUTH_TOKEN)"
+
 [functions.agent-chat]
 verify_jwt = true
 
@@ -21,6 +47,11 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.stripe-webhook]
+verify_jwt = false
+
+# Authorized via the shared-secret header `x-booking-notify-secret`, not a
+# Supabase JWT (called by the DB trigger, pg_cron, and Next.js server routes).
+[functions.booking-notifications]
 verify_jwt = false
 
 # MCP server uses its own PAT-based auth (mcp_tokens table), not Supabase JWTs.

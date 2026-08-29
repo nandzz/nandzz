@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 25;
 
 export default async function FeedPage({
   searchParams,
@@ -33,6 +33,16 @@ export default async function FeedPage({
 
   const userId = await getUserIdFromClaims(supabase);
   if (!userId) redirect("/login");
+
+  // The feed is a personal-account capability: a business gets followed and
+  // booked rather than following creators, so it has no feed. Send business
+  // accounts back to their content dashboard.
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("account_type")
+    .eq("id", userId)
+    .single();
+  if (me?.account_type === "business") redirect("/dashboard/contents");
 
   const followingIds = await getFollowingIds(supabase, userId);
 
@@ -51,6 +61,10 @@ export default async function FeedPage({
         .select("*, profiles(username, display_name, avatar_url)", { count: "exact" })
         .in("user_id", followingIds)
         .eq("is_public", true)
+        // Feed is publications + photos only — links and videos belong to the
+        // profile's Links section, not the feed. Legacy rows with a null
+        // content_type fall back to a publication, so keep them too.
+        .or("content_type.is.null,content_type.not.in.(link,video)")
         .order("created_at", { ascending: false })
         .range(from, to),
       getAllLikedSpaceIds(supabase, userId),

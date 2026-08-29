@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicWidgetById } from "@/features/booking/server";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
+import { currencySymbol } from "@/lib/widgets/messages";
 import { renderWidgetIcon, CalendarBookingFlow } from "@/features/booking";
 import { ShareMenu } from "@/features/spaces";
 import { BackButton } from "@/components/ui/BackButton";
@@ -144,10 +145,12 @@ export default async function WidgetPage({
               instanceId={widget.id}
               locations={config.locations}
               services={config.services}
+              categories={config.categories}
               timezone={config.timezone}
               businessName={displayName}
               staff={config.staff}
               showPrices={config.show_prices}
+              currencySymbol={currencySymbol(config.currency)}
               collectAddress={config.collect_address}
               addressRequired={config.address_required}
             />

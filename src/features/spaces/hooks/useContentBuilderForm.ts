@@ -275,7 +275,8 @@ export function useContentBuilderForm({
         try {
           preview_image_url = await uploadSpacePreviewImage(userId, previewImage);
         } catch (uploadErr) {
-          setError(t.contentBuilder.uploadImageFailedPrefix + (uploadErr as Error).message);
+          console.error("[content-builder] preview upload failed:", uploadErr);
+          setError(t.contentBuilder.genericError);
           setLoading(false);
           return;
         }
@@ -339,15 +340,10 @@ export function useContentBuilderForm({
       // Let framework control-flow errors (redirect, notFound, …) propagate so
       // Next.js can handle the navigation instead of us swallowing them.
       unstable_rethrow(err);
-      const supaErr = err as {
-        message?: string;
-        details?: string;
-        hint?: string;
-        code?: string;
-      };
-      const message = supaErr?.message || (err instanceof Error ? err.message : t.contentBuilder.genericError);
-      const details = supaErr?.details || supaErr?.hint || "";
-      setError(details ? `${message} — ${details}` : message);
+      // Never surface the raw Supabase message/details/hint to the user — those
+      // leak DB internals and are un-localized. Log the raw error, show generic.
+      console.error("[content-builder] save failed:", err);
+      setError(t.contentBuilder.genericError);
     } finally {
       setLoading(false);
     }

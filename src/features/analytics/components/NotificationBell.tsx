@@ -133,7 +133,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                 onClick={() => {
                   if (n.type === "new_booking") {
                     const { instance_id } = n.payload as { instance_id: string };
-                    router.push(`/dashboard/widgets/${instance_id}?tab=bookings`);
+                    router.push(`/dashboard/widgets/${instance_id}/bookings`);
                     setOpen(false);
                     return;
                   }

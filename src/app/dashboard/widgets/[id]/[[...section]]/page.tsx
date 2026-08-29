@@ -7,20 +7,25 @@ import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOwnerWidgetById } from "@/features/booking/server";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
+import { currencySymbol } from "@/lib/widgets/messages";
 import { renderWidgetIcon, WidgetWorkspace, AgentWidgetWorkspace } from "@/features/booking";
+import {
+  fetchOverviewData,
+  fetchCalendarData,
+  fetchListData,
+  fetchCustomersData,
+} from "@/features/booking/dashboardData";
 import { LocaleSelect } from "@/components/layout/LocaleSelect";
 import { ChevronLeft } from "lucide-react";
-import type { WidgetBooking } from "@/lib/types";
 import { getServerTranslations, getCurrentLocale } from "@/lib/i18n/server";
-
-const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", eur: "€", gbp: "£" };
+import { tabFromSegment } from "@/features/booking/widgetTabs";
 
 export default async function WidgetStudioPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; section?: string[] }>;
 }) {
-  const { id } = await params;
+  const { id, section } = await params;
   const supabase = await createClient();
   const userId = await getUserIdFromClaims(supabase);
   if (!userId) redirect("/login");
@@ -30,6 +35,19 @@ export default async function WidgetStudioPage({
 
   const slug = widget.catalog.slug;
   if (slug !== "calendar" && slug !== "agent") notFound();
+
+  // The tab lives in the path as a single segment
+  // (`/dashboard/widgets/{id}/{segment}`); anything deeper, or an unknown
+  // segment, isn't a real studio route. The agent widget has no tabbed
+  // workspace, so it only serves its base path.
+  if (section && section.length > 1) notFound();
+  const sectionSeg = section?.[0];
+  const initialTab = tabFromSegment(sectionSeg);
+  if (slug === "agent") {
+    if (sectionSeg) notFound();
+  } else if (initialTab === null) {
+    notFound();
+  }
 
   const admin = createAdminClient();
   const [t, locale, { data: profile }] = await Promise.all([
@@ -85,14 +103,13 @@ export default async function WidgetStudioPage({
         />
       ) : (
         <CalendarWorkspaceLoader
-          admin={admin}
           instanceId={widget.id}
           hasAccess={widget.has_access}
           enabled={widget.enabled}
           config={widget.config}
-          currency={widget.catalog.currency}
           username={profile?.username}
           locale={locale}
+          initialTab={initialTab ?? "overview"}
         />
       )}
     </div>
@@ -103,36 +120,59 @@ export default async function WidgetStudioPage({
 // needs (bookings for calendar, usage-period lookup for agent).
 
 async function CalendarWorkspaceLoader({
-  admin,
   instanceId,
   hasAccess,
   enabled,
   config,
-  currency,
   username,
   locale,
+  initialTab,
 }: {
-  admin: ReturnType<typeof createAdminClient>;
   instanceId: string;
   hasAccess: boolean;
   enabled: boolean;
   config: Record<string, unknown>;
-  currency: string;
   username?: string;
   locale: Awaited<ReturnType<typeof getCurrentLocale>>;
+  initialTab: string;
 }) {
-  const { data: bookingRows } = await admin
-    .from("widget_bookings")
-    .select("*")
-    .eq("instance_id", instanceId)
-    .order("starts_at", { ascending: true });
-
-  const bookings = (bookingRows ?? []) as WidgetBooking[];
   const normalizedConfig = normalizeCalendarConfig(config);
-  const currencySymbol = CURRENCY_SYMBOLS[currency?.toLowerCase()] ?? currency?.toUpperCase() ?? "$";
+  const symbol = currencySymbol(normalizedConfig.currency);
 
   const canShare = hasAccess && enabled && !!username;
   const shareUrl = canShare ? `/${username}/widget/${instanceId}` : null;
+
+  // Default the first-paint scope to the first location — this matches the
+  // client's first render (before localStorage restores a prior pick), so the
+  // seeded data lines up and the client only refetches if that pick differs.
+  const locationId = normalizedConfig.locations[0]?.id ?? null;
+  const location = locationId ? normalizedConfig.locations.find((l) => l.id === locationId) ?? null : null;
+  const timezone = location?.timezone || normalizedConfig.timezone;
+  const monthKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+  }).format(new Date());
+
+  // First-paint payload: every tab's initial slice, bounded — the same functions
+  // the /dashboard API route serves for later interactions. Read through the
+  // RLS-scoped session client (owner reads their own rows; the customers RPC
+  // needs auth.uid()).
+  const supabase = await createClient();
+  const [overview, calendar, list, customers] = await Promise.all([
+    fetchOverviewData(supabase, {
+      instanceId,
+      locationId,
+      timezone,
+      currencySymbol: symbol,
+      locale,
+      period: "month",
+      shareUrl,
+    }),
+    fetchCalendarData(supabase, { instanceId, locationId, monthKey, timezone }),
+    fetchListData(supabase, { instanceId, locationId, filter: "all", query: "", limit: 12, offset: 0 }),
+    fetchCustomersData(supabase, { instanceId, locationId, timezone, currencySymbol: symbol }),
+  ]);
 
   return (
     <Suspense>
@@ -141,10 +181,10 @@ async function CalendarWorkspaceLoader({
         hasAccess={hasAccess}
         enabled={enabled}
         config={normalizedConfig}
-        allBookings={bookings}
-        currencySymbol={currencySymbol}
+        initial={{ locationId, overview, calendar, list, customers }}
+        currencySymbol={symbol}
         shareUrl={shareUrl}
-        locale={locale}
+        initialTab={initialTab}
       />
     </Suspense>
   );

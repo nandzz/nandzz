@@ -375,6 +375,7 @@ describe("normalizeLocation", () => {
       photo_url: undefined,
       timezone: undefined,
       services: [],
+      categories: [],
       staff: [],
       availability: {},
       blackout_dates: undefined,

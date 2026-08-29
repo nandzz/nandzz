@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserEntitlements } from "@/lib/plan";
 import { defaultCalendarConfig } from "@/lib/widgets/calendar";
+import { suggestedCurrencyForLocale } from "@/lib/widgets/messages";
+import { getCurrentLocale } from "@/lib/i18n/server";
 import { createWidgetInstanceSchema } from "../schemas";
 
 export type CreateWidgetInstanceResult =
@@ -63,9 +65,11 @@ export async function createWidgetInstance(input: {
     .maybeSingle();
   if (existing?.id) return { ok: true, id: existing.id as string };
 
+  // Seed a new calendar widget's currency from the owner's locale (they can
+  // change it in the services editor); other widget types don't price.
   const seedConfig =
     widget.slug === "calendar"
-      ? defaultCalendarConfig()
+      ? { ...defaultCalendarConfig(), currency: suggestedCurrencyForLocale(await getCurrentLocale()) }
       : widget.slug === "agent"
         ? { enabled: true }
         : {};

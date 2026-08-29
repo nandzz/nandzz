@@ -12,7 +12,11 @@ const inputCls = "rounded-lg border border-border bg-background px-2.5 py-1.5 te
 interface Props {
   location: Location;
   uploading: boolean;
-  onBack: () => void;
+  // When rendered inside LocationFormModal the modal supplies its own header,
+  // Cancel/Save/Delete footer and panel chrome, so the standalone back button,
+  // the bordered section wrapper and the in-body danger zone are all dropped.
+  inModal?: boolean;
+  onBack?: () => void;
   onOpenPhotoPicker: (locationId: string) => void;
   onUpdate: (id: string, fields: Partial<Location>) => void;
   onRemove: (id: string) => void;
@@ -32,6 +36,7 @@ interface Props {
 export function LocationEditor({
   location,
   uploading,
+  inModal = false,
   onBack,
   onOpenPhotoPicker,
   onUpdate,
@@ -52,17 +57,20 @@ export function LocationEditor({
     sat: t.booking.weekdaySat,
     sun: t.booking.weekdaySun,
   };
+  const Wrapper = inModal ? "div" : "section";
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex items-center gap-1.5 rounded-lg py-1 text-sm font-medium text-muted-foreground outline-none transition hover:text-foreground focus-visible:ring-2 focus-visible:ring-emerald-400"
-      >
-        <ArrowLeft className="h-4 w-4" /> {t.booking.backToLocations}
-      </button>
+    <div className={inModal ? "" : "space-y-4"}>
+      {!inModal && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 rounded-lg py-1 text-sm font-medium text-muted-foreground outline-none transition hover:text-foreground focus-visible:ring-2 focus-visible:ring-emerald-400"
+        >
+          <ArrowLeft className="h-4 w-4" /> {t.booking.backToLocations}
+        </button>
+      )}
 
-      <section className="rounded-2xl border border-border bg-background p-5 space-y-6">
+      <Wrapper className={inModal ? "space-y-6" : "rounded-2xl border border-border bg-background p-5 space-y-6"}>
         {/* Identity: photo + name + address + timezone */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <button
@@ -208,17 +216,19 @@ export function LocationEditor({
           </div>
         </div>
 
-        {/* Danger zone */}
-        <div className="flex justify-end border-t border-border pt-4">
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => onRemove(location.id)}
-          >
-            <Trash2 className="h-4 w-4" /> {t.booking.deleteLocation}
-          </Button>
-        </div>
-      </section>
+        {/* Danger zone — the modal moves delete into its own footer instead. */}
+        {!inModal && (
+          <div className="flex justify-end border-t border-border pt-4">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onRemove(location.id)}
+            >
+              <Trash2 className="h-4 w-4" /> {t.booking.deleteLocation}
+            </Button>
+          </div>
+        )}
+      </Wrapper>
     </div>
   );
 }

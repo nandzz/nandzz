@@ -41,6 +41,10 @@ vi.mock("@/lib/plan", () => ({
   getUserEntitlements: async () => entitlements,
 }));
 
+vi.mock("@/lib/i18n/server", () => ({
+  getCurrentLocale: async () => "en",
+}));
+
 import { createWidgetInstance } from "./create-widget-instance";
 
 beforeEach(() => {

@@ -5,6 +5,7 @@ import { mapBookingError } from "@/lib/widgets/booking-errors";
 import { normalizeCalendarConfig } from "@/lib/widgets/calendar";
 import { currencySymbol } from "@/lib/widgets/messages";
 import { dispatchBookingMessage } from "@/lib/widgets/notify";
+import { detectLocale, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/translations";
 import type { WidgetBooking } from "@/lib/types";
 
 // Public: create a booking. Entitlement, availability and overlap are enforced
@@ -26,6 +27,7 @@ export async function POST(
     notes?: string;
     staff_id?: string | null;
     location_id?: string | null;
+    locale?: string;
   };
 
   // Multi-service: prefer the explicit list, falling back to the single
@@ -40,17 +42,19 @@ export async function POST(
     .map((s) => (typeof s === "string" ? s.trim() : ""))
     .filter(Boolean);
 
-  // The public web form requires a phone number (the MCP/AI programmatic path
-  // stays lenient — see create_booking_tx, which keeps customer_phone nullable).
+  // The public web form and the owner's manual-booking flow both require a name
+  // and phone; email is optional (a client who phones in may not give one — the
+  // RPC stores '' and the confirmation email is skipped when it's absent). The
+  // MCP/AI programmatic path stays lenient on phone — see create_booking_tx,
+  // which keeps customer_phone nullable.
   if (
     serviceIds.length === 0 ||
     !body.starts_at ||
-    !body.customer_name ||
-    !body.customer_email ||
+    !body.customer_name?.trim() ||
     !body.customer_phone?.trim()
   ) {
     return NextResponse.json(
-      { error: "service_id, starts_at, customer_name, customer_email and customer_phone are required" },
+      { error: "service_id, starts_at, customer_name and customer_phone are required" },
       { status: 400 }
     );
   }
@@ -69,6 +73,17 @@ export async function POST(
 
   const admin = createAdminClient();
 
+  // Capture the booker's language so the DB-trigger email localizes to it.
+  // Prefer the locale the widget was actually displayed in (the customer's
+  // picker choice / nandzz-lang cookie, sent in the body) over Accept-Language,
+  // which reflects the browser build, not the language the booker used (e.g. an
+  // English-installed browser used to book in Italian).
+  const bodyLocale =
+    typeof body.locale === "string" && SUPPORTED_LOCALES.includes(body.locale as Locale)
+      ? (body.locale as Locale)
+      : null;
+  const locale = bodyLocale ?? detectLocale(req.headers.get("accept-language") ?? "");
+
   const { data: booking, error } = await admin
     .rpc("create_booking_tx", {
       p_instance_id: instanceId,
@@ -76,13 +91,14 @@ export async function POST(
       p_service_ids: serviceIds,
       p_starts_at: body.starts_at,
       p_customer_name: body.customer_name,
-      p_customer_email: body.customer_email,
+      p_customer_email: body.customer_email?.trim() || null,
       p_customer_phone: body.customer_phone ?? null,
       p_customer_address: body.customer_address?.trim() || null,
       p_notes: body.notes ?? null,
       p_created_by: createdBy,
       p_staff_id: body.staff_id ?? null,
       p_location_id: body.location_id ?? null,
+      p_locale: locale,
     })
     .single<WidgetBooking>();
 
@@ -98,17 +114,19 @@ export async function POST(
 
   const { data: instance } = await admin
     .from("widget_instances")
-    .select("config, owner:profiles(display_name, username), catalog:widget_catalog(currency)")
+    .select("config, owner:profiles(display_name, username)")
     .eq("id", instanceId)
     .maybeSingle();
 
   const owner = instance?.owner as unknown as { display_name?: string; username?: string } | null;
-  const catalog = instance?.catalog as unknown as { currency?: string } | null;
   const businessName = owner?.display_name || owner?.username || "your provider";
+  // Currency lives on the calendar config (owner-selected), not the widget catalog.
   const config = normalizeCalendarConfig(instance?.config);
 
-  // Send the owner-configured confirmation over their chosen channel(s).
-  // Best-effort: dispatch swallows failures so the committed booking still 201s.
+  // Send the owner-configured confirmation. Email now goes through the DB
+  // insert trigger → booking-notifications edge function; dispatch only carries
+  // WhatsApp (its email branch was removed). Best-effort: dispatch swallows
+  // failures so the committed booking still 201s.
   await dispatchBookingMessage(config.messages.confirmation, {
     customerName: booking.customer_name,
     customerEmail: booking.customer_email,
@@ -118,7 +136,7 @@ export async function POST(
     startsAt: booking.starts_at,
     timezone: config.timezone,
     priceCents: booking.price_cents,
-    currencySymbol: currencySymbol(catalog?.currency),
+    currencySymbol: currencySymbol(config.currency),
     manageUrl,
     staffName: booking.staff_name ?? null,
   });

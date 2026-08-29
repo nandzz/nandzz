@@ -24,17 +24,36 @@ interface SpaceOwnerMenuProps {
 export function SpaceOwnerMenu({ spaceId, editHref, redirectTo }: SpaceOwnerMenuProps) {
   const { t } = useLanguage();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // Opening a portal dialog straight from a Base UI menu item races with the
+  // menu's own close (backdrop / scroll-lock / focus-return tear down over the
+  // exit animation), which swallows the dialog. Close the menu first, then open
+  // the dialog on the next frame once that teardown has settled.
+  const requestDelete = () => {
+    setMenuOpen(false);
+    requestAnimationFrame(() => setConfirmOpen(true));
+  };
+
   const handleDelete = async () => {
-    await deleteSpace({ id: spaceId });
-    router.push(redirectTo);
-    router.refresh();
+    const result = await deleteSpace({ id: spaceId });
+    if (!result.ok) return;
+    // Go back to wherever the user came from (the content list, a collection,
+    // the profile…) instead of a fixed page. The action already revalidated the
+    // caches, so that previous page renders fresh with the deleted item gone.
+    // Fall back to `redirectTo` when there's no in-app history (e.g. the space
+    // was opened directly from a shared link).
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(redirectTo);
+    }
   };
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           className={buttonVariants({ variant: "ghost", size: "sm" })}
           aria-label={t.space.spaceActions}
@@ -51,7 +70,7 @@ export function SpaceOwnerMenu({ spaceId, editHref, redirectTo }: SpaceOwnerMenu
             {t.space.analytics}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>
+          <DropdownMenuItem variant="destructive" onClick={requestDelete}>
             <Trash2 className="h-4 w-4" />
             {t.space.deleteSpace}
           </DropdownMenuItem>

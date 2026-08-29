@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   combineServices,
   computeAvailableSlots,
@@ -17,14 +18,37 @@ import type { WidgetBooking } from "@/lib/types";
 
 async function loadBooking(token: string) {
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("widget_bookings")
     .select(
-      "*, instance:widget_instances(config, enabled, owner:profiles(display_name, username), catalog:widget_catalog(currency))"
+      "*, instance:widget_instances(config, enabled, owner:profiles(display_name, username))"
     )
     .eq("manage_token", token)
     .maybeSingle();
-  return { admin, data };
+  // Surface the query error rather than swallowing it: an embed/schema failure
+  // here otherwise masquerades as a 404 "Booking not found" (the caller only
+  // checks `!data`), which is what it looks like when the token is genuinely
+  // missing. Log it so the real cause is visible in the server console.
+  if (error) console.error("loadBooking failed for token", token, error);
+  return { admin, data, error };
+}
+
+// The owner dashboard cancels/reschedules through this SAME token route the
+// public manage page uses, so the caller's identity is the only signal of who
+// acted. If the signed-in user IS the booking's owner ⇒ the business initiated
+// it (customer must be told); otherwise treat it as customer-initiated (guests
+// have no session, and a customer managing their own booking isn't the owner).
+// Mirrors create_booking_tx's created_by == owner heuristic.
+async function resolveActor(ownerUserId: string): Promise<"business" | "customer"> {
+  try {
+    const ssr = await createClient();
+    const {
+      data: { user },
+    } = await ssr.auth.getUser();
+    return user?.id && user.id === ownerUserId ? "business" : "customer";
+  } catch {
+    return "customer";
+  }
 }
 
 function present(booking: WidgetBooking, instance: { owner?: { display_name?: string; username?: string } | null; config?: unknown }) {
@@ -52,7 +76,10 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
-  const { data } = await loadBooking(token);
+  const { data, error } = await loadBooking(token);
+  // Keep the real cause in the server log (loadBooking logs it); the client gets a
+  // generic message so a DB/schema failure never leaks out or masquerades as 404.
+  if (error) return NextResponse.json({ error: "Unable to load booking." }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   const booking = data as unknown as WidgetBooking;
   return NextResponse.json(present(booking, (data as { instance?: unknown }).instance as never));
@@ -63,27 +90,33 @@ export async function DELETE(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
-  const { admin, data } = await loadBooking(token);
+  const { admin, data, error: loadError } = await loadBooking(token);
+  if (loadError) return NextResponse.json({ error: "Unable to load booking." }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
   const booking = data as unknown as WidgetBooking;
   const alreadyCancelled = booking.status === "cancelled";
 
+  // Record who is cancelling in the same UPDATE: the DB trigger reads
+  // notify_actor to decide the email recipient (owner ⇒ tell the customer;
+  // customer ⇒ tell the business) and fires the edge function itself. Next never
+  // calls the edge function. The trigger's OLD.status guard suppresses a repeat
+  // cancel, so writing notify_actor on a double-cancel is harmless.
+  const actor = await resolveActor(booking.owner_user_id);
   const { error } = await admin
     .from("widget_bookings")
-    .update({ status: "cancelled" })
+    .update({ status: "cancelled", notify_actor: actor })
     .eq("manage_token", token);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Notify the customer with the owner-configured cancellation message — but
+  // WhatsApp confirmation (email is handled by the DB trigger → edge function) —
   // only on the first transition, so a double-cancel doesn't re-message.
   if (!alreadyCancelled) {
     const instance = (data as {
       instance?: {
         config?: unknown;
         owner?: { display_name?: string; username?: string } | null;
-        catalog?: { currency?: string } | null;
       };
     }).instance;
     const config = normalizeCalendarConfig(instance?.config);
@@ -100,7 +133,7 @@ export async function DELETE(
       startsAt: booking.starts_at,
       timezone: config.timezone,
       priceCents: booking.price_cents,
-      currencySymbol: currencySymbol(instance?.catalog?.currency),
+      currencySymbol: currencySymbol(config.currency),
       manageUrl: `${siteUrl}/booking/${token}`,
       staffName: booking.staff_name ?? null,
     });
@@ -123,7 +156,8 @@ export async function PATCH(
   };
   if (!starts_at) return NextResponse.json({ error: "starts_at is required" }, { status: 400 });
 
-  const { admin, data } = await loadBooking(token);
+  const { admin, data, error: loadError } = await loadBooking(token);
+  if (loadError) return NextResponse.json({ error: "Unable to load booking." }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
   const booking = data as unknown as WidgetBooking;
@@ -221,6 +255,10 @@ export async function PATCH(
 
   const newEnds = new Date(new Date(requestedIso).getTime() + service.duration_min * 60_000).toISOString();
 
+  // Record who is rescheduling in the same UPDATE: the DB trigger reads
+  // notify_actor to pick the email recipient and fires the edge function itself.
+  const actor = await resolveActor(booking.owner_user_id);
+
   // Try each free candidate in turn — the exclusion constraint rejects one that
   // was just grabbed for an overlapping range, so we fall through to the next
   // (same optimistic-retry shape as create_booking_tx's candidate loop).
@@ -231,7 +269,7 @@ export async function PATCH(
     const candidateName = candidateId ? staffSource.find((m) => m.id === candidateId)?.name ?? null : null;
     const { data: row, error } = await admin
       .from("widget_bookings")
-      .update({ starts_at: requestedIso, ends_at: newEnds, staff_id: candidateId, staff_name: candidateName })
+      .update({ starts_at: requestedIso, ends_at: newEnds, staff_id: candidateId, staff_name: candidateName, notify_actor: actor })
       .eq("manage_token", token)
       .eq("status", "confirmed")
       .select("starts_at, ends_at, staff_id, staff_name")
@@ -251,5 +289,7 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status });
   }
 
+  // Reschedule email is handled by the DB trigger (it reads the notify_actor we
+  // wrote into the UPDATE above) → edge function. Nothing to send from here.
   return NextResponse.json({ ok: true, ...updated });
 }

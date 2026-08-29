@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, MessageCircle, Ban, CalendarClock, Clock, Loader2, MapPin } from "lucide-react";
 import { whatsappLink } from "@/lib/widgets/contact";
@@ -18,6 +18,7 @@ export type BookingRowData = {
   customer_email: string;
   service_name: string;
   starts_at: string; // ISO
+  ends_at: string; // ISO — reserved span end, drives the in-progress/completed tag
   price_cents: number | null;
   status: "confirmed" | "cancelled";
   customer_phone: string | null;
@@ -28,18 +29,34 @@ export type BookingRowData = {
   manage_token: string;
 };
 
+// Chronological status pill shown above the customer name. Each category gets
+// its own colour so the owner can scan the list at a glance. Classes cover both
+// light and dark themes.
+const TAG_STYLES = {
+  cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
+  completed: "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
+  inProgress: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+  soon: "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
+  today: "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
+  tomorrow: "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
+} as const;
+
+const HOUR_MS = 3_600_000;
+
 export function BookingRow({
   b,
   money,
   fmt,
   timezone,
+  now,
   dim,
   cancellable,
 }: {
   b: BookingRowData;
   money: (cents: number) => string;
   fmt: (iso: string) => string;
-  timezone: string; // IANA tz — the reschedule picker renders slots in it
+  timezone: string; // IANA tz — the reschedule picker renders slots in it + tag day math
+  now: number; // reference "now" (ms) the chronological tag is computed against
   dim?: boolean;
   cancellable?: boolean;
 }) {
@@ -51,6 +68,47 @@ export function BookingRow({
 
   const when = fmt(b.starts_at);
   const firstName = b.customer_name.split(" ")[0] || b.customer_name;
+
+  // Single chronological status tag, resolved by priority against `now`:
+  // cancelled → in progress → completed → imminent countdown (≤4h) → today →
+  // tomorrow → (nothing, for further-out dates the time pill already shows).
+  const tag = useMemo<{ label: string; className: string; live?: boolean } | null>(() => {
+    const start = new Date(b.starts_at).getTime();
+    const end = new Date(b.ends_at).getTime();
+    if (b.status === "cancelled")
+      return { label: t.booking.tagCancelled, className: TAG_STYLES.cancelled };
+    if (now >= start && now < end)
+      return { label: t.booking.tagInProgress, className: TAG_STYLES.inProgress, live: true };
+    if (now >= end)
+      return { label: t.booking.tagCompleted, className: TAG_STYLES.completed };
+
+    const delta = start - now; // upcoming
+    if (delta <= 4 * HOUR_MS) {
+      if (delta < HOUR_MS) {
+        const n = Math.max(1, Math.ceil(delta / 60_000));
+        return { label: t.booking.tagInMinutes.replace("{n}", String(n)), className: TAG_STYLES.soon };
+      }
+      const n = Math.min(4, Math.max(1, Math.round(delta / HOUR_MS)));
+      const label = n === 1 ? t.booking.tagInHour : t.booking.tagInHours.replace("{n}", String(n));
+      return { label, className: TAG_STYLES.soon };
+    }
+
+    // Beyond the countdown window: is it (in the widget's timezone) today or
+    // tomorrow? Otherwise no tag — the date pill already carries that info.
+    const dayFmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const startKey = dayFmt.format(new Date(start));
+    if (startKey === dayFmt.format(new Date(now)))
+      return { label: t.booking.tagToday, className: TAG_STYLES.today };
+    if (startKey === dayFmt.format(new Date(now + 24 * HOUR_MS)))
+      return { label: t.booking.tagTomorrow, className: TAG_STYLES.tomorrow };
+    return null;
+  }, [b.starts_at, b.ends_at, b.status, now, timezone, t]);
+
   const wa = b.customer_phone
     ? whatsappLink(
         b.customer_phone,
@@ -97,8 +155,8 @@ export function BookingRow({
     try {
       const res = await fetch(`/api/widgets/bookings/${b.manage_token}`, { method: "DELETE" });
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        alert(data?.error || t.booking.errorCancelThis);
+        // Never surface the raw API error body; show localized copy only.
+        alert(t.booking.errorCancelThis);
         return;
       }
       router.refresh(); // re-run the server page → tiles, chart & lists all update
@@ -110,8 +168,20 @@ export function BookingRow({
   }
 
   return (
-    <div className={`flex items-center justify-between gap-3 px-5 py-3.5 ${dim ? "opacity-70" : ""}`}>
+    <div
+      className={`flex items-center justify-between gap-3 px-5 py-3.5 ${dim ? "opacity-70" : ""}`}
+    >
       <div className="min-w-0">
+        {tag && (
+          <span
+            className={`mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tag.className}`}
+          >
+            {tag.live && (
+              <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" aria-hidden />
+            )}
+            {tag.label}
+          </span>
+        )}
         <p className="truncate font-medium">{b.customer_name}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <p className="truncate text-sm text-muted-foreground">{b.service_name}</p>
@@ -139,11 +209,6 @@ export function BookingRow({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        {b.status === "cancelled" && (
-          <span className="mr-1 rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">
-            {t.booking.cancelledBadge}
-          </span>
-        )}
         {b.price_cents != null && b.price_cents > 0 && (
           <span className="mr-1 hidden text-sm font-medium tabular-nums sm:inline">{money(b.price_cents)}</span>
         )}

@@ -104,12 +104,12 @@ describe("SpaceGrid", () => {
 
       render(<SpaceGrid spaces={[notesSpace, imageSpace, linkSpace]} />);
 
-      expect(screen.getByRole("heading", { name: /Content/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Publication/ })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Gallery/ })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Links/ })).toBeInTheDocument();
 
       // Each section shows a count of its spaces.
-      expect(screen.getByRole("heading", { name: /Content 1/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Publication 1/ })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Gallery 1/ })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Links 1/ })).toBeInTheDocument();
     });
@@ -118,7 +118,7 @@ describe("SpaceGrid", () => {
       render(<SpaceGrid spaces={allSpaces} />);
 
       // allSpaces all resolve to "html" -> Informative only.
-      expect(screen.getByRole("heading", { name: /Content/ })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Publication/ })).toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: /Gallery/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: /Links/ })).not.toBeInTheDocument();
     });
@@ -130,7 +130,7 @@ describe("SpaceGrid", () => {
       render(<SpaceGrid spaces={[imageSpace, notesSpace]} />);
 
       const headings = screen.getAllByRole("heading").map((h) => h.textContent);
-      const contentIdx = headings.findIndex((h) => h?.includes("Content"));
+      const contentIdx = headings.findIndex((h) => h?.includes("Publication"));
       const galleryIdx = headings.findIndex((h) => h?.includes("Gallery"));
       expect(contentIdx).toBeGreaterThanOrEqual(0);
       expect(galleryIdx).toBeGreaterThanOrEqual(0);

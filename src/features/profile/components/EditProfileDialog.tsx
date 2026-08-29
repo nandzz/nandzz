@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import type { Profile, SocialLinks } from "@/lib/types";
+import type { Profile, SocialLinks, ProfileAddress } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { updateProfileInfo } from "../actions/update-profile-info";
+import { AddressAutocomplete } from "./AddressAutocomplete";
 import {
   InstagramIcon,
   LinkedinIcon,
@@ -44,6 +45,7 @@ export function EditProfileDialog({ onClose, profile }: EditProfileDialogProps) 
   const [tagline, setTagline] = useState(profile.tagline || "");
   const [bio, setBio] = useState(profile.bio || "");
   const [websiteUrl, setWebsiteUrl] = useState(profile.website_url || "");
+  const [address, setAddress] = useState<ProfileAddress | null>(profile.address ?? null);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(profile.social_links || {});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -89,6 +91,7 @@ export function EditProfileDialog({ onClose, profile }: EditProfileDialogProps) 
         bio: bio || null,
         websiteUrl: websiteUrl || null,
         socialLinks,
+        address,
       });
 
       if (!result.ok) throw new Error(result.message || "Something went wrong");
@@ -103,7 +106,8 @@ export function EditProfileDialog({ onClose, profile }: EditProfileDialogProps) 
       router.refresh();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      console.error("[profile] update failed:", err);
+      setError(t.common.error);
     } finally {
       setLoading(false);
     }
@@ -203,6 +207,17 @@ export function EditProfileDialog({ onClose, profile }: EditProfileDialogProps) 
                     className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">{t.settings.address}</Label>
+                <AddressAutocomplete
+                  id="edit-address"
+                  value={address}
+                  onChange={setAddress}
+                  placeholder={t.settings.addressPlaceholder}
+                />
+                <p className="text-xs text-muted-foreground">{t.settings.addressHint}</p>
               </div>
 
               <div className="space-y-3">

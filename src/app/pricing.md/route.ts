@@ -27,6 +27,9 @@ export async function GET() {
           ? "€0 / month (free)"
           : `${formatPrice(plan.price_cents, plan.currency)} / ${plan.billing_interval}`;
       lines.push(`- Price: ${price}`);
+      if (plan.price_cents > 0 && plan.trial_days > 0) {
+        lines.push(`- Free trial: ${plan.trial_days} days`);
+      }
       if (plan.description) lines.push(`- Summary: ${plan.description}`);
       lines.push(
         `- Spaces: ${plan.space_limit === null ? "Unlimited" : `Up to ${plan.space_limit}`}`

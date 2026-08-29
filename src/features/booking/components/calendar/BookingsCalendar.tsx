@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Plus } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { BookingRow, type BookingRowData } from "./BookingRow";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,11 +16,18 @@ import { useLanguage } from "@/contexts/LanguageContext";
 // DST edges, mirroring MonthCalendar.
 
 interface Props {
-  bookings: BookingRowData[]; // already filtered by search + status
+  bookings: BookingRowData[]; // the viewed month's rows, filtered by search + status
+  // The viewed month ("YYYY-MM"), controlled by the parent so changing it can
+  // refetch that month's rows server-side. `onMonthChange` fires on prev/next/today.
+  monthKey: string;
+  onMonthChange: (monthKey: string) => void;
   timezone: string;
   now: number; // server request time (ms)
   money: (cents: number) => string;
   fmtDate: (iso: string) => string; // full date+time formatter for agenda rows
+  // Opens the owner's manual-booking flow, seeded with the given day
+  // ("YYYY-MM-DD") — the day the owner clicked "Add booking" on.
+  onNewBooking?: (dateKey: string) => void;
 }
 
 // 2024-01-01 was a Monday (UTC) — a stable anchor for deriving locale-aware
@@ -63,7 +70,7 @@ function labelForKey(locale: string, key: string) {
   return dayLabelFmt(locale).format(new Date(`${key}T12:00:00Z`));
 }
 
-export function BookingsCalendar({ bookings, timezone, now, money, fmtDate }: Props) {
+export function BookingsCalendar({ bookings, monthKey, onMonthChange, timezone, now, money, fmtDate, onNewBooking }: Props) {
   const { t, locale } = useLanguage();
   const headers = useMemo(() => weekdayHeaders(locale), [locale]);
   // Civil date-key ("YYYY-MM-DD") for an instant in the widget timezone. Always
@@ -85,10 +92,12 @@ export function BookingsCalendar({ bookings, timezone, now, money, fmtDate }: Pr
 
   const todayKey = dayKeyFmt.format(new Date(now));
 
-  const [view, setView] = useState<{ y: number; m: number }>(() => {
-    const t = parseKey(todayKey);
-    return { y: t.y, m: t.m };
-  });
+  // The viewed month is controlled by the parent (drives the month refetch), so
+  // it's derived from `monthKey` rather than held as local state.
+  const view = useMemo(() => {
+    const [y, m] = monthKey.split("-").map(Number);
+    return { y, m: m - 1 };
+  }, [monthKey]);
   const [selected, setSelected] = useState<string>(todayKey);
   const [modalDay, setModalDay] = useState<string | null>(null);
 
@@ -116,13 +125,14 @@ export function BookingsCalendar({ bookings, timezone, now, money, fmtDate }: Pr
   }, [view.y, view.m]);
 
   function goMonth(delta: number) {
-    const m = view.m + delta;
-    const y = view.y + Math.floor(m / 12);
-    setView({ y, m: ((m % 12) + 12) % 12 });
+    const mm = view.m + delta;
+    const y = view.y + Math.floor(mm / 12);
+    const m0 = ((mm % 12) + 12) % 12;
+    onMonthChange(`${y}-${pad(m0 + 1)}`);
   }
   function goToday() {
-    const t = parseKey(todayKey);
-    setView({ y: t.y, m: t.m });
+    const tk = parseKey(todayKey);
+    onMonthChange(`${tk.y}-${pad(tk.m + 1)}`);
     setSelected(todayKey);
   }
 
@@ -150,6 +160,7 @@ export function BookingsCalendar({ bookings, timezone, now, money, fmtDate }: Pr
               money={money}
               fmt={fmtDate}
               timezone={timezone}
+              now={now}
               cancellable={upcoming}
               dim={!upcoming}
             />
@@ -293,15 +304,35 @@ export function BookingsCalendar({ bookings, timezone, now, money, fmtDate }: Pr
       <div className="overflow-hidden rounded-2xl border border-border bg-background">
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <h3 className="text-sm font-semibold">{labelForKey(locale, selected)}</h3>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {selectedList.length}{" "}
-            {selectedList.length === 1 ? t.booking.bookingCountSingular : t.booking.bookingCountPlural}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {selectedList.length}{" "}
+              {selectedList.length === 1 ? t.booking.bookingCountSingular : t.booking.bookingCountPlural}
+            </span>
+            {onNewBooking && (
+              <button
+                type="button"
+                onClick={() => onNewBooking(selected)}
+                className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:border-emerald-300 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
+              >
+                <Plus className="h-3.5 w-3.5" /> {t.booking.manualAddOnDay}
+              </button>
+            )}
+          </div>
         </div>
         {selectedList.length === 0 ? (
           <div className="px-5 py-10 text-center">
             <CalendarDays className="mx-auto h-7 w-7 text-muted-foreground/50" />
             <p className="mt-2 text-sm text-muted-foreground">{t.booking.noBookingsOnDay}</p>
+            {onNewBooking && (
+              <button
+                type="button"
+                onClick={() => onNewBooking(selected)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <Plus className="h-4 w-4" /> {t.booking.manualAddOnDay}
+              </button>
+            )}
           </div>
         ) : (
           renderRows(selectedList)

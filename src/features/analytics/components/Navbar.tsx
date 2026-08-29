@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,70 +15,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Moon, Sun, Menu, User, UserPlus, Settings, LogOut, CreditCard, Plug, Blocks, Calendar, Users, BarChart3, Palette, Briefcase } from "lucide-react";
-import type { Profile } from "@/lib/types";
 import { FEATURES } from "@/lib/flags";
-import { usePlanEntitlements } from "@/lib/plan-client";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotificationBell } from "./NotificationBell";
 import { AiJobsIndicator } from "./AiJobsIndicator";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChrome } from "@/contexts/ChromeContext";
 import { cn } from "@/lib/utils";
-import { getSessionUser, onAuthChange, fetchProfileFull, setAccountType } from "../auth";
+import { setAccountType } from "../auth";
+import { useAuth } from "../AuthContext";
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const { isHidden } = useChrome();
-  const entitlements = usePlanEntitlements();
-  const [user, setUser] = useState<{ id: string } | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { userId, profile, entitlements } = useAuth();
   const [switchOpen, setSwitchOpen] = useState(false);
 
   // Business account gates the Business sections; default (personal) until the
   // profile resolves so business-only chrome never flashes.
   const isBusiness = profile?.account_type === "business";
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    const data = await fetchProfileFull(userId);
-    if (data) setProfile(data);
-  }, []);
-
-  useEffect(() => {
-    getSessionUser().then((u) => {
-      if (u) {
-        setUser(u);
-        fetchProfile(u.id);
-      }
-    });
-
-    return onAuthChange((u) => {
-      if (u) {
-        setUser(u);
-        fetchProfile(u.id);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-    });
-  }, [fetchProfile]);
-
-  useEffect(() => {
-    const handler = () => {
-      if (user) fetchProfile(user.id);
-    };
-    window.addEventListener("profile-updated", handler);
-    return () => window.removeEventListener("profile-updated", handler);
-  }, [user, fetchProfile]);
-
   const handleSwitchToBusiness = useCallback(async () => {
-    if (!user) return;
-    const ok = await setAccountType(user.id, "business");
+    if (!userId) return;
+    const ok = await setAccountType(userId, "business");
     if (ok) {
-      setProfile((prev) => (prev ? { ...prev, account_type: "business" } : prev));
+      // The provider's own `profile-updated` listener re-reads the row.
       window.dispatchEvent(new Event("profile-updated"));
     }
-  }, [user]);
+  }, [userId]);
 
   const handleLogout = () => {
     // Hand off to the server sign-out route: it clears the auth cookies on its
@@ -106,7 +71,7 @@ export function Navbar() {
 
           {/* Nav links - desktop */}
           <div className="hidden items-center gap-1 md:flex">
-            {user && FEATURES.monetization && (
+            {userId && FEATURES.monetization && (
               <Link
                 href="/pricing"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -114,7 +79,7 @@ export function Navbar() {
                 {t.nav.pricing}
               </Link>
             )}
-            {user && (
+            {userId && !isBusiness && (
               <Link
                 href="/dashboard/feed"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -122,7 +87,7 @@ export function Navbar() {
                 {t.nav.feed}
               </Link>
             )}
-            {user && (
+            {userId && (
               <Link
                 href="/dashboard/contents/create-space"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -134,7 +99,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {user ? (
+          {userId ? (
             <div className="hidden md:flex items-center gap-3">
               {isBusiness && FEATURES.widgets && entitlements.hasWidgets && (
                 <Link
@@ -168,11 +133,11 @@ export function Navbar() {
           )}
 
           {/* AI jobs indicator + notification bell */}
-          {user && <AiJobsIndicator userId={user.id} />}
-          {user && <NotificationBell userId={user.id} />}
+          {userId && <AiJobsIndicator userId={userId} />}
+          {userId && <NotificationBell userId={userId} />}
 
           {/* Avatar dropdown — desktop only, after the bell */}
-          {user && (
+          {userId && (
             <div className="hidden md:flex">
               <DropdownMenu>
                 <DropdownMenuTrigger aria-label="Account menu" className="rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer transition-transform hover:scale-105">
@@ -264,7 +229,7 @@ export function Navbar() {
               <Menu className="h-5 w-5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              {user ? (
+              {userId ? (
                 <>
                   {/* User info */}
                   <DropdownMenuGroup>
@@ -314,6 +279,24 @@ export function Navbar() {
                   </DropdownMenuGroup>
 
                   <DropdownMenuSeparator />
+
+                  {/* Shortcuts — business-only; Bookings opens the calendar
+                      (booking) widget where received appointments are managed. */}
+                  {isBusiness && (
+                    <>
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {t.nav.groupShortcuts}
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem render={<Link href="/dashboard/bookings" />} className="gap-2">
+                          <Calendar aria-hidden className="h-4 w-4 text-muted-foreground" />
+                          {t.nav.bookings}
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
 
                   {/* Business */}
                   <DropdownMenuGroup>

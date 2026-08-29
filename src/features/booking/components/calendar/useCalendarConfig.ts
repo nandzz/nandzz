@@ -14,6 +14,11 @@ export interface CalendarConfigController {
   saving: boolean;
   status: { ok: boolean; msg: string } | null;
   save: () => Promise<boolean>; // resolves true on a successful persist
+  // Persist a config computed in the SAME tick it's set (e.g. LocationManager
+  // committing a location from the modal) — the closed-over `config` state
+  // hasn't updated yet, so hand the merged config in explicitly. Kept separate
+  // from `save` so the arg never collides with `onClick={save}` event handlers.
+  saveWith: (config: CalendarConfig) => Promise<boolean>;
 }
 
 // Single source of truth for a calendar widget instance's config + enabled flag.
@@ -32,8 +37,8 @@ export function useCalendarConfig(
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const save = useCallback(async (): Promise<boolean> => {
-    const errors = validateCalendarConfig(config);
+  const saveWith = useCallback(async (cfg: CalendarConfig): Promise<boolean> => {
+    const errors = validateCalendarConfig(cfg);
     if (errors.length > 0) {
       setStatus({ ok: false, msg: errors[0] });
       return false;
@@ -41,7 +46,7 @@ export function useCalendarConfig(
     setSaving(true);
     setStatus(null);
     try {
-      const res = await updateWidgetInstance({ instanceId, config, enabled });
+      const res = await updateWidgetInstance({ instanceId, config: cfg, enabled });
       if (!res.ok) {
         setStatus({
           ok: false,
@@ -57,7 +62,9 @@ export function useCalendarConfig(
     } finally {
       setSaving(false);
     }
-  }, [config, enabled, instanceId, t]);
+  }, [enabled, instanceId, t]);
 
-  return { config, setConfig, enabled, setEnabled, saving, status, save };
+  const save = useCallback(() => saveWith(config), [saveWith, config]);
+
+  return { config, setConfig, enabled, setEnabled, saving, status, save, saveWith };
 }

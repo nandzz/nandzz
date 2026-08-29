@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Settings2 } from "lucide-react";
+import { MapPin, Settings2, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Location } from "@/lib/types";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -18,6 +18,10 @@ interface Props {
 export function LocationGate({ locations, onSelect, onManage }: Props) {
   const { t } = useLanguage();
 
+  // A lone location gets a single, sensibly-sized card (not a stretched
+  // half-width grid cell); two or more fan out into a responsive grid.
+  const single = locations.length === 1;
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-6">
       <div className="text-center">
@@ -25,8 +29,8 @@ export function LocationGate({ locations, onSelect, onManage }: Props) {
         <p className="mt-1 text-sm text-muted-foreground">{t.booking.locationGateSubtitle}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {locations.map((l) => {
+      <div className={single ? "mx-auto max-w-md" : "grid grid-cols-1 gap-3 sm:grid-cols-2"}>
+        {locations.map((l, i) => {
           const initial = l.name?.trim()?.[0]?.toUpperCase() ?? "?";
           return (
             <button
@@ -34,7 +38,8 @@ export function LocationGate({ locations, onSelect, onManage }: Props) {
               type="button"
               onClick={() => onSelect(l.id)}
               aria-label={t.booking.workingInLocationAria.replace("{name}", l.name || t.booking.unnamedLocation)}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4 text-left outline-none transition-all hover:border-emerald-400/70 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400"
+              style={{ animationDelay: `${i * 50}ms` }}
+              className="group flex w-full items-center gap-3 rounded-2xl border border-border bg-background p-4 text-left outline-none transition-all duration-300 fill-mode-both animate-in fade-in slide-in-from-bottom-2 hover:border-emerald-400/70 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 active:scale-[0.98] motion-reduce:animate-none"
             >
               <Avatar size="lg" className="h-12 w-12 shrink-0">
                 <AvatarImage src={l.photo_url || undefined} />
@@ -54,6 +59,7 @@ export function LocationGate({ locations, onSelect, onManage }: Props) {
                   )}
                 </p>
               </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-emerald-500 motion-reduce:transition-none" />
             </button>
           );
         })}

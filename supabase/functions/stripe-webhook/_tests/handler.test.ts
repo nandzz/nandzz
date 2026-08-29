@@ -361,6 +361,22 @@ Deno.test("subscription: returns 500 when set_user_plan errors so Stripe retries
   assertEquals(result.body.error, "plan_update_failed");
 });
 
+Deno.test("subscription: legacy per-instance widget sub (instance_id) is ignored, never touches plan state", async () => {
+  const { admin, rpcCalls, lookupCalls } = makeAdmin();
+  // A widget subscription.deleted must NOT downgrade the owner's plan.
+  const result = await handleStripeEvent(
+    subscriptionEvent({
+      type: "customer.subscription.deleted",
+      metadata: { user_id: "user-1", instance_id: "inst-1", catalog_id: "cat-1" },
+    }),
+    admin,
+  );
+  assertEquals(result.status, 200);
+  assertEquals(result.body.skipped, "legacy_widget");
+  assertEquals(rpcCalls.length, 0, "no RPC should fire for a legacy widget sub");
+  assertEquals(lookupCalls.length, 0);
+});
+
 // ---- invoice.paid -----------------------------------------------------------
 
 function invoiceEvent(overrides: {
@@ -436,6 +452,72 @@ Deno.test("invoice.paid: skips when subscription/price is missing", async () => 
   const result = await handleStripeEvent(invoiceEvent({ subId: null }), admin);
   assertEquals(result.status, 200);
   assertEquals(result.body.skipped, "missing_sub_or_price");
+  assertEquals(rpcCalls.length, 0);
+});
+
+Deno.test("invoice.paid: resolves user_id from invoice.parent.subscription_details (current Stripe API)", async () => {
+  const { admin, rpcCalls, lookupCalls } = makeAdmin({
+    lookups: { subscription_plans: { data: { slug: "starter" }, error: null } },
+  });
+  // Current Stripe API version: no top-level subscription/price, metadata under parent.
+  const event = {
+    id: "evt_test_invoice_parent",
+    type: "invoice.paid",
+    livemode: false,
+    created: 1_700_000_000,
+    data: {
+      object: {
+        id: "in_test_parent",
+        parent: {
+          type: "subscription_details",
+          subscription_details: {
+            subscription: "sub_parent_1",
+            metadata: { user_id: "user-7", plan_slug: "starter" },
+          },
+        },
+        lines: {
+          data: [
+            {
+              pricing: { price_details: { price: "price_starter" } },
+              period: { end: 1_702_700_000 },
+            },
+          ],
+        },
+      },
+    },
+  } as unknown as Stripe.Event;
+
+  const result = await handleStripeEvent(event, admin);
+  assertEquals(result.status, 200);
+  assertEquals(result.body.refilled, "starter");
+  assertEquals(lookupCalls[0].filters, [["stripe_price_id", "price_starter"]]);
+  assertEquals(rpcCalls[0].name, "set_user_plan");
+  assertEquals(rpcCalls[0].args.p_user_id, "user-7");
+  assertEquals(rpcCalls[0].args.p_sub_id, "sub_parent_1");
+});
+
+Deno.test("invoice.paid: legacy per-instance widget invoice (instance_id) is ignored", async () => {
+  const { admin, rpcCalls } = makeAdmin({
+    lookups: { subscription_plans: { data: { slug: "starter" }, error: null } },
+  });
+  const event = {
+    id: "evt_test_widget_invoice",
+    type: "invoice.paid",
+    livemode: false,
+    created: 1_700_000_000,
+    data: {
+      object: {
+        id: "in_widget_1",
+        subscription: "sub_widget_1",
+        subscription_details: { metadata: { user_id: "user-1", instance_id: "inst-1" } },
+        lines: { data: [{ price: { id: "price_widget" }, period: { end: 1_702_700_000 } }] },
+      },
+    },
+  } as unknown as Stripe.Event;
+
+  const result = await handleStripeEvent(event, admin);
+  assertEquals(result.status, 200);
+  assertEquals(result.body.skipped, "legacy_widget");
   assertEquals(rpcCalls.length, 0);
 });
 

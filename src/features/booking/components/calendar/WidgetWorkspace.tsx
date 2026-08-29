@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { LayoutDashboard, CalendarDays, Users, UserCog, MapPin, Clock, Tag, Bell, CircleAlert, ChevronDown, ArrowLeft } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, CalendarDays, Users, UserCog, MapPin, Clock, Tag, CircleAlert, ChevronDown, ArrowLeft } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Link from "next/link";
 import { subscribeToWidgetBookings } from "@/features/booking/realtime";
 import { AvailabilityManager } from "@/features/booking/components/calendar/AvailabilityManager";
 import { ServicesManager } from "@/features/booking/components/calendar/ServicesManager";
-import { NotificationsManager } from "@/features/booking/components/calendar/NotificationsManager";
 import { StaffManager } from "@/features/booking/components/calendar/StaffManager";
 import { LocationManager } from "@/features/booking/components/calendar/LocationManager";
 import { LocationGate } from "@/features/booking/components/calendar/LocationGate";
@@ -17,21 +16,11 @@ import { WidgetOverview } from "@/features/booking/components/calendar/WidgetOve
 import { WidgetBookings } from "@/features/booking/components/calendar/WidgetBookings";
 import { WidgetCustomers } from "@/features/booking/components/calendar/WidgetCustomers";
 import { NewBookingBanner } from "@/features/booking/components/calendar/NewBookingBanner";
-import { buildOverview, buildBookings, buildCustomers } from "@/features/booking/calendarStats";
+import { useWidgetDashboard, type InitialDashboard } from "@/features/booking/components/calendar/useWidgetDashboard";
 import { playBookingChime } from "@/features/booking/chime";
+import { tabFromSegment, segmentFromTab } from "@/features/booking/widgetTabs";
 import type { CalendarConfig, WidgetBooking } from "@/lib/types";
-import type { StatsPeriod } from "@/lib/period";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-const VALID_TABS = new Set([
-  "overview",
-  "bookings",
-  "customers",
-  "staff",
-  "availability",
-  "services",
-  "notifications",
-]);
 
 // Live-count new confirmed bookings whose start falls on "today" in the widget's
 // timezone and is still upcoming. Subscribes to INSERTs on widget_bookings for
@@ -43,9 +32,9 @@ const VALID_TABS = new Set([
 function useNewBookingsToday(
   instanceId: string,
   timezone: string,
+  onRefresh: () => void,
   onConfirmedBooking?: (booking: WidgetBooking) => void
 ): [number, () => void] {
-  const router = useRouter();
   const [newToday, setNewToday] = useState(0);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref so the effect below doesn't need to resubscribe when the callback
@@ -70,7 +59,7 @@ function useNewBookingsToday(
       if (refreshTimer.current) return;
       refreshTimer.current = setTimeout(() => {
         refreshTimer.current = null;
-        router.refresh();
+        onRefresh();
       }, 400);
     };
 
@@ -96,7 +85,7 @@ function useNewBookingsToday(
       }
       unsubscribe();
     };
-  }, [instanceId, timezone, router]);
+  }, [instanceId, timezone, onRefresh]);
 
   const reset = useCallback(() => setNewToday(0), []);
   return [newToday, reset];
@@ -107,10 +96,10 @@ interface Props {
   hasAccess: boolean;
   enabled: boolean;
   config: CalendarConfig;
-  allBookings: WidgetBooking[];
+  initial: InitialDashboard;
   currencySymbol: string;
   shareUrl: string | null;
-  locale: string;
+  initialTab: string;
 }
 
 export function WidgetWorkspace({
@@ -118,20 +107,28 @@ export function WidgetWorkspace({
   hasAccess,
   enabled,
   config,
-  allBookings,
+  initial,
   currencySymbol,
   shareUrl,
-  locale,
+  initialTab,
 }: Props) {
   const { t } = useLanguage();
-  const searchParams = useSearchParams();
-  // Deep-link support: `?tab=bookings` opens straight to the Bookings tab
-  // (used by the notification-bell entry). Read once on mount; anything
-  // absent/unrecognized falls back to "overview".
-  const [tab, setTab] = useState(() => {
-    const requested = searchParams.get("tab");
-    return requested && VALID_TABS.has(requested) ? requested : "overview";
-  });
+  const pathname = usePathname();
+  // The active tab lives in the URL path (`/dashboard/widgets/{id}/{segment}`),
+  // resolved server-side into `initialTab` for the first render / deep links.
+  // We keep it in local state (so switching is instant and never remounts the
+  // workspace, preserving unsaved config edits + the realtime subscription) and
+  // sync it back from the path when the owner uses the browser back/forward
+  // buttons.
+  const [tab, setTab] = useState(initialTab);
+
+  useEffect(() => {
+    // Path shape: /dashboard/widgets/{id}/{segment} — index 4 is the segment,
+    // absent on the base (overview) path.
+    const next = tabFromSegment(pathname.split("/")[4]) ?? "overview";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync tab to the URL on back/forward (external-state sync, not derived render state)
+    setTab((prev) => (prev === next ? prev : next));
+  }, [pathname]);
   // Single shared config controller — instantiated ONCE here so the Settings
   // studio (services + per-service staff_ids) and the Staff tab (config.staff)
   // edit and PATCH the same object instead of two divergent snapshots.
@@ -150,10 +147,6 @@ export function WidgetWorkspace({
   const dismissBookingAlert = useCallback(() => {
     setBookingAlert(null);
   }, []);
-
-  // Badge subscription keys off the instance's initial timezone (stable across
-  // config edits), matching the pre-refactor behavior.
-  const [newToday, resetNewToday] = useNewBookingsToday(instanceId, config.timezone, handleConfirmedBooking);
 
   // Which location the Staff tab and the Settings studio's Services/
   // Availability sections are scoped to — shared here so both stay in sync.
@@ -185,6 +178,12 @@ export function WidgetWorkspace({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLocationId(stored);
       setLocationConfirmed(true);
+    } else if (locations.length === 1) {
+      // A single location has nothing to choose — skip the gate and open its
+      // dashboard straight away. Switching (via the header pill) still shows the
+      // gate, so "Gestisci sedi" stays reachable.
+      setSelectedLocationId(locations[0].id);
+      setLocationConfirmed(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -202,22 +201,47 @@ export function WidgetWorkspace({
   const currentLocation = locations.find((l) => l.id === currentLocationId) ?? null;
   const effectiveTimezone = currentLocation?.timezone || controller.config.timezone;
 
-  const scopedBookings = useMemo(
-    () => allBookings.filter((b) => b.location_id === currentLocationId),
-    [allBookings, currentLocationId]
+  // All tab data is fetched windowed/aggregated server-side, scoped to the
+  // current location, and refetched on demand as the owner navigates — see
+  // useWidgetDashboard. Seeded from the loader's first-paint payload.
+  const dash = useWidgetDashboard({ instanceId, initial, locationId: currentLocationId, shareUrl });
+
+  // Realtime + manual bookings refresh the visible slices in place (no full
+  // navigation): the badge subscription drives dash.refetchAll on every insert.
+  const [newToday, resetNewToday] = useNewBookingsToday(
+    instanceId,
+    config.timezone,
+    dash.refetchAll,
+    handleConfirmedBooking
   );
-  const [trendPeriod, setTrendPeriod] = useState<StatsPeriod>("month");
-  const overview = useMemo(
-    () => buildOverview(scopedBookings, effectiveTimezone, currencySymbol, shareUrl, locale, trendPeriod),
-    [scopedBookings, effectiveTimezone, currencySymbol, shareUrl, locale, trendPeriod]
-  );
-  const bookingsData = useMemo(
-    () => buildBookings(scopedBookings, effectiveTimezone, currencySymbol),
-    [scopedBookings, effectiveTimezone, currencySymbol]
-  );
-  const customersData = useMemo(
-    () => buildCustomers(scopedBookings, effectiveTimezone, currencySymbol),
-    [scopedBookings, effectiveTimezone, currencySymbol]
+
+  // Stable "now" anchor for the children's chronological tags across this mount.
+  const [now] = useState(() => Date.now());
+
+  // Inputs for the owner's manual "New booking" flow, scoped to the current
+  // location (or the legacy top-level config when the instance has no
+  // locations). `locationId` matches how the dashboard data is scoped, so a
+  // manual booking lands under the location the owner is viewing.
+  const manualBookingScope = useMemo(
+    () =>
+      currentLocation
+        ? {
+            instanceId,
+            locationId: currentLocation.id,
+            services: currentLocation.services,
+            categories: currentLocation.categories ?? [],
+            staff: currentLocation.staff,
+            showPrices: controller.config.show_prices,
+          }
+        : {
+            instanceId,
+            locationId: null,
+            services: controller.config.services,
+            categories: controller.config.categories ?? [],
+            staff: controller.config.staff,
+            showPrices: controller.config.show_prices,
+          },
+    [currentLocation, instanceId, controller.config]
   );
 
   const handleTabChange = useCallback(
@@ -225,8 +249,14 @@ export function WidgetWorkspace({
       const next = String(value);
       setTab(next);
       if (next === "bookings") resetNewToday();
+      // Reflect the tab in the URL without a navigation/refetch: pushState
+      // integrates with the Next router (keeps usePathname in sync) while
+      // leaving this component mounted, so switching tabs never drops unsaved
+      // config edits or resubscribes realtime. pushState (not replaceState) so
+      // the browser back button steps through visited tabs.
+      window.history.pushState(null, "", `/dashboard/widgets/${instanceId}/${segmentFromTab(next)}`);
     },
-    [resetNewToday]
+    [resetNewToday, instanceId]
   );
 
   // Clicking the banner jumps straight to the Bookings tab and clears the
@@ -260,7 +290,7 @@ export function WidgetWorkspace({
               <ArrowLeft className="h-4 w-4" /> {t.booking.backToLocations}
             </button>
           )}
-          <LocationManager controller={controller} />
+          <LocationManager controller={controller} onFirstLocationCreated={pickLocation} />
           {bookingBanner}
         </div>
       );
@@ -277,7 +307,7 @@ export function WidgetWorkspace({
     <>
       <Tabs value={tab} onValueChange={handleTabChange} className="gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Horizontally scrollable on narrow screens so 7 tabs never overflow
+          {/* Horizontally scrollable on narrow screens so the tabs never overflow
               or force the row to wrap mid-list. */}
           <div className="min-w-0 max-w-full overflow-x-auto">
             <TabsList variant="line" className="h-9 w-max">
@@ -303,9 +333,6 @@ export function WidgetWorkspace({
               </TabsTrigger>
               <TabsTrigger value="services">
                 <Tag className="h-4 w-4" /> {t.booking.tabServices}
-              </TabsTrigger>
-              <TabsTrigger value="notifications">
-                <Bell className="h-4 w-4" /> {t.booking.tabNotifications}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -339,15 +366,33 @@ export function WidgetWorkspace({
               </Link>
             </div>
           )}
-          <WidgetOverview data={overview} period={trendPeriod} onPeriodChange={setTrendPeriod} />
+          <WidgetOverview data={dash.overview} period={dash.period} onPeriodChange={dash.setPeriod} />
         </TabsContent>
 
         <TabsContent value="bookings">
-          <WidgetBookings data={bookingsData} />
+          <WidgetBookings
+            timezone={effectiveTimezone}
+            currencySymbol={currencySymbol}
+            now={now}
+            calendar={dash.calendar}
+            monthKey={dash.monthKey}
+            onMonthChange={dash.setMonthKey}
+            calendarLoading={dash.calendarLoading}
+            list={dash.list}
+            page={dash.page}
+            onPageChange={dash.setPage}
+            listLoading={dash.listLoading}
+            filter={dash.filter}
+            onFilterChange={dash.setFilter}
+            query={dash.query}
+            onQueryChange={dash.setQuery}
+            manual={manualBookingScope}
+            onBooked={dash.refetchAll}
+          />
         </TabsContent>
 
         <TabsContent value="customers">
-          <WidgetCustomers data={customersData} />
+          <WidgetCustomers data={dash.customers} />
         </TabsContent>
 
         <TabsContent value="staff">
@@ -360,10 +405,6 @@ export function WidgetWorkspace({
 
         <TabsContent value="services">
           <ServicesManager controller={controller} currentLocationId={currentLocationId} />
-        </TabsContent>
-
-        <TabsContent value="notifications">
-          <NotificationsManager controller={controller} />
         </TabsContent>
       </Tabs>
       {bookingBanner}

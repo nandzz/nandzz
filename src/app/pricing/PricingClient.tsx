@@ -79,6 +79,12 @@ export function PricingClient({
                       <span className="text-sm font-medium text-muted-foreground">/{plan.billing_interval}</span>
                     )}
                   </div>
+                  {plan.price_cents > 0 && plan.trial_days > 0 && (
+                    <p className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+                      <Sparkles className="h-3 w-3" />
+                      {plan.trial_days}-day free trial
+                    </p>
+                  )}
                   {plan.description && (
                     <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                   )}
@@ -100,7 +106,11 @@ export function PricingClient({
 
                   <Link href={plan.price_cents === 0 ? "/login?tab=signup" : "/dashboard/credits"}>
                     <Button variant={isPopular ? "default" : "outline"} className="w-full">
-                      {plan.price_cents === 0 ? "Get started" : `Choose ${plan.name}`}
+                      {plan.price_cents === 0
+                        ? "Get started"
+                        : plan.trial_days > 0
+                          ? "Start free trial"
+                          : `Choose ${plan.name}`}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>

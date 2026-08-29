@@ -16,12 +16,25 @@ const socialLinks = z
   })
   .partial();
 
+// Business address. Nullable when the owner has none. `formatted` is capped
+// generously (Google formatted addresses are well under this); coords are
+// bounded to valid lat/lng so a tampered client can't store garbage.
+const address = z
+  .object({
+    formatted: z.string().max(300),
+    place_id: z.string().max(300).optional(),
+    lat: z.number().min(-90).max(90).optional(),
+    lng: z.number().min(-180).max(180).optional(),
+  })
+  .nullable();
+
 export const updateProfileInfoSchema = z.object({
   displayName: z.string().max(50).nullable(),
   tagline: z.string().max(100).nullable(),
   bio: z.string().max(500).nullable(),
   websiteUrl: z.string().max(300).nullable(),
   socialLinks,
+  address,
 });
 
 // Storage uploads stay client-side (browser → Supabase directly); the resulting

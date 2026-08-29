@@ -1,8 +1,7 @@
-// Stripe Customer Portal — lets users view receipts and manage payment methods.
-// Subscriptions are not used in the credits model, but the portal still surfaces invoice history.
-// Configure in Stripe Dashboard → Settings → Customer portal.
+// Stripe Customer Portal — lets users manage/cancel their plan subscription,
+// update payment methods, and view invoice history.
+// Must be activated in Stripe Dashboard → Settings → Billing → Customer portal.
 
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/server";
 
@@ -28,10 +27,23 @@ export async function POST() {
   const stripe = getStripe();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${siteUrl}/dashboard/credits`,
-  });
-
-  return NextResponse.redirect(portalSession.url, 303);
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${siteUrl}/dashboard/credits`,
+    });
+    // Return the URL as JSON (client redirects). A fetch() can't follow a 303
+    // to Stripe cross-origin, so the caller opens the portal itself.
+    return Response.json({ url: portalSession.url });
+  } catch (err) {
+    // Most common cause: the Customer Portal hasn't been activated for this
+    // account in Stripe Dashboard → Settings → Billing → Customer portal.
+    // Surface a clean message instead of a 500 HTML page so the button can
+    // show it inline.
+    console.error("[stripe/portal] failed to create portal session:", err);
+    return Response.json(
+      { error: "Billing portal is unavailable right now. Please try again later." },
+      { status: 502 },
+    );
+  }
 }

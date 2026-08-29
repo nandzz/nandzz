@@ -5,11 +5,12 @@ import Link from "next/link";
 import { createClient, getUserIdFromClaims } from "@/lib/supabase/server";
 import { getAccountType } from "@/lib/account/server";
 import { getOwnerWidgets, getWidgetCatalog } from "@/features/booking/server";
-import { getUserEntitlements } from "@/lib/plan";
+import { getUserEntitlements, getSubscriptionPlans } from "@/lib/plan";
 import { AddWidgetButton, renderWidgetIcon } from "@/features/booking";
-import { Blocks, Check, Settings, Lock } from "lucide-react";
+import { Blocks, Check, Settings } from "lucide-react";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { PageShell } from "@/components/layout/PageShell";
+import { WidgetPaywall } from "./WidgetPaywall";
 
 export default async function WidgetsDashboardPage() {
   const supabase = await createClient();
@@ -19,15 +20,18 @@ export default async function WidgetsDashboardPage() {
   // Business-only section: personal accounts can't reach it by direct URL.
   if ((await getAccountType(supabase, userId)) !== "business") redirect("/dashboard/feed");
 
-  const [widgets, catalog, entitlements, t] = await Promise.all([
+  const [widgets, catalog, entitlements, plans, t] = await Promise.all([
     getOwnerWidgets(userId),
     getWidgetCatalog(),
     getUserEntitlements(userId),
+    getSubscriptionPlans(),
     getServerTranslations(),
   ]);
 
   const ownedCatalogIds = new Set(widgets.map((w) => w.catalog_id));
   const available = catalog.filter((c) => !ownedCatalogIds.has(c.id));
+  // Plans that unlock widgets — surfaced on the locked cards and in the modal.
+  const widgetPlans = plans.filter((p) => p.has_widgets);
 
   return (
     <PageShell width="content">
@@ -42,18 +46,11 @@ export default async function WidgetsDashboardPage() {
       </div>
 
       {!entitlements.hasWidgets ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-8 text-center dark:border-emerald-900/50 dark:bg-emerald-950/20">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 dark:bg-emerald-900/40">
-            <Lock className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <h2 className="text-xl font-semibold">{t.plan.widgetsLockedTitle}</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{t.plan.widgetsLocked}</p>
-          <Link
-            href="/dashboard/credits"
-            className="mt-5 inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-          >
-            {t.plan.upgradeToStarter}
-          </Link>
+        /* Locked: the catalog is always shown, but each card opens the
+           subscription modal instead of adding the widget. */
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">{t.booking.addWidgetSection}</h2>
+          <WidgetPaywall catalog={catalog} widgetPlans={widgetPlans} />
         </div>
       ) : (
         <>

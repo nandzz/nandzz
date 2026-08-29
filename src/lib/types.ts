@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n/translations";
+
 export type SocialLinks = {
   instagram?: string;
   linkedin?: string;
@@ -5,6 +7,16 @@ export type SocialLinks = {
   github?: string;
   email?: string;
   youtube?: string;
+};
+
+// Business address shown on the public profile. `formatted` is the display +
+// Maps-query string; `place_id` (when set, from Google Places) pins the exact
+// place in the Maps deep-link; lat/lng are kept for future map/distance use.
+export type ProfileAddress = {
+  formatted: string;
+  place_id?: string;
+  lat?: number;
+  lng?: number;
 };
 
 // Account type: a Personal account (default) vs a Business account. Personal
@@ -33,6 +45,7 @@ export type Profile = {
   background_position: string | null;
   website_url: string | null;
   social_links: SocialLinks | null;
+  address: ProfileAddress | null;
   created_at: string;
   stripe_customer_id?: string | null;
   paid_credits?: number | null;
@@ -108,6 +121,7 @@ export type SubscriptionPlan = {
   currency: string;
   billing_interval: "month" | "year";
   monthly_credits: number;
+  trial_days: number; // 0 ⇒ no trial
   space_limit: number | null; // null ⇒ unlimited
   has_widgets: boolean;
   has_mcp: boolean;
@@ -315,6 +329,15 @@ export type WidgetSubscription = {
   updated_at: string;
 };
 
+// A grouping the owner can sort services under (e.g. "Nails", "Hair"). Purely
+// presentational — it groups services in the manager and the public booking
+// widget; it never affects availability or booking. Lives per-scope alongside
+// services (top-level config, or a location's own list).
+export type CalendarCategory = {
+  id: string;
+  name: string;
+};
+
 // A service the owner offers through the calendar widget.
 export type CalendarService = {
   id: string;
@@ -324,6 +347,9 @@ export type CalendarService = {
   // Staff members who can perform this service. Undefined/empty ⇒ every staff
   // member is eligible (also the natural default before any staff are added).
   staff_ids?: string[];
+  // The category this service is grouped under. Undefined/null (or an id that no
+  // longer resolves) ⇒ shown under "Uncategorized".
+  category_id?: string | null;
 };
 
 // Weekday key → list of [start, end] "HH:MM" windows (owner-local time).
@@ -346,16 +372,21 @@ export type MessageChannel = "off" | "whatsapp" | "email" | "both";
 
 // An owner-customizable message template. Body/subject may contain {{variables}}
 // (see MESSAGE_VARIABLES in lib/widgets/messages.ts).
+// `i18n` holds optional per-locale overrides; for a given locale, a present
+// subject/body wins over the top-level (English/fallback) subject/body.
 export type MessageTemplate = {
   channel: MessageChannel;
   subject: string; // email subject; ignored for whatsapp-only
   body: string;
+  i18n?: Partial<Record<Locale, { subject?: string; body?: string }>>;
 };
 
 // Per-event templates for the calendar widget's automated messages.
 export type CalendarMessages = {
   confirmation: MessageTemplate; // sent when a booking is created
   cancellation: MessageTemplate; // sent when a booking is cancelled
+  reschedule: MessageTemplate; // sent when a booking is rescheduled
+  reminder: MessageTemplate; // sent ~24h before the booking starts
 };
 
 // A physical shop/branch. Each location fully owns its own services, staff,
@@ -369,6 +400,7 @@ export type Location = {
   photo_url?: string; // same avatars bucket pattern as staff
   timezone?: string; // falls back to config.timezone
   services: CalendarService[];
+  categories?: CalendarCategory[]; // service groupings for this location
   staff: StaffMember[];
   availability: AvailabilityWindows;
   blackout_dates?: string[]; // "YYYY-MM-DD"
@@ -376,12 +408,14 @@ export type Location = {
 
 export type CalendarConfig = {
   timezone: string;
+  currency: string; // ISO 4217 code (lowercase) the owner prices this widget in
   buffer_min: number;
   show_prices: boolean; // whether service prices are shown on the public booking widget
   collect_address: boolean; // whether the public booking widget asks the customer for an address
   address_required: boolean; // whether that address field must be filled (only meaningful when collect_address)
   locations: Location[]; // empty ⇒ legacy single-location mode (read the top-level fields below)
   services: CalendarService[]; // legacy top-level (used only when locations is empty)
+  categories?: CalendarCategory[]; // legacy top-level service groupings (used only when locations is empty)
   availability: AvailabilityWindows;
   blackout_dates: string[]; // "YYYY-MM-DD"
   staff: StaffMember[]; // empty ⇒ business is a single bookable resource (legacy behavior)

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function BuyCreditsButton({
   packId,
@@ -13,6 +14,7 @@ export function BuyCreditsButton({
   credits: number;
   highlighted: boolean;
 }) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,14 +29,17 @@ export function BuyCreditsButton({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "Checkout failed");
+        // Never surface the raw API error body; show localized copy.
+        console.error("[credits] checkout failed:", json?.error);
+        setError(t.billing.checkoutFailed);
         return;
       }
       if (json.url) {
         window.location.href = json.url;
       }
-    } catch {
-      setError("Network error — try again");
+    } catch (err) {
+      console.error("[credits] checkout network error:", err);
+      setError(t.billing.networkError);
     } finally {
       setLoading(false);
     }

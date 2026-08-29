@@ -15,9 +15,22 @@ function client(row: unknown): SupabaseClient {
 }
 
 describe("getChromeProfileLite", () => {
-  it("returns the lite profile row", async () => {
-    const row = { username: "ada", display_name: "Ada", avatar_url: null };
+  it("returns the lite profile row, preserving account_type", async () => {
+    const row = {
+      username: "ada",
+      display_name: "Ada",
+      avatar_url: null,
+      account_type: "business",
+    };
     expect(await getChromeProfileLite(client(row), "u1")).toEqual(row);
+  });
+
+  it("defaults account_type to 'personal' when the row omits it", async () => {
+    const row = { username: "ada", display_name: "Ada", avatar_url: null };
+    expect(await getChromeProfileLite(client(row), "u1")).toEqual({
+      ...row,
+      account_type: "personal",
+    });
   });
 
   it("returns null when there is no row", async () => {

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   const { data: plan, error: planErr } = await admin
     .from("subscription_plans")
-    .select("slug, name, stripe_price_id, active, price_cents")
+    .select("slug, name, stripe_price_id, active, price_cents, trial_days")
     .eq("slug", plan_slug)
     .single();
 
@@ -64,6 +64,12 @@ export async function POST(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const metadata = { user_id: user.id, plan_slug: plan.slug };
 
+  // A free trial (trial_days > 0) delays the first charge; the subscription
+  // starts in `trialing` and the webhook maps that to plan_status the same way.
+  const trialDays = plan.trial_days ?? 0;
+  const subscriptionData =
+    trialDays > 0 ? { metadata, trial_period_days: trialDays } : { metadata };
+
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
     cancel_url: `${siteUrl}/dashboard/credits?canceled=1`,
     allow_promotion_codes: true,
     metadata,
-    subscription_data: { metadata },
+    subscription_data: subscriptionData,
   });
 
   return Response.json({ url: session.url });

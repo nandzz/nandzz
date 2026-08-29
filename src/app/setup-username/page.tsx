@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { claimSignupProfile } from "@/features/auth";
+import { claimSignupProfile, mapAuthError } from "@/features/auth";
+import { safeNextPath } from "@/lib/utils";
+import { AUTH_RETURN_TO_KEY } from "@/lib/layout/appShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +19,47 @@ import { Sparkles } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SetupUsernamePage() {
+  return (
+    <Suspense>
+      <SetupUsernameForm />
+    </Suspense>
+  );
+}
+
+function SetupUsernameForm() {
   const router = useRouter();
   const { t } = useLanguage();
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // An in-modal flow (e.g. booking) completes the username step INSIDE its own
+  // auth modal, not on this page. It records where to return in
+  // AUTH_RETURN_TO_KEY right before the OAuth redirect; only such flows write
+  // that marker, so its presence is the signal to bounce back — the modal there
+  // detects the missing profile and opens the username step. This covers every
+  // booking host (widget, agent, bare profile), not just the widget route.
+  // `bouncing` hides this page's form so it's never shown in that flow.
+  const [bouncing, setBouncing] = useState(false);
+  useEffect(() => {
+    let returnTo: string | null = null;
+    try {
+      returnTo = sessionStorage.getItem(AUTH_RETURN_TO_KEY);
+    } catch {
+      return;
+    }
+    const safeReturnTo = safeNextPath(returnTo, "");
+    if (safeReturnTo) {
+      try {
+        sessionStorage.removeItem(AUTH_RETURN_TO_KEY);
+      } catch {
+        // ignore — removal is best-effort
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time redirect guard: hide this page's form while we navigate back to the modal flow
+      setBouncing(true);
+      router.replace(safeReturnTo);
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +93,16 @@ export default function SetupUsernamePage() {
         } else if (result.error === "INVALID_USERNAME") {
           setError(t.setup.usernameInvalid);
         } else {
-          setError(result.message || t.common.error);
+          // Never surface the raw server message; map to safe localized copy.
+          setError(mapAuthError(result.message, t));
         }
       } else {
-        router.push("/dashboard/contents");
-        router.refresh();
+        // A fresh account lands on its own public profile page. Use a full-page
+        // navigation (not router.push) so the browser re-runs middleware with the
+        // just-created profile + session and server-renders the profile cleanly.
+        // A client-side transition here stalls on the fresh profile's RSC fetch
+        // and never commits — the page just appears to "do nothing".
+        window.location.assign(`/${trimmed}`);
       }
     } catch {
       setError(t.common.error);
@@ -68,6 +110,10 @@ export default function SetupUsernamePage() {
       setLoading(false);
     }
   };
+
+  // Bouncing back to a widget flow — render nothing so this page's form never
+  // flashes; the widget's auth modal takes over.
+  if (bouncing) return null;
 
   return (
     <div className="relative flex min-h-[calc(100vh-8rem)] items-center justify-center px-4">

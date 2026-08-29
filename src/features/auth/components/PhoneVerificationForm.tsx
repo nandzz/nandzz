@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getPhoneInfo, updateUserPhone, verifyPhoneOtp } from "../auth";
+import { mapAuthError } from "../error-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,12 +45,13 @@ export function PhoneVerificationForm() {
     try {
       const { error } = await updateUserPhone(phoneNumber);
       if (error) {
-        setError(error.message);
+        setError(mapAuthError(error.message, t));
         return false;
       }
       return true;
-    } catch {
-      setError(t.phone.unexpectedError);
+    } catch (e) {
+      console.error("[phone] send OTP threw:", e);
+      setError(e instanceof Error ? mapAuthError(e.message, t) : t.phone.unexpectedError);
       return false;
     } finally {
       setLoading(false);
@@ -83,7 +85,7 @@ export function PhoneVerificationForm() {
     try {
       const { error } = await verifyPhoneOtp(phone, otp);
       if (error) {
-        setError(error.message);
+        setError(mapAuthError(error.message, t));
       } else {
         setCurrentPhone(phone);
         setPhoneState("verified");
@@ -91,8 +93,9 @@ export function PhoneVerificationForm() {
         setOtp("");
         setStep("input");
       }
-    } catch {
-      setError(t.phone.unexpectedError);
+    } catch (e) {
+      console.error("[phone] verify OTP threw:", e);
+      setError(e instanceof Error ? mapAuthError(e.message, t) : t.phone.unexpectedError);
     } finally {
       setLoading(false);
     }

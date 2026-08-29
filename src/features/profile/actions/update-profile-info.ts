@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import type { ProfileAddress } from "@/lib/types";
 import { updateProfileInfoSchema } from "../schemas";
 
 export type UpdateProfileInfoResult =
@@ -20,10 +21,12 @@ export async function updateProfileInfo(input: {
   bio: string | null;
   websiteUrl: string | null;
   socialLinks: Record<string, string | undefined>;
+  address: ProfileAddress | null;
 }): Promise<UpdateProfileInfoResult> {
   const parsed = updateProfileInfoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "INVALID_INPUT" };
-  const { displayName, tagline, bio, websiteUrl, socialLinks } = parsed.data;
+  const { displayName, tagline, bio, websiteUrl, socialLinks, address } =
+    parsed.data;
 
   const supabase = await createClient();
   const {
@@ -39,6 +42,7 @@ export async function updateProfileInfo(input: {
       bio,
       website_url: websiteUrl,
       social_links: socialLinks,
+      address,
     })
     .eq("id", user.id);
   if (error) return { ok: false, error: "FAILED", message: error.message };

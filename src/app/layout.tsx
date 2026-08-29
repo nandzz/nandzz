@@ -4,11 +4,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ChromeProvider } from "@/contexts/ChromeContext";
 import { AppChrome } from "@/components/layout/AppChrome";
+import { AuthProvider } from "@/features/analytics/AuthContext";
 import { type Locale } from "@/lib/i18n/translations";
 import { getServerTranslations, getCurrentLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { getChromeProfileLite } from "@/features/analytics/server";
-import type { ProfileLite } from "@/lib/types";
+import { getChromeProfile } from "@/features/analytics/server";
+import type { Profile } from "@/lib/types";
 import "./globals.css";
 
 const inter = Inter({
@@ -107,9 +108,9 @@ export default async function RootLayout({
   const { data: claimsData } = await supabase.auth.getClaims();
   const initialUserId = claimsData?.claims?.sub ?? null;
 
-  let initialProfile: ProfileLite | null = null;
+  let initialProfile: Profile | null = null;
   if (initialUserId) {
-    initialProfile = await getChromeProfileLite(supabase, initialUserId);
+    initialProfile = await getChromeProfile(supabase, initialUserId);
   }
 
   return (
@@ -127,9 +128,9 @@ export default async function RootLayout({
         >
           <LanguageProvider initialLocale={initialLocale}>
             <ChromeProvider>
-              <AppChrome initialUserId={initialUserId} initialProfile={initialProfile}>
-                {children}
-              </AppChrome>
+              <AuthProvider initialUserId={initialUserId} initialProfile={initialProfile}>
+                <AppChrome>{children}</AppChrome>
+              </AuthProvider>
             </ChromeProvider>
           </LanguageProvider>
         </ThemeProvider>

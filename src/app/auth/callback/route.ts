@@ -28,7 +28,21 @@ export async function GET(request: Request) {
           .single();
 
         if (!profile) {
-          return NextResponse.redirect(`${base}/setup-username`);
+          // In-modal auth flows (the booking widget, and the agent/profile
+          // booking chat) finish onboarding — choose-a-username — INSIDE their
+          // own modal, so send that visitor straight back to where they were
+          // rather than to the standalone setup page. They mark themselves with
+          // `modal=1` on the return URL; the widget route is also matched
+          // directly as a belt-and-suspenders fallback. Everyone else goes to the
+          // setup page, carrying `next` so they return where they started after.
+          const inModalAuth = searchParams.get("modal") === "1";
+          const WIDGET_ROUTE_RE = /^\/[^/]+\/widget\/[^/]+/;
+          if (inModalAuth || WIDGET_ROUTE_RE.test(next)) {
+            return NextResponse.redirect(`${base}${next}`);
+          }
+          const setupUrl = new URL(`${base}/setup-username`);
+          if (searchParams.get("next")) setupUrl.searchParams.set("next", next);
+          return NextResponse.redirect(setupUrl.toString());
         }
       }
 

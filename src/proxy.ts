@@ -10,15 +10,6 @@ const PROFILE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 const SETUP_PATH = "/setup-username";
 const POST_SETUP_PATH = "/dashboard/contents";
 
-function skipProfileGuard(pathname: string): boolean {
-  return (
-    pathname === SETUP_PATH ||
-    pathname.startsWith("/api/") ||
-    pathname.startsWith("/auth/") ||
-    pathname === "/logout"
-  );
-}
-
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -104,7 +95,15 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    if (!hasProfile && !skipProfileGuard(pathname)) {
+    // A profile-less (freshly OAuth'd) user is only *forced* to finish the
+    // username step when they try to enter the authenticated app (the
+    // dashboard). On every public page — booking widget, agent, profile — the
+    // username step happens INSIDE that page's own auth modal, so we must NOT
+    // redirect them away: doing so yanks the visitor out of the booking modal
+    // onto the standalone /setup-username page (and, because that page bounces
+    // back, into a redirect loop → blank screen). Let them stay; the page opens
+    // the modal on the username step itself.
+    if (!hasProfile && pathname.startsWith("/dashboard")) {
       const url = request.nextUrl.clone();
       url.pathname = SETUP_PATH;
       url.search = "";

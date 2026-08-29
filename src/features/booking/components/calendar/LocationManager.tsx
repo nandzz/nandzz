@@ -1,53 +1,43 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Check, Search, MapPinned, MapPinX } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search, MapPinned, MapPinX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AvatarCropModal } from "@/components/ui/AvatarCropModal";
-import type { Location, WeekdayKey } from "@/lib/types";
-import { getCurrentUserId, uploadLocationPhoto } from "@/features/booking/storage";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import type { CalendarConfig, Location } from "@/lib/types";
 import type { CalendarConfigController } from "@/features/booking/components/calendar/useCalendarConfig";
 import { LocationCard } from "@/features/booking/components/calendar/LocationCard";
-import { LocationEditor } from "@/features/booking/components/calendar/LocationEditor";
+import { LocationFormModal } from "@/features/booking/components/calendar/LocationFormModal";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-// Photo files must be under this size (mirrors StaffManager's uploader).
-const MAX_LOCATION_PHOTO_SIZE = 1.5 * 1024 * 1024;
 
 interface Props {
   controller: CalendarConfigController;
+  // Called after the owner saves their FIRST location (the roster was empty
+  // before). WidgetWorkspace uses it to drop them straight into that location's
+  // dashboard instead of the "choose a location" gate — nothing to choose yet.
+  onFirstLocationCreated?: (id: string) => void;
 }
 
-type Mode = "list" | "edit";
-
-// Top-level Locations tab: a master–detail roster, cloned from StaffManager.
-// Each location fully owns its own services/staff/availability/blackout_dates
-// (edited elsewhere, via the location-scope selector re-targeting the
-// existing Services/Staff/Availability sections) — this manager only handles
-// the location's own identity: name, address, photo, timezone, and its own
-// working hours + days off. Consumes the shared config controller so its
-// saves stay in lockstep with the rest of the Settings studio.
-export function LocationManager({ controller }: Props) {
+// Top-level Locations roster: a searchable grid of cards. Creating or editing a
+// single location happens in LocationFormModal — a focused modal, so adding a
+// location is a deliberate task that never swaps the whole screen out from
+// under the owner. Each location fully owns its own services/staff/availability/
+// blackout_dates (edited elsewhere, via the location-scope selector re-targeting
+// the Services/Staff/Availability sections); this manager only handles the
+// location's own identity: name, address, photo, timezone, hours + days off.
+export function LocationManager({ controller, onFirstLocationCreated }: Props) {
   const { t } = useLanguage();
-  const { config, setConfig, saving, status, save } = controller;
+  const { config, setConfig, saving, status, saveWith } = controller;
 
-  // Master–detail navigation (local UI state only — never persisted).
-  const [mode, setMode] = useState<Mode>("list");
-  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-  // Location photo upload: a single hidden file input shared across cards;
-  // the in-flight location id tracks which card the picked/cropped image
-  // belongs to.
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const ownerIdRef = useRef<string | null>(null);
-  const [photoLocationId, setPhotoLocationId] = useState<string | null>(null);
-  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
-  const [uploadingLocationId, setUploadingLocationId] = useState<string | null>(null);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  // The location open in the modal (a copy — see LocationFormModal), plus
+  // whether it's a not-yet-committed new one. null ⇒ modal closed.
+  const [editing, setEditing] = useState<{ location: Location; isNew: boolean } | null>(null);
+  // Card trash click → confirm before the (immediate, irreversible) delete.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // ── locations ──
-  function createLocation() {
+  function openCreate() {
     const loc: Location = {
       id: `loc_${Math.random().toString(36).slice(2, 9)}`,
       name: t.booking.newLocationDefaultName,
@@ -55,169 +45,42 @@ export function LocationManager({ controller }: Props) {
       staff: [],
       availability: {},
     };
-    setConfig((c) => ({ ...c, locations: [...c.locations, loc] }));
-    // Jump straight into the editor for the fresh location.
-    setEditingLocationId(loc.id);
-    setMode("edit");
+    setEditing({ location: loc, isNew: true });
   }
-  function updateLocation(id: string, fields: Partial<Location>) {
-    setConfig((c) => ({
-      ...c,
-      locations: c.locations.map((l) => (l.id === id ? { ...l, ...fields } : l)),
-    }));
-  }
-  function removeLocation(id: string) {
-    // The location object takes its nested services/staff with it — no
-    // cross-refs to scrub elsewhere in config (unlike removeStaff).
-    setConfig((c) => ({ ...c, locations: c.locations.filter((l) => l.id !== id) }));
-    // Deleting always returns to the roster.
-    if (editingLocationId === id) {
-      setEditingLocationId(null);
-      setMode("list");
-    }
-  }
-
-  // Per-location weekly hours (mirrors the per-staff addWindow/updateWindow/removeWindow).
-  function addLocationWindow(locationId: string, day: WeekdayKey) {
-    setConfig((c) => ({
-      ...c,
-      locations: c.locations.map((l) =>
-        l.id === locationId
-          ? {
-              ...l,
-              availability: {
-                ...l.availability,
-                [day]: [...(l.availability[day] ?? []), ["09:00", "17:00"] as [string, string]],
-              },
-            }
-          : l
-      ),
-    }));
-  }
-  function updateLocationWindow(locationId: string, day: WeekdayKey, idx: number, which: 0 | 1, value: string) {
-    setConfig((c) => ({
-      ...c,
-      locations: c.locations.map((l) =>
-        l.id === locationId
-          ? {
-              ...l,
-              availability: {
-                ...l.availability,
-                [day]: (l.availability[day] ?? []).map((w, i) =>
-                  i === idx ? ((which === 0 ? [value, w[1]] : [w[0], value]) as [string, string]) : w
-                ),
-              },
-            }
-          : l
-      ),
-    }));
-  }
-  function removeLocationWindow(locationId: string, day: WeekdayKey, idx: number) {
-    setConfig((c) => ({
-      ...c,
-      locations: c.locations.map((l) =>
-        l.id === locationId
-          ? {
-              ...l,
-              availability: {
-                ...l.availability,
-                [day]: (l.availability[day] ?? []).filter((_, i) => i !== idx),
-              },
-            }
-          : l
-      ),
-    }));
-  }
-  // Per-location days off (mirrors the blackout-dates chip pattern).
-  function addLocationDayOff(locationId: string, date: string) {
-    setConfig((c) => ({
-      ...c,
-      locations: c.locations.map((l) =>
-        l.id === locationId
-          ? { ...l, blackout_dates: [...(l.blackout_dates ?? []), date].sort() }
-          : l
-      ),
-    }));
-  }
-  function removeLocationDayOff(locationId: string, date: string) {
-    setConfig((c) => ({
-      ...c,
-      locations: c.locations.map((l) =>
-        l.id === locationId
-          ? { ...l, blackout_dates: (l.blackout_dates ?? []).filter((d) => d !== date) }
-          : l
-      ),
-    }));
-  }
-
-  // ── navigation ──
   function openEditor(id: string) {
-    setPhotoError(null);
-    setEditingLocationId(id);
-    setMode("edit");
-  }
-  function backToList() {
-    setMode("list");
-    setEditingLocationId(null);
-    setPhotoError(null);
+    const loc = config.locations.find((l) => l.id === id);
+    if (loc) setEditing({ location: loc, isNew: false });
   }
 
-  // Saving from the editor persists the whole config, then returns to the
-  // roster on success (a failed/invalid save keeps you on the location so you
-  // can fix it). From the list view it just persists in place.
-  async function handleSave() {
-    const ok = await save();
-    if (ok && mode === "edit") backToList();
+  // Commit the modal's draft into config and persist it in the same tick
+  // (`saveWith` takes the merged config directly, side-stepping the controller's
+  // stale closed-over config). On a failed/invalid save the modal stays open so
+  // the owner can fix it.
+  async function handleModalSave(loc: Location) {
+    const wasEmpty = config.locations.length === 0;
+    const exists = config.locations.some((l) => l.id === loc.id);
+    const merged: CalendarConfig = {
+      ...config,
+      locations: exists
+        ? config.locations.map((l) => (l.id === loc.id ? loc : l))
+        : [...config.locations, loc],
+    };
+    setConfig(merged);
+    const ok = await saveWith(merged);
+    if (!ok) return;
+    setEditing(null);
+    if (wasEmpty) onFirstLocationCreated?.(loc.id);
   }
 
-  // ── location photo upload (hidden input → crop modal → Supabase Storage) ──
-  function openPhotoPicker(locationId: string) {
-    setPhotoError(null);
-    setPhotoLocationId(locationId);
-    photoInputRef.current?.click();
+  async function handleModalDelete(id: string) {
+    const merged: CalendarConfig = {
+      ...config,
+      locations: config.locations.filter((l) => l.id !== id),
+    };
+    setConfig(merged);
+    const ok = await saveWith(merged);
+    if (ok) setEditing(null);
   }
-  function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.size > MAX_LOCATION_PHOTO_SIZE) {
-      setPhotoError(t.booking.photoTooLarge);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => setCropImageSrc(reader.result as string);
-    reader.readAsDataURL(file);
-  }
-  async function handleCroppedPhoto(blob: Blob) {
-    const locationId = photoLocationId;
-    setCropImageSrc(null);
-    if (!locationId) return;
-    setUploadingLocationId(locationId);
-    setPhotoError(null);
-    try {
-      // Location photos live under the owner's auth uid (Storage RLS on
-      // `avatars` requires the first path segment to equal it); cache-busted.
-      let ownerId = ownerIdRef.current;
-      if (!ownerId) {
-        ownerId = await getCurrentUserId();
-        ownerIdRef.current = ownerId;
-      }
-      if (!ownerId) throw new Error(t.booking.notSignedIn);
-      const photoUrl = await uploadLocationPhoto(ownerId, locationId, blob);
-      updateLocation(locationId, { photo_url: photoUrl });
-    } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : t.booking.errorUploadPhoto);
-    } finally {
-      setUploadingLocationId(null);
-      setPhotoLocationId(null);
-    }
-  }
-
-  // The location currently open in the detail view (may vanish if deleted elsewhere).
-  const editingLocation = useMemo(
-    () => (mode === "edit" ? config.locations.find((l) => l.id === editingLocationId) ?? null : null),
-    [mode, editingLocationId, config.locations]
-  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -229,24 +92,30 @@ export function LocationManager({ controller }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Shared location-photo picker + crop modal (opened per-card / from the editor). */}
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="hidden"
-        onChange={handlePhotoFileChange}
-      />
-      {cropImageSrc && (
-        <AvatarCropModal
-          imageSrc={cropImageSrc}
-          onCancel={() => {
-            setCropImageSrc(null);
-            setPhotoLocationId(null);
-          }}
-          onCrop={handleCroppedPhoto}
+      {editing && (
+        <LocationFormModal
+          location={editing.location}
+          isNew={editing.isNew}
+          saving={saving}
+          errorMsg={status && !status.ok ? status.msg : null}
+          onSave={handleModalSave}
+          onDelete={handleModalDelete}
+          onClose={() => setEditing(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          if (confirmDeleteId) return handleModalDelete(confirmDeleteId);
+        }}
+        title={t.booking.deleteLocation}
+        description={t.booking.deleteLocationConfirm}
+        confirmLabel={t.booking.deleteLocation}
+        cancelLabel={t.booking.cancel}
+        variant="destructive"
+      />
 
       {/* Section header */}
       <div className="border-b border-border pb-2">
@@ -256,23 +125,7 @@ export function LocationManager({ controller }: Props) {
         <p className="mt-0.5 text-xs text-muted-foreground">{t.booking.locationsSectionDesc}</p>
       </div>
 
-      {photoError && <p className="text-xs text-red-600">{photoError}</p>}
-
-      {mode === "edit" && editingLocation ? (
-        <LocationEditor
-          location={editingLocation}
-          uploading={uploadingLocationId === editingLocation.id}
-          onBack={backToList}
-          onOpenPhotoPicker={openPhotoPicker}
-          onUpdate={updateLocation}
-          onRemove={removeLocation}
-          onAddWindow={addLocationWindow}
-          onUpdateWindow={updateLocationWindow}
-          onRemoveWindow={removeLocationWindow}
-          onAddDayOff={addLocationDayOff}
-          onRemoveDayOff={removeLocationDayOff}
-        />
-      ) : config.locations.length === 0 ? (
+      {config.locations.length === 0 ? (
         // Empty state — no locations yet.
         <div className="rounded-2xl border border-dashed border-border bg-background px-5 py-14 text-center">
           <MapPinned className="mx-auto h-9 w-9 text-muted-foreground/50" />
@@ -280,7 +133,7 @@ export function LocationManager({ controller }: Props) {
           <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
             {t.booking.noLocationsYetDesc}
           </p>
-          <Button className="mt-5" onClick={createLocation}>
+          <Button className="mt-5" onClick={openCreate}>
             <Plus className="h-4 w-4" /> {t.booking.createLocation}
           </Button>
         </div>
@@ -315,7 +168,7 @@ export function LocationManager({ controller }: Props) {
                   </button>
                 )}
               </div>
-              <Button className="shrink-0" onClick={createLocation}>
+              <Button className="shrink-0" onClick={openCreate}>
                 <Plus className="h-4 w-4" /> {t.booking.newLocation}
               </Button>
             </div>
@@ -337,28 +190,13 @@ export function LocationManager({ controller }: Props) {
                   key={l.id}
                   location={l}
                   onOpen={() => openEditor(l.id)}
-                  onDelete={() => removeLocation(l.id)}
+                  onDelete={() => setConfirmDeleteId(l.id)}
                 />
               ))}
             </div>
           )}
         </div>
       )}
-
-      {/* Save bar — persists the whole shared config via the controller, so saving
-          here also commits any Settings/Staff edits and vice versa. Present in both views. */}
-      <div className="sticky bottom-4 flex items-center justify-end gap-3 rounded-xl border border-border bg-background/90 p-3 backdrop-blur">
-        {status && (
-          <span className={`text-sm ${status.ok ? "text-emerald-600" : "text-red-600"}`}>
-            {status.ok && <Check className="mr-1 inline h-4 w-4" />}
-            {status.msg}
-          </span>
-        )}
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {t.booking.saveChanges}
-        </Button>
-      </div>
     </div>
   );
 }

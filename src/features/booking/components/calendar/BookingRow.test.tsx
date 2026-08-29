@@ -17,6 +17,7 @@ function makeBooking(overrides: Partial<BookingRowData> = {}): BookingRowData {
     customer_email: "jane@example.com",
     service_name: "Haircut",
     starts_at: "2026-08-10T09:00:00.000Z",
+    ends_at: "2026-08-10T09:30:00.000Z",
     price_cents: 5000,
     status: "confirmed",
     customer_phone: null,
@@ -30,11 +31,25 @@ function makeBooking(overrides: Partial<BookingRowData> = {}): BookingRowData {
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const fmt = (iso: string) => iso;
+// Default reference "now": a week before the sample booking, so the default
+// row carries no tag unless a test moves the clock.
+const DEFAULT_NOW = new Date("2026-08-03T09:00:00.000Z").getTime();
 
-function renderRow(overrides: Partial<BookingRowData> = {}, props: { dim?: boolean; cancellable?: boolean } = {}) {
+function renderRow(
+  overrides: Partial<BookingRowData> = {},
+  props: { dim?: boolean; cancellable?: boolean; now?: number } = {}
+) {
   const b = makeBooking(overrides);
   return render(
-    <BookingRow b={b} money={money} fmt={fmt} timezone="UTC" dim={props.dim} cancellable={props.cancellable} />
+    <BookingRow
+      b={b}
+      money={money}
+      fmt={fmt}
+      timezone="UTC"
+      now={props.now ?? DEFAULT_NOW}
+      dim={props.dim}
+      cancellable={props.cancellable}
+    />
   );
 }
 
@@ -67,15 +82,61 @@ describe("BookingRow", () => {
     });
   });
 
-  describe("status badge", () => {
-    it("shows the Cancelled badge for cancelled bookings", () => {
-      renderRow({ status: "cancelled" });
+  describe("chronological status tag", () => {
+    const START = "2026-08-10T09:00:00.000Z";
+    const END = "2026-08-10T09:30:00.000Z";
+    const at = (iso: string) => new Date(iso).getTime();
+
+    it("shows the Cancelled tag for cancelled bookings regardless of time", () => {
+      renderRow({ status: "cancelled" }, { now: at("2026-08-03T09:00:00.000Z") });
       expect(screen.getByText("Cancelled")).toBeInTheDocument();
     });
 
-    it("does not show the Cancelled badge for confirmed bookings", () => {
-      renderRow({ status: "confirmed" });
-      expect(screen.queryByText("Cancelled")).not.toBeInTheDocument();
+    it("shows 'In progress' while now is within the booking span", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-10T09:15:00.000Z") });
+      expect(screen.getByText("In progress")).toBeInTheDocument();
+    });
+
+    it("shows 'Completed' once the booking has ended", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-10T10:00:00.000Z") });
+      expect(screen.getByText("Completed")).toBeInTheDocument();
+    });
+
+    it("shows an hours countdown when the booking is within 4 hours", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-10T07:00:00.000Z") });
+      expect(screen.getByText("in 2 hours")).toBeInTheDocument();
+    });
+
+    it("uses the singular 'in 1 hour' at the one-hour mark", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-10T08:00:00.000Z") });
+      expect(screen.getByText("in 1 hour")).toBeInTheDocument();
+    });
+
+    it("shows a minutes countdown under an hour out", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-10T08:40:00.000Z") });
+      expect(screen.getByText("in 20 min")).toBeInTheDocument();
+    });
+
+    it("shows 'Today' for a same-day booking more than 4 hours away", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-10T02:00:00.000Z") });
+      expect(screen.getByText("Today")).toBeInTheDocument();
+    });
+
+    it("shows 'Tomorrow' for a next-day booking", () => {
+      renderRow({ starts_at: START, ends_at: END }, { now: at("2026-08-09T12:00:00.000Z") });
+      expect(screen.getByText("Tomorrow")).toBeInTheDocument();
+    });
+
+    it("shows no tag for a confirmed booking further than tomorrow", () => {
+      const { container } = renderRow(
+        { starts_at: START, ends_at: END },
+        { now: at("2026-08-03T09:00:00.000Z") }
+      );
+      for (const text of ["Today", "Tomorrow", "Completed", "In progress", "Cancelled"]) {
+        expect(screen.queryByText(text)).not.toBeInTheDocument();
+      }
+      // No countdown pill either.
+      expect(container.querySelector(".animate-pulse")).not.toBeInTheDocument();
     });
   });
 
@@ -138,7 +199,7 @@ describe("BookingRow", () => {
       vi.unstubAllGlobals();
     });
 
-    it("shows an alert with the server error and does not refresh when the request fails", async () => {
+    it("shows a localized alert (never the raw server error) and does not refresh when the request fails", async () => {
       vi.spyOn(window, "confirm").mockReturnValue(true);
       const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
       const fetchMock = vi.fn().mockResolvedValue({
@@ -151,7 +212,11 @@ describe("BookingRow", () => {
       renderRow({}, { cancellable: true });
       await user.click(screen.getByRole("button", { name: "Cancel Jane Doe's booking" }));
 
-      await waitFor(() => expect(alertMock).toHaveBeenCalledWith("Too late to cancel"));
+      // The raw API error body must never surface — only localized copy.
+      await waitFor(() =>
+        expect(alertMock).toHaveBeenCalledWith("Could not cancel this booking.")
+      );
+      expect(alertMock).not.toHaveBeenCalledWith("Too late to cancel");
       expect(mockRefresh).not.toHaveBeenCalled();
       vi.unstubAllGlobals();
     });
